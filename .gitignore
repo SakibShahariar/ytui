@@ -1,0 +1,14 @@
+# Compiled binary
+/ytui
+
+# Go build/test artifacts
+*.test
+*.out
+
+# OS cruft
+.DS_Store
+
+# Local editor state
+.vscode/
+.idea/
+*.swp
