@@ -10,6 +10,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rivo/uniseg"
 
 	"ytui/internal/auth"
 	"ytui/internal/downloader"
@@ -149,6 +151,57 @@ const (
 )
 
 // videoItem adapts ytdlp.Video to the list.Item interface bubbles/list needs.
+// ytDelegate is a custom list.ItemDelegate replacing bubbles/list's
+// DefaultDelegate. DefaultDelegate's internal title/description truncation
+// assumes rune-count roughly equals terminal display width, which breaks
+// down for scripts like Bengali, Devanagari, and Thai where combining
+// marks and conjuncts make multiple Unicode codepoints render as a single,
+// narrower glyph — that mismatch was producing garbled output (misaligned
+// text, stray leftover border/padding characters) for that kind of
+// content. This delegate does its own truncation via uniseg instead.
+type ytDelegate struct{}
+
+func (ytDelegate) Height() int                       { return 2 }
+func (ytDelegate) Spacing() int                       { return 1 }
+func (ytDelegate) Update(tea.Msg, *list.Model) tea.Cmd { return nil }
+
+func (ytDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	type titler interface{ Title() string }
+	type describer interface{ Description() string }
+
+	var title, desc string
+	if t, ok := item.(titler); ok {
+		title = t.Title()
+	}
+	if d, ok := item.(describer); ok {
+		desc = d.Description()
+	}
+
+	innerWidth := m.Width() - 4 // selection bar + padding
+	if innerWidth < 4 {
+		innerWidth = 4
+	}
+	title = truncate(title, innerWidth)
+	desc = truncate(desc, innerWidth)
+
+	selected := index == m.Index()
+
+	var titleStyle, descStyle lipgloss.Style
+	if selected {
+		titleStyle = lipgloss.NewStyle().Foreground(ctpMauve).Bold(true).
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(ctpMauve).PaddingLeft(1)
+		descStyle = lipgloss.NewStyle().Foreground(ctpPink).
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(ctpMauve).PaddingLeft(1)
+	} else {
+		titleStyle = lipgloss.NewStyle().Foreground(ctpText).PaddingLeft(2)
+		descStyle = lipgloss.NewStyle().Foreground(ctpSubtext0).PaddingLeft(2)
+	}
+
+	fmt.Fprint(w, titleStyle.Render(title)+"\n"+descStyle.Render(desc))
+}
+
 type videoItem struct{ v ytdlp.Video }
 
 func (i videoItem) Title() string {
@@ -181,15 +234,34 @@ func formatViews(v int64) string {
 
 // truncate shortens s to at most width runes, appending an ellipsis if it
 // had to cut anything. width <= 1 just returns "…".
+// truncate shortens s to at most `width` terminal display columns,
+// appending an ellipsis if it had to cut anything. Uses uniseg for actual
+// grapheme-cluster-aware width, not a naive rune count — scripts like
+// Bengali, Devanagari, and Thai combine multiple Unicode codepoints
+// (base character + combining vowel signs / conjuncts) into a single
+// visual glyph that occupies far fewer terminal columns than its rune
+// count would suggest. Counting runes instead of display width is what
+// caused garbled, misaligned rendering (stray leftover characters) for
+// that kind of text. width <= 1 just returns "…".
 func truncate(s string, width int) string {
-	r := []rune(s)
-	if len(r) <= width {
+	if uniseg.StringWidth(s) <= width {
 		return s
 	}
 	if width <= 1 {
 		return "…"
 	}
-	return string(r[:width-1]) + "…"
+	var b strings.Builder
+	col := 0
+	gr := uniseg.NewGraphemes(s)
+	for gr.Next() {
+		w := uniseg.StringWidth(gr.Str())
+		if col+w > width-1 { // leave room for the ellipsis
+			break
+		}
+		b.WriteString(gr.Str())
+		col += w
+	}
+	return b.String() + "…"
 }
 
 // wrapTwoLines word-wraps s to fit width, returning at most 2 lines. If
@@ -619,15 +691,7 @@ func New(s *store.Store) Model {
 	pi.CharLimit = 4000
 	pi.Width = 60
 
-	delegate := list.NewDefaultDelegate()
-	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
-		Foreground(ctpMauve).BorderLeftForeground(ctpMauve)
-	delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.
-		Foreground(ctpPink).BorderLeftForeground(ctpMauve)
-	delegate.Styles.NormalTitle = delegate.Styles.NormalTitle.Foreground(ctpText)
-	delegate.Styles.NormalDesc = delegate.Styles.NormalDesc.Foreground(ctpSubtext0)
-	delegate.Styles.DimmedTitle = delegate.Styles.DimmedTitle.Foreground(ctpOverlay0)
-	delegate.Styles.DimmedDesc = delegate.Styles.DimmedDesc.Foreground(ctpOverlay0)
+	delegate := ytDelegate{}
 
 	l := list.New(nil, delegate, defaultWidth, defaultHeight-headerLines-footerLines)
 	l.Title = "Results"
