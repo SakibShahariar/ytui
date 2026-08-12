@@ -1440,13 +1440,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.inputMode = false
 		m.activeTab = (m.activeTab + 1) % tab(len(tabNames))
 		m.refreshList()
-		return m, tea.Batch(m.maybeFetchForTab(), m.refreshPreview())
+		return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 	case "shift+tab":
 		m.searchInput.Blur()
 		m.inputMode = false
 		m.activeTab = (m.activeTab - 1 + tab(len(tabNames))) % tab(len(tabNames))
 		m.refreshList()
-		return m, tea.Batch(m.maybeFetchForTab(), m.refreshPreview())
+		return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 
 	case "/":
 		if !m.inputMode {
@@ -1454,7 +1454,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.refreshList()
 			m.inputMode = true
 			m.searchInput.Focus()
-			return m, tea.Batch(textinput.Blink, m.refreshPreview())
+			return m, tea.Batch(tea.ClearScreen, textinput.Blink, m.refreshPreview())
 		}
 
 	case "ctrl+l":
@@ -1517,7 +1517,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.browsingPlaylistTitle = pl.p.Title
 				m.playlistVideos = nil
 				m.refreshList()
-				return m, tea.Batch(m.maybeFetchForTab(), m.refreshPreview())
+				return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 			}
 			return m, nil
 		}
@@ -1527,7 +1527,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.browsingChannelTitle = s.s.Title
 				m.channelVideos = nil
 				m.refreshList()
-				return m, tea.Batch(m.maybeFetchForTab(), m.refreshPreview())
+				return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 			}
 			// Local (non-API) subscriptions don't carry a real channel ID,
 			// so there's nothing to browse into — Enter is a no-op there
@@ -1550,13 +1550,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.browsingPlaylistID = ""
 			m.playlistVideos = nil
 			m.refreshList()
-			return m, m.refreshPreview()
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 		}
 		if m.activeTab == tabSubscriptions && m.browsingChannelID != "" {
 			m.browsingChannelID = ""
 			m.channelVideos = nil
 			m.refreshList()
-			return m, m.refreshPreview()
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -2006,8 +2006,9 @@ func (m Model) View() string {
 		loadingIndicator = "  " + m.spin.View()
 	}
 	footerText := " " + help + loadingIndicator
+	avail := m.width - lipgloss.Width(modeBar)
 	footerLine := lipgloss.JoinHorizontal(lipgloss.Top, modeBar,
-		footerBarStyle.Width(m.width-lipgloss.Width(modeBar)).Render(footerText))
+		footerBarStyle.Width(avail).MaxWidth(avail).Render(footerText))
 	b.WriteString(footerLine)
 
 	if m.errMsg != "" {
