@@ -249,7 +249,7 @@ func renderLogo() string {
 // welcomeContent builds the first-screen view shown before any search has
 // run: logo, tagline, a quick glance at the user's library, and a nudge
 // toward the / key — instead of an empty box with just a placeholder.
-func (m Model) welcomeContent(width int) string {
+func (m Model) welcomeContent(width, availableHeight int) string {
 	center := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
 
 	tagline := subtitleStyle.Render("search, watch, and track youtube — never leave the terminal")
@@ -266,9 +266,28 @@ func (m Model) welcomeContent(width int) string {
 	hint := lipgloss.NewStyle().Foreground(ctpMauve).Bold(true).Render("just start typing") +
 		lipgloss.NewStyle().Foreground(ctpOverlay1).Render(" to search")
 
+	// Full version: logo(5) + blank + tagline + blank + stats + blank + hint = 12 lines.
+	// Compact version (no logo, just a plain title line) = 7 lines.
+	// Overflowing past availableHeight is what was pushing the title bar and
+	// tabs off the top of short terminals (the terminal itself scrolls to
+	// keep the bottom of the overflowing content in view) — this picks
+	// whichever version actually fits instead of always using the tallest.
+	const fullHeight = 12
+	if availableHeight >= fullHeight || availableHeight <= 0 {
+		parts := []string{
+			center.Render(renderLogo()),
+			"",
+			center.Render(tagline),
+			"",
+			center.Render(stats),
+			"",
+			center.Render(hint),
+		}
+		return "\n" + strings.Join(parts, "\n")
+	}
+
 	parts := []string{
-		center.Render(renderLogo()),
-		"",
+		center.Render(titleStyle.Render("ytui")),
 		center.Render(tagline),
 		"",
 		center.Render(stats),
@@ -860,11 +879,25 @@ func (m Model) panelHeight() int {
 }
 
 // previewVisible reports whether the preview panel should actually be
-// shown right now — the user's toggle is on AND there's something to
-// preview. An empty preview panel before a search has run is just
-// clutter, not useful chrome.
+// shown right now — the user's toggle is on, there's something to
+// preview, AND the terminal is wide enough that showing it won't force
+// the list panel below its own minimum width (which used to silently
+// overflow the terminal on narrower/half-width windows instead of just
+// hiding the panel).
 func (m Model) previewVisible() bool {
-	return m.previewEnabled && len(m.list.Items()) > 0
+	if !m.previewEnabled || len(m.list.Items()) == 0 {
+		return false
+	}
+	const minListWidth = 20
+	const widthGaps = 5 // JoinHorizontal separator + both panels' borders/padding slack
+	if m.width < minPreviewPanelWidth+minListWidth+widthGaps {
+		return false
+	}
+	const minImageRows = 4
+	if m.panelHeight() < previewHeaderRows+previewFooterRows+minImageRows {
+		return false
+	}
+	return true
 }
 
 // paneWidths returns (listWidth, previewWidth) in terminal columns. The
@@ -1074,14 +1107,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.applyListSize()
+		_ = thumb.Clear()
+		m.previewedID = ""
+		// Bubbletea normally only redraws what changed, which can leave
+		// stale characters behind at columns/rows a new, narrower frame no
+		// longer writes to — a full clear on every resize avoids that.
+		cmds := []tea.Cmd{tea.ClearScreen}
 		if m.previewVisible() {
-			_ = thumb.Clear()
-			m.previewedID = "" // force a redraw at the new size/position below
 			if v, ok := m.selectedVideo(); ok {
-				return m, m.showThumbnailCmd(v)
+				cmds = append(cmds, m.showThumbnailCmd(v))
 			}
 		}
-		return m, nil
+		return m, tea.Batch(cmds...)
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -1887,7 +1924,7 @@ func (m Model) View() string {
 	case m.showLoginHelp:
 		listContent.WriteString(m.loginHelpContent(listWidth - 2))
 	case m.activeTab == tabSearch && !m.everSearched && len(m.list.Items()) == 0:
-		listContent.WriteString(m.welcomeContent(listWidth - 2))
+		listContent.WriteString(m.welcomeContent(listWidth-2, panelH-4))
 	case !m.loggedIn && (m.activeTab == tabHome || m.activeTab == tabPlaylists || m.activeTab == tabLiked) && len(m.list.Items()) == 0:
 		listContent.WriteString(m.notLoggedInContent(listWidth - 2))
 	default:
