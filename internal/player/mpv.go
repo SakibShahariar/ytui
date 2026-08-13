@@ -129,6 +129,46 @@ func (p *Player) VolumeAdjust(delta int) error {
 	return p.sendCommand("add", "volume", delta)
 }
 
+// Duration returns the total length of the current file in seconds.
+func (p *Player) Duration() (float64, error) {
+	data, err := p.GetProperty("duration")
+	if err != nil {
+		return 0, err
+	}
+	d, ok := data.(float64)
+	if !ok {
+		return 0, fmt.Errorf("unexpected duration type from mpv")
+	}
+	return d, nil
+}
+
+// Volume returns the current volume level (0-100, can exceed 100 if
+// amplified above the default).
+func (p *Player) Volume() (float64, error) {
+	data, err := p.GetProperty("volume")
+	if err != nil {
+		return 0, err
+	}
+	v, ok := data.(float64)
+	if !ok {
+		return 0, fmt.Errorf("unexpected volume type from mpv")
+	}
+	return v, nil
+}
+
+// IsPaused reports whether playback is currently paused.
+func (p *Player) IsPaused() (bool, error) {
+	data, err := p.GetProperty("pause")
+	if err != nil {
+		return false, err
+	}
+	paused, ok := data.(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected pause type from mpv")
+	}
+	return paused, nil
+}
+
 // Quit stops mpv and cleans up the IPC connection/socket.
 func (p *Player) Quit() error {
 	if p.conn != nil {

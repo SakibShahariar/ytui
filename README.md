@@ -46,6 +46,7 @@ typing.
 | `ctrl+w`           | add the selected video to Watch Later            |
 | `ctrl+p`           | pause/resume current playback                    |
 | `[` `]`            | seek -10s / +10s                                 |
+| `-` `=`            | volume down / up                                 |
 | `ctrl+a`           | toggle audio-only mode for the next play         |
 | `ctrl+t`           | toggle the thumbnail preview panel               |
 | `ctrl+d`           | open download options (quality/subs/thumbnail) for the selected video — or cancel it, from the Downloads tab |
@@ -106,6 +107,40 @@ account.
 
 Shows your playlists at the top level; press `enter` on one to see its
 videos, `esc` to go back to the playlist list.
+
+## Now Playing bar
+
+While something's playing, the footer shows a live 2-line bar instead of a
+plain status message: title, mode (video/audio), and volume on the first
+line; a real progress bar with elapsed/total time on the second. Updates
+once per second by querying mpv directly (position, duration, volume,
+pause state).
+
+## Config file
+
+`~/.config/ytui/config.json` — optional, created and edited by hand (no
+in-app editor for it yet). All fields are optional; anything unset uses
+the built-in default.
+
+```json
+{
+  "download_dir": "/home/you/Videos/ytui",
+  "default_quality": "1080p",
+  "default_cookies_browser": "firefox",
+  "default_audio_only": false
+}
+```
+
+- `download_dir` — where `ctrl+d` downloads are saved. Default: `~/Downloads/ytui`.
+- `default_quality` — pre-selects a row in the download options picker.
+  Must match one of the picker's labels exactly: `"Best quality (video+audio)"`,
+  `"1080p"`, `"720p"`, `"480p"`, `"Audio only (mp3)"`, `"Audio only (opus)"`.
+  Default: best quality.
+- `default_cookies_browser` — overrides the picker's browser
+  auto-detection (`"firefox"`, `"chrome"`, `"chromium"`, `"brave"`, or
+  `"edge"`). Default: auto-detected from what's installed.
+- `default_audio_only` — starting state of audio-only playback mode
+  (still toggleable in-session with `ctrl+a`). Default: `false`.
 
 ## Thumbnail previews (Kitty terminal only)
 

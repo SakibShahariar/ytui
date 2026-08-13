@@ -26,6 +26,7 @@ import (
 	"github.com/rivo/uniseg"
 
 	"ytui/internal/auth"
+	"ytui/internal/config"
 	"ytui/internal/downloader"
 	"ytui/internal/player"
 	"ytui/internal/store"
@@ -111,6 +112,34 @@ func detectDefaultCookieBrowser() int {
 	return 0
 }
 
+// defaultCookieBrowserIndex prefers an explicit config.json override over
+// auto-detection, since the person telling us directly beats us guessing.
+func (m Model) defaultCookieBrowserIndex() int {
+	if m.cfg.DefaultCookiesBrowser != "" {
+		for i, v := range downloadCookieBrowserValues {
+			if v == m.cfg.DefaultCookiesBrowser {
+				return i
+			}
+		}
+	}
+	return detectDefaultCookieBrowser()
+}
+
+// defaultQualityIndex looks up a config-specified quality label (e.g.
+// "1080p") among the picker's presets, falling back to "Best quality" (0)
+// if unset or unrecognized.
+func defaultQualityIndex(label string) int {
+	if label == "" {
+		return 0
+	}
+	for i, q := range downloadQualities {
+		if q.Label == label {
+			return i
+		}
+	}
+	return 0
+}
+
 // downloadCookieBrowserLabels annotates whichever entry was auto-detected,
 // so it's clear in the UI *why* that one's pre-selected rather than it
 // looking like an arbitrary default.
@@ -133,8 +162,20 @@ func downloadPickerRows() int {
 // Header = title + tabs + divider. Footer = status line + mode bar.
 const (
 	headerLines = 3
-	footerLines = 2
 )
+
+// footerLines returns how many lines the footer currently occupies: the
+// mode/help bar, plus either the richer 2-line Now Playing bar (title +
+// progress) when something's playing, or a single status/error line
+// otherwise. Dynamic rather than a fixed constant so panelHeight() shrinks
+// the content panel appropriately instead of the Now Playing bar
+// overflowing past what was budgeted for it.
+func (m Model) footerLines() int {
+	if m.nowPlaying != nil {
+		return 3
+	}
+	return 2
+}
 
 // The preview panel's image now scales with the actual panel size (which
 // itself scales with the terminal), within sane bounds so it doesn't
@@ -429,7 +470,7 @@ func (m Model) downloadPickerContent(width int) string {
 	}
 	lines = append(lines, row(qCount+1, thumbBox, "Embed thumbnail"))
 
-	cookieLabel := "Cookies from browser: " + downloadCookieBrowserLabels(detectDefaultCookieBrowser())[m.downloadPickerCookies]
+	cookieLabel := "Cookies from browser: " + downloadCookieBrowserLabels(m.defaultCookieBrowserIndex())[m.downloadPickerCookies]
 	lines = append(lines, row(qCount+2, "⟳", cookieLabel))
 
 	lines = append(lines, "")
@@ -569,6 +610,7 @@ type playbackStartedMsg struct {
 }
 type thumbShownMsg struct{ id string }
 type positionTickMsg struct{}
+type nowPlayingTickMsg struct{}
 type downloadsTickMsg struct{}
 type thumbErrMsg struct{ err error }
 
@@ -606,6 +648,7 @@ type likedLoadedMsg struct {
 // Model is the top-level Bubbletea model.
 type Model struct {
 	store *store.Store
+	cfg   config.Config
 
 	activeTab   tab
 	inputMode   bool // true = typing in the search box; false = list navigation
@@ -623,6 +666,11 @@ type Model struct {
 	nowPlaying *player.Player
 	playingVid *ytdlp.Video
 	audioOnly  bool
+
+	npPos    float64
+	npDur    float64
+	npVol    float64
+	npPaused bool
 
 	previewEnabled bool
 	previewedID    string // avoid redrawing the same thumbnail every keystroke
@@ -693,7 +741,7 @@ func New(s *store.Store) Model {
 
 	delegate := ytDelegate{}
 
-	l := list.New(nil, delegate, defaultWidth, defaultHeight-headerLines-footerLines)
+	l := list.New(nil, delegate, defaultWidth, defaultHeight-headerLines-2)
 	l.Title = "Results"
 	l.Styles.Title = lipgloss.NewStyle().Background(ctpMauve).Foreground(ctpBase).Bold(true).Padding(0, 1)
 	l.SetShowStatusBar(false)
@@ -703,10 +751,12 @@ func New(s *store.Store) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
-	dl, _ := downloader.New("") // best-effort; nil is handled gracefully wherever it's used
+	cfg := config.Load()
+	dl, _ := downloader.New(cfg.DownloadDir) // best-effort; nil is handled gracefully wherever it's used
 
 	m := Model{
 		store:          s,
+		cfg:            cfg,
 		activeTab:      tabSearch,
 		inputMode:      true,
 		searchInput:    ti,
@@ -717,6 +767,7 @@ func New(s *store.Store) Model {
 		height:         defaultHeight,
 		previewEnabled: thumb.Supported(), // auto-on in Kitty; press 't' to disable if it glitches
 		downloads:      dl,
+		audioOnly:      cfg.DefaultAudioOnly,
 	}
 	m.applyListSize()
 	return m
@@ -757,6 +808,16 @@ func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
 func positionTickCmd() tea.Cmd {
 	return tea.Tick(20*time.Second, func(time.Time) tea.Msg {
 		return positionTickMsg{}
+	})
+}
+
+// nowPlayingTickCmd drives the live Now Playing bar (position, duration,
+// volume, pause state). Ticks much faster than positionTickCmd since a
+// progress bar needs to feel live, whereas resume-position only needs
+// occasional saves.
+func nowPlayingTickCmd() tea.Cmd {
+	return tea.Tick(1*time.Second, func(time.Time) tea.Msg {
+		return nowPlayingTickMsg{}
 	})
 }
 
@@ -935,7 +996,7 @@ func (m Model) previewImageRegion() (col, row, cols, rows int) {
 // all available vertical space between the header and footer, matching
 // the "everything visible, fixed position" multi-panel convention.
 func (m Model) panelHeight() int {
-	h := m.height - headerLines - footerLines - 1
+	h := m.height - headerLines - m.footerLines() - 1
 	if h < 5 {
 		h = 5
 	}
@@ -1218,10 +1279,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errMsg = ""
 		}
 		m.nowPlaying = msg.p
+		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 		if msg.err == nil && msg.p != nil {
-			return m, positionTickCmd()
+			return m, tea.Batch(positionTickCmd(), nowPlayingTickCmd())
 		}
 		return m, nil
+
+	case nowPlayingTickMsg:
+		if m.nowPlaying == nil {
+			return m, nil // playback ended/stopped since the last tick — don't reschedule
+		}
+		if pos, err := m.nowPlaying.Position(); err == nil {
+			m.npPos = pos
+		}
+		if dur, err := m.nowPlaying.Duration(); err == nil {
+			m.npDur = dur
+		}
+		if vol, err := m.nowPlaying.Volume(); err == nil {
+			m.npVol = vol
+		}
+		if paused, err := m.nowPlaying.IsPaused(); err == nil {
+			m.npPaused = paused
+		}
+		return m, nowPlayingTickCmd()
 
 	case positionTickMsg:
 		if m.nowPlaying == nil {
@@ -1662,10 +1742,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.downloadPicker = true
 			m.downloadPickerVideo = &v
 			m.downloadPickerCursor = 0
-			m.downloadPickerQuality = 0
+			m.downloadPickerQuality = defaultQualityIndex(m.cfg.DefaultQuality)
 			m.downloadPickerSubs = false
 			m.downloadPickerThumb = false
-			m.downloadPickerCookies = detectDefaultCookieBrowser()
+			m.downloadPickerCookies = m.defaultCookieBrowserIndex()
 		}
 		return m, nil
 
@@ -1684,12 +1764,23 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			_ = m.nowPlaying.SeekRelative(10)
 		}
 		return m, nil
+	case "-":
+		if m.nowPlaying != nil {
+			_ = m.nowPlaying.VolumeAdjust(-5)
+		}
+		return m, nil
+	case "=":
+		if m.nowPlaying != nil {
+			_ = m.nowPlaying.VolumeAdjust(5)
+		}
+		return m, nil
 	case "ctrl+x":
 		if m.nowPlaying != nil {
 			m.saveResumePosition()
 			_ = m.nowPlaying.Quit()
 			m.nowPlaying = nil
 			m.playingVid = nil
+			m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 			m.statusMsg = "playback stopped"
 		}
 		return m, nil
@@ -1792,7 +1883,7 @@ func (m Model) contextualHelp() string {
 	}
 
 	if m.nowPlaying != nil {
-		parts = append(parts, "^p: pause", "[ ]: seek", "^x: stop")
+		parts = append(parts, "^p: pause", "[ ]: seek", "-=: volume", "^x: stop")
 	}
 
 	parts = append(parts, "^a: audio")
@@ -1862,6 +1953,12 @@ func (m Model) saveResumePosition() {
 func (m Model) playSelected() (tea.Model, tea.Cmd) {
 	v, ok := m.selectedVideo()
 	if !ok {
+		item := m.list.SelectedItem()
+		if item == nil {
+			m.errMsg = "diagnostic: no item selected (list.SelectedItem() returned nil)"
+		} else {
+			m.errMsg = fmt.Sprintf("diagnostic: selected item isn't a playable video (type %T)", item)
+		}
 		return m, nil
 	}
 	if m.nowPlaying != nil {
@@ -2077,17 +2174,54 @@ func (m Model) View() string {
 
 	if m.errMsg != "" {
 		b.WriteString("\n" + errorStyle.Render("error: "+m.errMsg))
-	} else if m.statusMsg != "" || m.playingVid != nil {
-		status := m.statusMsg
-		if m.playingVid != nil {
-			mode := "video"
-			if m.audioOnly {
-				mode = "audio"
-			}
-			status = fmt.Sprintf("▶ playing (%s): %s", mode, m.playingVid.Title)
-		}
-		b.WriteString("\n" + dividerStyle.Render(status))
+	} else if m.nowPlaying != nil {
+		b.WriteString("\n" + m.nowPlayingBar())
+	} else if m.statusMsg != "" {
+		b.WriteString("\n" + dividerStyle.Render(m.statusMsg))
 	}
 
 	return b.String()
+}
+
+// nowPlayingBar renders the 2-line "now playing" display: title + mode +
+// volume on the first line, a progress bar with elapsed/total time on the
+// second. Replaces what used to be a single line of plain status text.
+func (m Model) nowPlayingBar() string {
+	playIcon := "▶"
+	if m.npPaused {
+		playIcon = "⏸"
+	}
+	mode := "video"
+	if m.audioOnly {
+		mode = "audio"
+	}
+	title := ""
+	if m.playingVid != nil {
+		title = m.playingVid.Title
+	}
+	volPct := int(m.npVol)
+	titleLine := lipgloss.NewStyle().Foreground(ctpMauve).Bold(true).Render(playIcon+" ") +
+		lipgloss.NewStyle().Foreground(ctpText).Render(truncate(title, m.width-24)) +
+		lipgloss.NewStyle().Foreground(ctpOverlay1).Render(fmt.Sprintf("  (%s)", mode))
+	volLine := lipgloss.NewStyle().Foreground(ctpSubtext0).Render(fmt.Sprintf("🔊 %d%%", volPct))
+	titleRow := lipgloss.JoinHorizontal(lipgloss.Top,
+		lipgloss.NewStyle().Width(m.width-lipgloss.Width(volLine)).Render(titleLine),
+		volLine,
+	)
+
+	bar := progressBar(percentOf(m.npPos, m.npDur), 30)
+	timeStr := fmt.Sprintf("%s / %s", formatDuration(m.npPos), formatDuration(m.npDur))
+	progressRow := lipgloss.NewStyle().Foreground(ctpLavender).Render(bar) + "  " +
+		lipgloss.NewStyle().Foreground(ctpSubtext0).Render(timeStr)
+
+	return titleRow + "\n" + progressRow
+}
+
+// percentOf is a small guard against divide-by-zero before mpv has
+// reported a duration yet (right after playback starts).
+func percentOf(pos, dur float64) float64 {
+	if dur <= 0 {
+		return 0
+	}
+	return pos / dur * 100
 }
