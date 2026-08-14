@@ -22,6 +22,7 @@ type Video struct {
 	ViewCount   int64
 	URL         string
 	Thumbnail   string
+	Description string    // only populated by GetDescription — search results don't include it
 	PublishedAt time.Time // zero value if unknown (e.g. yt-dlp search results don't provide this)
 }
 
@@ -85,6 +86,35 @@ func checkInstalled() error {
 		return fmt.Errorf("yt-dlp not found on PATH — install it with: sudo dnf install yt-dlp")
 	}
 	return nil
+}
+
+// GetDescription fetches the full description for a single video. This is
+// a real (non-flat) metadata fetch — slower than search, since it hits the
+// actual video page rather than just search-result stubs — so it's only
+// used for the currently-playing video, not for every list item.
+func GetDescription(videoURL string) (string, error) {
+	if err := checkInstalled(); err != nil {
+		return "", err
+	}
+	cmd := exec.Command(binaryName,
+		"--dump-json",
+		"--no-warnings",
+		"--skip-download",
+		videoURL,
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("yt-dlp metadata fetch failed: %v\n%s", err, stderr.String())
+	}
+	var data struct {
+		Description string `json:"description"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &data); err != nil {
+		return "", fmt.Errorf("parsing yt-dlp metadata: %w", err)
+	}
+	return data.Description, nil
 }
 
 // Search runs `yt-dlp "ytsearchN:query"` and parses the newline-delimited

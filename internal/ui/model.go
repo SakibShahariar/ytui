@@ -39,6 +39,7 @@ type tab int
 
 const (
 	tabSearch tab = iota
+	tabNowPlaying
 	tabHome
 	tabSubscriptions
 	tabPlaylists
@@ -48,7 +49,7 @@ const (
 	tabDownloads
 )
 
-var tabNames = []string{"Search", "Home", "Subs", "Playlists", "Liked", "Watch Later", "History", "Downloads"}
+var tabNames = []string{"Search", "Now Playing", "Home", "Subs", "Playlists", "Liked", "Watch Later", "History", "Downloads"}
 
 // downloadQuality is one row of the ctrl+d quality picker.
 type downloadQuality struct {
@@ -557,6 +558,78 @@ func (m Model) notLoggedInContent(width int) string {
 	)
 	return "\n\n" + msg + "\n" + hint
 }
+
+// nowPlayingContent renders the dedicated Now Playing tab: a big thumbnail
+// (blank lines reserved here, the actual image drawn separately via
+// nowPlayingThumbCmd) followed by title/channel/duration/views and the
+// full description.
+func (m Model) nowPlayingContent(width int) string {
+	if m.nowPlaying == nil || m.playingVid == nil {
+		center := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
+		msg := center.Render(lipgloss.NewStyle().Foreground(ctpOverlay1).Render("nothing playing"))
+		hint := center.Render(lipgloss.NewStyle().Foreground(ctpOverlay0).Render("enter on a video, anywhere, to play it"))
+		return "\n\n" + msg + "\n" + hint
+	}
+
+	v := m.playingVid
+	_, _, _, imgRows := m.nowPlayingImageRegion()
+
+	var b strings.Builder
+	b.WriteString("\n") // blank line before the image area
+	haveImage := thumb.Supported() && m.previewedID == v.ID
+	if haveImage {
+		b.WriteString(strings.Repeat("\n", imgRows))
+	} else {
+		msg := "loading thumbnail…"
+		if !thumb.Supported() {
+			msg = "no preview — Kitty terminal required"
+		}
+		b.WriteString(lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Height(imgRows).
+			Foreground(ctpOverlay0).Render(msg))
+	}
+	b.WriteString("\n\n")
+
+	b.WriteString(lipgloss.NewStyle().Foreground(ctpText).Bold(true).Render(truncate(v.Title, width)))
+	b.WriteString("\n")
+	b.WriteString(dividerStyle.Render(strings.Repeat("─", width)))
+	b.WriteString("\n")
+	details := "📺 " + v.Channel
+	if v.Duration > 0 {
+		details += "  ⏱  " + formatDuration(v.Duration)
+	}
+	if v.ViewCount > 0 {
+		details += "  👁  " + formatViews(v.ViewCount) + " views"
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(ctpSubtext0).Render(truncate(details, width)))
+	b.WriteString("\n\n")
+
+	switch {
+	case m.npDescriptionLoading:
+		b.WriteString(lipgloss.NewStyle().Foreground(ctpOverlay0).Render("loading description…"))
+	case m.npDescription != "":
+		// Everything above this point (blank + image + blank + title +
+		// divider + details + blank) is exactly 7 lines beyond imgRows —
+		// clamp the description to whatever's left instead of letting an
+		// unbounded description overflow past the panel's border.
+		remaining := m.panelHeight() - 2 - (imgRows + 7)
+		if remaining < 1 {
+			remaining = 1
+		}
+		wrapped := lipgloss.NewStyle().Foreground(ctpSubtext1).Width(width).Render(m.npDescription)
+		lines := strings.Split(wrapped, "\n")
+		if len(lines) > remaining {
+			lines = lines[:remaining]
+			if remaining > 0 {
+				lines[remaining-1] = truncate(lines[remaining-1], width-1) + "…"
+			}
+		}
+		b.WriteString(strings.Join(lines, "\n"))
+	default:
+		b.WriteString(lipgloss.NewStyle().Foreground(ctpOverlay0).Render("no description available"))
+	}
+
+	return b.String()
+}
 // Catppuccin Mocha — the most-recognized "modern terminal" palette right
 // now (huge ecosystem: editors, shells, Discord, hundreds of app ports).
 // Named as semantic roles (not raw hex scattered through styles) so the
@@ -611,6 +684,11 @@ type playbackStartedMsg struct {
 type thumbShownMsg struct{ id string }
 type positionTickMsg struct{}
 type nowPlayingTickMsg struct{}
+type videoDescriptionMsg struct {
+	videoID string // guards against a slow fetch for a video the person already skipped past
+	desc    string
+	err     error
+}
 type downloadsTickMsg struct{}
 type thumbErrMsg struct{ err error }
 
@@ -671,6 +749,9 @@ type Model struct {
 	npDur    float64
 	npVol    float64
 	npPaused bool
+
+	npDescription        string
+	npDescriptionLoading bool
 
 	previewEnabled bool
 	previewedID    string // avoid redrawing the same thumbnail every keystroke
@@ -821,6 +902,13 @@ func nowPlayingTickCmd() tea.Cmd {
 	})
 }
 
+func fetchDescriptionCmd(videoID, videoURL string) tea.Cmd {
+	return func() tea.Msg {
+		desc, err := ytdlp.GetDescription(videoURL)
+		return videoDescriptionMsg{videoID: videoID, desc: desc, err: err}
+	}
+}
+
 // downloadsTickCmd drives the live progress bar on the Downloads tab.
 // Ticks fairly often (progress should feel live) but only while something
 // is actually queued/downloading — see the downloadsTickMsg handler.
@@ -920,6 +1008,9 @@ func fetchLikedCmd(client *http.Client) tea.Cmd {
 func (m *Model) refreshPreview() tea.Cmd {
 	_ = thumb.Clear()
 	m.previewedID = ""
+	if m.activeTab == tabNowPlaying {
+		return m.nowPlayingThumbCmd()
+	}
 	if !m.previewVisible() {
 		return nil
 	}
@@ -961,6 +1052,66 @@ const (
 	previewHeaderRows = 2 // "Preview" label + blank line
 	previewFooterRows = 7 // blank separator, title (2 lines), divider, channel, duration, views
 )
+
+// nowPlayingInfoRows is how many lines the Now Playing tab's info block
+// (below the thumbnail) reserves: blank, title (2 lines), divider,
+// channel/duration/views, blank, description label, then description text
+// itself gets whatever's left. Kept as a named constant — shared between
+// the region math and the renderer — specifically because mismatched
+// "how many lines does this reserve" constants have been the source of
+// real layout bugs here before (image overlapping text, overflow).
+const nowPlayingInfoRows = 7
+
+// nowPlayingImageRegion computes where the Now Playing tab's (much larger,
+// since it doesn't share space with a results list) thumbnail draws.
+func (m Model) nowPlayingImageRegion() (col, row, cols, rows int) {
+	listWidth, _ := m.paneWidths() // previewVisible() is false for this tab (no list items), so this is the full content width
+	col = 3                        // panel border + padding
+	row = headerLines + 2          // header rows + panel top border + a blank line
+
+	cols = listWidth - 6
+	if cols > 90 {
+		cols = 90 // cap — an enormous thumbnail on an ultrawide monitor looks worse, not better
+	}
+	if cols < 20 {
+		cols = 20
+	}
+
+	rows = int(math.Round(float64(cols) * 9.0 / 32.0)) // 16:9 aspect, terminal cells ~2x taller than wide
+	maxRows := m.panelHeight() - 2 - 2 - nowPlayingInfoRows
+	if rows > maxRows {
+		rows = maxRows
+	}
+	if rows < 4 {
+		rows = 4
+	}
+	return
+}
+
+// nowPlayingThumbCmd draws the currently-playing video's thumbnail into
+// the Now Playing tab. No-op unless that tab is actually active and
+// something's playing.
+func (m Model) nowPlayingThumbCmd() tea.Cmd {
+	if m.activeTab != tabNowPlaying || m.nowPlaying == nil || m.playingVid == nil || m.playingVid.Thumbnail == "" {
+		return nil
+	}
+	if !thumb.Supported() || m.playingVid.ID == m.previewedID {
+		return nil
+	}
+	v := *m.playingVid
+	col, row, cols, rows := m.nowPlayingImageRegion()
+	return func() tea.Msg {
+		path, err := thumb.Download(v.Thumbnail, v.ID)
+		if err != nil {
+			return thumbErrMsg{err}
+		}
+		_ = thumb.Clear()
+		if err := thumb.Show(path, col, row, cols, rows); err != nil {
+			return thumbErrMsg{err}
+		}
+		return thumbShownMsg{id: v.ID}
+	}
+}
 
 func (m Model) previewImageRegion() (col, row, cols, rows int) {
 	listWidth, previewWidth := m.paneWidths()
@@ -1049,6 +1200,8 @@ func (m Model) paneWidths() (listWidth, previewWidth int) {
 
 func (m Model) currentListItems() []list.Item {
 	switch m.activeTab {
+	case tabNowPlaying:
+		return nil
 	case tabDownloads:
 		if m.downloads == nil {
 			return nil
@@ -1280,9 +1433,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.nowPlaying = msg.p
 		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
+		m.npDescription = ""
 		if msg.err == nil && msg.p != nil {
-			return m, tea.Batch(positionTickCmd(), nowPlayingTickCmd())
+			cmds := []tea.Cmd{positionTickCmd(), nowPlayingTickCmd()}
+			if m.playingVid != nil {
+				m.npDescriptionLoading = true
+				cmds = append(cmds, fetchDescriptionCmd(m.playingVid.ID, m.playingVid.URL))
+			}
+			if m.activeTab == tabNowPlaying {
+				cmds = append(cmds, m.refreshPreview())
+			}
+			return m, tea.Batch(cmds...)
 		}
+		return m, nil
+
+	case videoDescriptionMsg:
+		m.npDescriptionLoading = false
+		if msg.err != nil || m.playingVid == nil || m.playingVid.ID != msg.videoID {
+			return m, nil // stale response for a video that's no longer playing, or fetch failed — not worth surfacing as an error
+		}
+		m.npDescription = msg.desc
 		return m, nil
 
 	case nowPlayingTickMsg:
@@ -1781,7 +1951,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.nowPlaying = nil
 			m.playingVid = nil
 			m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
+			m.npDescription = ""
+			m.npDescriptionLoading = false
 			m.statusMsg = "playback stopped"
+			if m.activeTab == tabNowPlaying {
+				return m, m.refreshPreview()
+			}
 		}
 		return m, nil
 	}
@@ -2084,6 +2259,8 @@ func (m Model) View() string {
 		listContent.WriteString(m.downloadPickerContent(listWidth - 2))
 	case m.showLoginHelp:
 		listContent.WriteString(m.loginHelpContent(listWidth - 2))
+	case m.activeTab == tabNowPlaying:
+		listContent.WriteString(m.nowPlayingContent(listWidth - 2))
 	case m.activeTab == tabSearch && !m.everSearched && len(m.list.Items()) == 0:
 		listContent.WriteString(m.welcomeContent(listWidth-2, panelH-4))
 	case !m.loggedIn && (m.activeTab == tabHome || m.activeTab == tabPlaylists || m.activeTab == tabLiked) && len(m.list.Items()) == 0:
