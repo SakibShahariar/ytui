@@ -14,16 +14,14 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"time"
 )
 
-const socketPath = "/tmp/ytui-mpv.sock"
-
 // Player wraps a running mpv process and its IPC connection.
 type Player struct {
-	cmd  *exec.Cmd
-	conn net.Conn
+	cmd        *exec.Cmd
+	conn       net.Conn
+	socketPath string
 }
 
 // mpvCommand is the shape mpv's IPC protocol expects for sending commands.
@@ -38,8 +36,13 @@ func Play(videoURL string, audioOnly bool) (*Player, error) {
 		return nil, fmt.Errorf("mpv not found on PATH — install it with: sudo dnf install mpv")
 	}
 
-	// Clean up any stale socket from a previous crashed session.
-	_ = os.Remove(socketPath)
+	// Unique per call (PID + nanosecond timestamp), not a fixed shared
+	// path — a fixed path meant two Play() calls close together (e.g.
+	// starting a new video right as the old one is being stopped) could
+	// race for the same socket file before the old mpv fully released it,
+	// causing playback to intermittently just silently fail to connect.
+	socketPath := fmt.Sprintf("/tmp/ytui-mpv-%d-%d.sock", os.Getpid(), time.Now().UnixNano())
+	_ = os.Remove(socketPath) // belt-and-suspenders; shouldn't exist given the above
 
 	args := []string{
 		"--no-terminal",
@@ -73,10 +76,10 @@ func Play(videoURL string, audioOnly bool) (*Player, error) {
 	if err != nil {
 		// mpv is still playing even without IPC control, so don't kill it —
 		// just report degraded (no in-TUI control) mode to the caller.
-		return &Player{cmd: cmd}, fmt.Errorf("mpv started but IPC connect failed (no in-TUI control): %w", err)
+		return &Player{cmd: cmd, socketPath: socketPath}, fmt.Errorf("mpv started but IPC connect failed (no in-TUI control): %w", err)
 	}
 
-	return &Player{cmd: cmd, conn: conn}, nil
+	return &Player{cmd: cmd, conn: conn, socketPath: socketPath}, nil
 }
 
 // sendCommand sends a raw mpv IPC command, e.g. []interface{}{"set_property", "pause", true}.
@@ -185,7 +188,9 @@ func (p *Player) Quit() error {
 			_ = p.cmd.Process.Kill()
 		}
 	}
-	_ = os.Remove(socketPath)
+	if p.socketPath != "" {
+		_ = os.Remove(p.socketPath)
+	}
 	return nil
 }
 
@@ -229,9 +234,4 @@ func (p *Player) GetProperty(name string) (interface{}, error) {
 		return nil, fmt.Errorf("mpv error: %s", resp.Error)
 	}
 	return resp.Data, nil
-}
-
-// SocketPath exposes where the IPC socket lives, mostly for debugging.
-func SocketPath() string {
-	return filepath.Clean(socketPath)
 }

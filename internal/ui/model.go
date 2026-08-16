@@ -51,6 +51,44 @@ const (
 
 var tabNames = []string{"Search", "Now Playing", "Home", "Subs", "Playlists", "Liked", "Watch Later", "History", "Downloads"}
 
+// visibleTabs returns which tabs currently show in the tab bar. Now
+// Playing only appears while something's actually playing — showing an
+// empty "Now Playing" tab all the time would just be dead weight in the
+// tab bar for the (usual) case where nothing's playing.
+func (m Model) visibleTabs() []tab {
+	out := make([]tab, 0, len(tabNames))
+	for i := range tabNames {
+		t := tab(i)
+		if t == tabNowPlaying && m.nowPlaying == nil {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
+}
+
+// nextTab/prevTab cycle among only the currently visible tabs, so tab/
+// shift+tab never lands on a hidden Now Playing tab.
+func (m Model) nextTab() tab {
+	vis := m.visibleTabs()
+	for i, t := range vis {
+		if t == m.activeTab {
+			return vis[(i+1)%len(vis)]
+		}
+	}
+	return tabSearch
+}
+
+func (m Model) prevTab() tab {
+	vis := m.visibleTabs()
+	for i, t := range vis {
+		if t == m.activeTab {
+			return vis[(i-1+len(vis))%len(vis)]
+		}
+	}
+	return tabSearch
+}
+
 // downloadQuality is one row of the ctrl+d quality picker.
 type downloadQuality struct {
 	Label        string
@@ -1435,7 +1473,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 		m.npDescription = ""
 		if msg.err == nil && msg.p != nil {
-			cmds := []tea.Cmd{positionTickCmd(), nowPlayingTickCmd()}
+			cmds := []tea.Cmd{tea.ClearScreen, positionTickCmd(), nowPlayingTickCmd()}
 			if m.playingVid != nil {
 				m.npDescriptionLoading = true
 				cmds = append(cmds, fetchDescriptionCmd(m.playingVid.ID, m.playingVid.URL))
@@ -1445,7 +1483,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(cmds...)
 		}
-		return m, nil
+		return m, tea.ClearScreen
 
 	case videoDescriptionMsg:
 		m.npDescriptionLoading = false
@@ -1459,9 +1497,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.nowPlaying == nil {
 			return m, nil // playback ended/stopped since the last tick — don't reschedule
 		}
-		if pos, err := m.nowPlaying.Position(); err == nil {
-			m.npPos = pos
+		pos, err := m.nowPlaying.Position()
+		if err != nil {
+			// mpv is gone — the video finished, or it was closed some way
+			// other than our own ctrl+x (its own quit key, closing its
+			// window, a crash). Clean up as if we'd stopped it ourselves.
+			return m.clearNowPlaying()
 		}
+		m.npPos = pos
 		if dur, err := m.nowPlaying.Duration(); err == nil {
 			m.npDur = dur
 		}
@@ -1752,13 +1795,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		m.searchInput.Blur()
 		m.inputMode = false
-		m.activeTab = (m.activeTab + 1) % tab(len(tabNames))
+		m.activeTab = m.nextTab()
 		m.refreshList()
 		return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 	case "shift+tab":
 		m.searchInput.Blur()
 		m.inputMode = false
-		m.activeTab = (m.activeTab - 1 + tab(len(tabNames))) % tab(len(tabNames))
+		m.activeTab = m.prevTab()
 		m.refreshList()
 		return m, tea.Batch(tea.ClearScreen, m.maybeFetchForTab(), m.refreshPreview())
 
@@ -1948,15 +1991,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.nowPlaying != nil {
 			m.saveResumePosition()
 			_ = m.nowPlaying.Quit()
-			m.nowPlaying = nil
-			m.playingVid = nil
-			m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
-			m.npDescription = ""
-			m.npDescriptionLoading = false
 			m.statusMsg = "playback stopped"
-			if m.activeTab == tabNowPlaying {
-				return m, m.refreshPreview()
-			}
+			return m.clearNowPlaying()
 		}
 		return m, nil
 	}
@@ -2057,17 +2093,16 @@ func (m Model) contextualHelp() string {
 		}
 	}
 
-	if m.nowPlaying != nil {
-		parts = append(parts, "^p: pause", "[ ]: seek", "-=: volume", "^x: stop")
-	}
-
 	parts = append(parts, "^a: audio")
 
 	if hasItems && thumb.Supported() {
 		parts = append(parts, "^t: thumbs")
 	}
 
-	parts = append(parts, "^l: login", "^c: quit")
+	if !m.loggedIn {
+		parts = append(parts, "^l: login")
+	}
+	parts = append(parts, "^c: quit")
 
 	return strings.Join(parts, " · ")
 }
@@ -2128,12 +2163,6 @@ func (m Model) saveResumePosition() {
 func (m Model) playSelected() (tea.Model, tea.Cmd) {
 	v, ok := m.selectedVideo()
 	if !ok {
-		item := m.list.SelectedItem()
-		if item == nil {
-			m.errMsg = "diagnostic: no item selected (list.SelectedItem() returned nil)"
-		} else {
-			m.errMsg = fmt.Sprintf("diagnostic: selected item isn't a playable video (type %T)", item)
-		}
 		return m, nil
 	}
 	if m.nowPlaying != nil {
@@ -2150,6 +2179,25 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 	}
 	_ = m.store.AddHistory(store.HistoryEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail, PositionS: resumePos})
 	return m, startPlayback(v.URL, m.audioOnly, resumePos)
+}
+
+// clearNowPlaying resets all Now Playing state — used both when we stop
+// playback ourselves (ctrl+x) and when the 1s poll detects mpv is gone
+// (video ended, closed some other way). If the person is currently
+// viewing the Now Playing tab, navigates them away from it since it'd
+// otherwise show stale/empty content while still being "selected".
+func (m Model) clearNowPlaying() (tea.Model, tea.Cmd) {
+	m.nowPlaying = nil
+	m.playingVid = nil
+	m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
+	m.npDescription = ""
+	m.npDescriptionLoading = false
+	if m.activeTab == tabNowPlaying {
+		m.activeTab = tabSearch
+		m.refreshList()
+		return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+	}
+	return m, tea.ClearScreen
 }
 
 func (m Model) subscribeToSelected() (tea.Model, tea.Cmd) {
@@ -2228,11 +2276,11 @@ func (m Model) View() string {
 	b.WriteString("\n")
 
 	var tabsLine strings.Builder
-	for i, name := range tabNames {
-		if tab(i) == m.activeTab {
-			tabsLine.WriteString(activeTabStyle.Render(name))
+	for _, t := range m.visibleTabs() {
+		if t == m.activeTab {
+			tabsLine.WriteString(activeTabStyle.Render(tabNames[t]))
 		} else {
-			tabsLine.WriteString(inactiveTabStyle.Render(name))
+			tabsLine.WriteString(inactiveTabStyle.Render(tabNames[t]))
 		}
 	}
 	b.WriteString(tabsLine.String())
