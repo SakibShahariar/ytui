@@ -8,7 +8,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -518,86 +517,6 @@ func downloadsTickCmd() tea.Cmd {
 	return tea.Tick(500*time.Millisecond, func(time.Time) tea.Msg {
 		return downloadsTickMsg{}
 	})
-}
-
-func loginCmd() tea.Cmd {
-	return func() tea.Msg {
-		err := auth.Login(context.Background())
-		return loginResultMsg{err: err}
-	}
-}
-
-func importClientSecretsRawCmd(jsonText string) tea.Cmd {
-	return func() tea.Msg {
-		err := auth.ImportClientSecretsRaw(jsonText)
-		return clientSecretsImportedMsg{err: err}
-	}
-}
-
-func importClientCredentialsCmd(clientID, clientSecret string) tea.Cmd {
-	return func() tea.Msg {
-		err := auth.ImportClientCredentials(clientID, clientSecret)
-		return clientSecretsImportedMsg{err: err}
-	}
-}
-
-func authClientCmd() tea.Cmd {
-	return func() tea.Msg {
-		client, err := auth.Client(context.Background())
-		return authClientReadyMsg{client: client, err: err}
-	}
-}
-
-func fetchSubsCmd(client *http.Client) tea.Cmd {
-	return func() tea.Msg {
-		subs, err := ytapi.Subscriptions(client)
-		return subsLoadedMsg{subs: subs, err: err}
-	}
-}
-
-func fetchPlaylistsCmd(client *http.Client) tea.Cmd {
-	return func() tea.Msg {
-		pls, err := ytapi.Playlists(client)
-		return playlistsLoadedMsg{playlists: pls, err: err}
-	}
-}
-
-func fetchPlaylistVideosCmd(client *http.Client, playlistID string) tea.Cmd {
-	return func() tea.Msg {
-		videos, err := ytapi.PlaylistVideos(client, playlistID)
-		return playlistVideosLoadedMsg{videos: videos, err: err}
-	}
-}
-
-func fetchChannelVideosCmd(client *http.Client, channelID string) tea.Cmd {
-	return func() tea.Msg {
-		videos, err := ytapi.ChannelVideos(client, channelID)
-		return channelVideosLoadedMsg{videos: videos, err: err}
-	}
-}
-
-func fetchHomeFeedCmd(client *http.Client, subs []ytapi.Subscription) tea.Cmd {
-	return func() tea.Msg {
-		var err error
-		if len(subs) == 0 {
-			subs, err = ytapi.Subscriptions(client)
-			if err != nil {
-				return homeFeedLoadedMsg{err: err}
-			}
-		}
-		if len(subs) == 0 {
-			return homeFeedLoadedMsg{videos: nil}
-		}
-		videos, failed, err := ytapi.HomeFeed(client, subs, 5)
-		return homeFeedLoadedMsg{videos: videos, failed: failed, err: err}
-	}
-}
-
-func fetchLikedCmd(client *http.Client) tea.Cmd {
-	return func() tea.Msg {
-		videos, err := ytapi.LikedVideos(client)
-		return likedLoadedMsg{videos: videos, err: err}
-	}
 }
 
 // refreshPreview clears any currently-drawn thumbnail and redraws one for
