@@ -168,7 +168,7 @@ TUI frameworks — not a bug we can fully eliminate, only minimize.
 - **Search & metadata**: shells out to `yt-dlp --dump-json --flat-playlist`
   against `ytsearchN:query` — fast, no API key needed.
 - **Playback**: launches `mpv` with `--input-ipc-server` and talks to it
-  over a Unix socket at `/tmp/ytui-mpv.sock`, so pause/seek/quit happen
+  over a unique Unix socket under `/tmp/ytui-mpv-*.sock`, so pause/seek/quit happen
   without leaving the TUI. mpv's own yt-dlp hook resolves the actual
   stream, so we just hand it the watch-page URL.
 - **Local data**: subscriptions / history / watch-later are stored as
