@@ -1508,9 +1508,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			// mpv is gone — the video finished, or it was closed some way
 			// other than our own ctrl+x (its own quit key, closing its
-			// window, a crash). Clean up as if we'd stopped it ourselves.
+			// window, a crash). Save the last UI-observed position before
+			// clearing playback state; the fresh IPC query has already failed.
+			m.saveResumePosition()
 			return m.clearNowPlaying()
-		}
+	}
 		m.npPos = pos
 		if dur, err := m.nowPlaying.Duration(); err == nil {
 			m.npDur = dur
