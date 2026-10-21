@@ -23,3 +23,20 @@ func TestDestinationRegex(t *testing.T) {
 		t.Errorf("destination = %q, want full path", match[1])
 	}
 }
+
+func TestRunDoesNotRestartCanceledDownload(t *testing.T) {
+	d := &Download{VideoID: "video", Status: StatusCanceled}
+	m := &Manager{
+		byID:    map[string]*Download{"video": d},
+		order:   []string{"video"},
+		destDir: t.TempDir(),
+	}
+
+	m.run(d)
+	if d.Status != StatusCanceled {
+		t.Errorf("status after run = %v, want canceled", d.Status)
+	}
+	if d.cmd != nil {
+		t.Error("canceled download unexpectedly created a process")
+	}
+}
