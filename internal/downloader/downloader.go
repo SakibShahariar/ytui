@@ -154,7 +154,13 @@ var destRe = regexp.MustCompile(`\[download\]\s+Destination:\s+(.+)`)
 var alreadyDoneRe = regexp.MustCompile(`has already been downloaded`)
 
 func (m *Manager) run(d *Download) {
-	m.setStatus(d.VideoID, StatusDownloading, nil)
+	m.mu.Lock()
+	if d.Status == StatusCanceled {
+		m.mu.Unlock()
+		return
+	}
+	d.Status = StatusDownloading
+	m.mu.Unlock()
 
 	outputTemplate := filepath.Join(m.destDir, "%(title).100s [%(id)s].%(ext)s")
 	args := []string{"--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate}
@@ -191,12 +197,20 @@ func (m *Manager) run(d *Download) {
 	}
 	cmd.Stderr = cmd.Stdout // merge — yt-dlp's progress line format is the same either way
 
+	// Serialize process startup with Cancel. Otherwise a cancel between
+	// assigning d.cmd and cmd.Start (or before d.cmd is assigned) can leave
+	// a canceled queue item running in the background.
 	m.mu.Lock()
+	if d.Status == StatusCanceled {
+		m.mu.Unlock()
+		_ = stdout.Close()
+		return
+	}
 	d.cmd = cmd
+	startErr := cmd.Start()
 	m.mu.Unlock()
-
-	if err := cmd.Start(); err != nil {
-		m.setError(d.VideoID, fmt.Errorf("couldn't start yt-dlp: %w", err))
+	if startErr != nil {
+		m.setError(d.VideoID, fmt.Errorf("couldn't start yt-dlp: %w", startErr))
 		return
 	}
 
