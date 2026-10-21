@@ -50,6 +50,8 @@ typing.
 | `ctrl+a`           | toggle audio-only mode for the next play         |
 | `ctrl+t`           | toggle the thumbnail preview panel               |
 | `ctrl+d`           | open download options (quality/subs/thumbnail) for the selected video — or cancel it, from the Downloads tab |
+| `ctrl+o`           | switch the Downloads tab between the live queue and saved offline files |
+| `delete`            | in Offline Downloads, request deletion of the selected file (press `y` to confirm) |
 | `ctrl+l`           | log in with Google (or log out, if already in)   |
 | `ctrl+x`           | stop current playback                            |
 | `ctrl+c`           | quit, always                                     |
@@ -156,6 +158,15 @@ with owner-only permissions (`0600`).
   `"edge"`). Default: auto-detected from what's installed.
 - `default_audio_only` — starting state of audio-only playback mode
   (still toggleable in-session with `ctrl+a`). Default: `false`.
+
+## Offline downloads
+
+Open the **Downloads** tab and press `ctrl+o` to browse media files already saved
+in the configured `download_dir` (default: `~/Downloads/ytui`). The list includes
+common video and audio formats and sorts newest first. Press `enter` to play a
+file with mpv, or `delete` and then `y` to permanently remove it. Hidden and
+partial files and unsupported file types are not listed. This view is local-only
+and does not require Google login.
 
 ## Thumbnail previews (Kitty terminal only)
 
