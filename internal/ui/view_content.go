@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"ytui/internal/thumb"
 )
 
 func renderLogo() string {
