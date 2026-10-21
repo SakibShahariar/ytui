@@ -110,7 +110,7 @@ func ChannelUploadsPlaylistID(client *http.Client, channelID string) (string, er
 // perChannelLimit caps how many videos we pull per channel (e.g. 5) —
 // getting a full history from every channel just to show the ~30 newest
 // overall would be wasteful.
-func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]ytdlp.Video, error) {
+func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]ytdlp.Video, int, error) {
 	const maxConcurrent = 8
 
 	sem := make(chan struct{}, maxConcurrent)
@@ -118,6 +118,7 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 	var mu sync.Mutex
 	var all []ytdlp.Video
 	var firstErr error
+	failed := 0
 
 	for _, sub := range subs {
 		wg.Add(1)
@@ -129,6 +130,7 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 			playlistID, err := ChannelUploadsPlaylistID(client, channelID)
 			if err != nil {
 				mu.Lock()
+				failed++
 				if firstErr == nil {
 					firstErr = err
 				}
@@ -138,6 +140,7 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 			videos, err := PlaylistVideosLimited(client, playlistID, perChannelLimit)
 			if err != nil {
 				mu.Lock()
+				failed++
 				if firstErr == nil {
 					firstErr = err
 				}
@@ -151,14 +154,13 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 	}
 	wg.Wait()
 
-	if len(all) == 0 && firstErr != nil {
-		return nil, firstErr // every channel failed — surface the error
-	}
-
 	sort.Slice(all, func(i, j int) bool {
 		return all[i].PublishedAt.After(all[j].PublishedAt)
 	})
-	return all, nil
+	if len(all) == 0 && firstErr != nil {
+		return nil, failed, firstErr // every channel failed — surface the error
+	}
+	return all, failed, nil
 }
 
 // Subscriptions fetches all of the user's subscriptions, paginating until
