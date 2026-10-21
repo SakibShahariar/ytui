@@ -93,8 +93,24 @@ func (s *Store) Save() error {
 	if err != nil {
 		return err
 	}
-	tmp := s.path() + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+	// Use a unique temporary file in the same directory so concurrent saves
+	// do not overwrite each other's staging file. Store data includes watch
+	// history and URLs, so keep it private from other local users.
+	tmpFile, err := os.CreateTemp(s.dir, ".data.json-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmp := tmpFile.Name()
+	defer os.Remove(tmp)
+	if err := tmpFile.Chmod(0o600); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
 		return err
 	}
 	return os.Rename(tmp, s.path())
