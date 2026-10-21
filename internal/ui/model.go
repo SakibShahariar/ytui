@@ -750,6 +750,7 @@ type channelVideosLoadedMsg struct {
 }
 type homeFeedLoadedMsg struct {
 	videos []ytdlp.Video
+	failed int
 	err    error
 }
 type likedLoadedMsg struct {
@@ -1030,8 +1031,8 @@ func fetchHomeFeedCmd(client *http.Client, subs []ytapi.Subscription) tea.Cmd {
 		if len(subs) == 0 {
 			return homeFeedLoadedMsg{videos: nil}
 		}
-		videos, err := ytapi.HomeFeed(client, subs, 5)
-		return homeFeedLoadedMsg{videos: videos, err: err}
+		videos, failed, err := ytapi.HomeFeed(client, subs, 5)
+		return homeFeedLoadedMsg{videos: videos, failed: failed, err: err}
 	}
 }
 
@@ -1652,6 +1653,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.errMsg = "home feed: " + msg.err.Error()
 			return m, nil
+		}
+		if msg.failed > 0 {
+			m.statusMsg = fmt.Sprintf("home feed loaded with partial results: %d channel(s) failed", msg.failed)
 		}
 		items := make([]list.Item, 0, len(msg.videos))
 		for _, v := range msg.videos {
