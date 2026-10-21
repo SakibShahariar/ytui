@@ -185,8 +185,8 @@ TUI frameworks — not a bug we can fully eliminate, only minimize.
       `ctrl+d` to queue/cancel)
 - [x] Resume playback position (saved every 20s + on stop/quit, auto-seeks
       back on replay)
-- [ ] Config file (`~/.config/ytui/config.toml`) for default quality,
-      download dir, keybinds
+- [x] Config file (`~/.config/ytui/config.json`) for download defaults
+      (quality, download directory, cookies browser, and audio-only mode)
 - [ ] Desktop notifications via `notify-send` for new uploads (GNOME-native)
 - [ ] Migrate storage to SQLite once query needs grow beyond flat JSON
 - [x] OAuth login to pull real YouTube subscriptions, playlists, and liked
