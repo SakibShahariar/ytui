@@ -339,7 +339,7 @@ func Login(ctx context.Context) error {
 			return
 		}
 		if errMsg := q.Get("error"); errMsg != "" {
-			fmt.Fprintf(w, "<html><body>Login cancelled (%s). You can close this window.</body></html>", errMsg)
+			fmt.Fprint(w, "<html><body>Login cancelled. You can close this window.</body></html>")
 			resultCh <- result{err: fmt.Errorf("login cancelled: %s", errMsg)}
 			return
 		}
