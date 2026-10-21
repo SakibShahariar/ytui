@@ -165,36 +165,12 @@ func Search(query string, limit int) ([]Video, error) {
 	return results, nil
 }
 
-// StreamURL resolves a watch page URL (or video ID) to a direct, playable
-// stream URL that mpv can open. Using -f "bv*+ba/b" asks for best video+audio
-// (falling back to best combined) — mpv can also just take the webpage URL
-// directly since it has native yt-dlp hook support, but resolving explicitly
-// gives us more control (and works even if the user's mpv lacks the hook).
+// StreamURL keeps the watch-page URL intact for mpv's yt-dlp integration.
+// Resolving it here would perform a network request whose result is discarded;
+// mpv must receive the original URL so it can select compatible streams itself.
 func StreamURL(videoURL string) (string, error) {
-	if err := checkInstalled(); err != nil {
-		return "", err
+	if strings.TrimSpace(videoURL) == "" {
+		return "", fmt.Errorf("video URL is empty")
 	}
-	cmd := exec.Command(binaryName,
-		"-f", "bv*+ba/b",
-		"-g", // print final URL(s) only
-		"--no-warnings",
-		videoURL,
-	)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("yt-dlp resolve failed: %v\n%s", err, stderr.String())
-	}
-
-	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
-	if len(lines) == 0 || lines[0] == "" {
-		return "", fmt.Errorf("no stream URL returned for %s", videoURL)
-	}
-	// First line is video stream; mpv can be pointed at just this URL and
-	// will pull audio itself if we instead pass the original watch URL.
-	// Simplest and most robust: just hand mpv the original webpage URL and
-	// let its yt-dlp hook do the work. See player.Play.
 	return videoURL, nil
 }
