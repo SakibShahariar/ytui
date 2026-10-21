@@ -18,6 +18,8 @@ type Video struct {
 	ID          string
 	Title       string
 	Channel     string
+	ChannelID   string
+	ChannelURL  string
 	Duration    float64
 	ViewCount   int64
 	URL         string
@@ -35,6 +37,10 @@ type videoJSON struct {
 	ID         string  `json:"id"`
 	Title      string  `json:"title"`
 	Channel    string  `json:"channel"`
+	ChannelID  string  `json:"channel_id"`
+	ChannelURL string  `json:"channel_url"`
+	UploaderID string  `json:"uploader_id"`
+	UploaderURL string `json:"uploader_url"`
 	Duration   float64 `json:"duration"`
 	ViewCount  int64   `json:"view_count"`
 	URL        string  `json:"webpage_url"`
@@ -47,10 +53,23 @@ type videoJSON struct {
 }
 
 func (raw videoJSON) toVideo() Video {
+	channelURL := raw.ChannelURL
+	if channelURL == "" {
+		channelURL = raw.UploaderURL
+	}
+	channelID := raw.ChannelID
+	if channelID == "" {
+		channelID = raw.UploaderID
+	}
+	if channelID == "" {
+		channelID = channelURL
+	}
 	v := Video{
 		ID:        raw.ID,
 		Title:     raw.Title,
 		Channel:   raw.Channel,
+		ChannelID: channelID,
+		ChannelURL: channelURL,
 		Duration:  raw.Duration,
 		ViewCount: raw.ViewCount,
 		URL:       raw.URL,
