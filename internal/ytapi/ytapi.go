@@ -70,7 +70,12 @@ func get(client *http.Client, endpoint string, params url.Values) (json.RawMessa
 // ID — every channel has one, and it behaves like a normal playlist you
 // can list videos from via PlaylistVideos, giving a "recent uploads" feed
 // for a subscribed channel without needing a separate activities/search call.
+var uploadsPlaylistCache sync.Map
+
 func ChannelUploadsPlaylistID(client *http.Client, channelID string) (string, error) {
+	if cached, ok := uploadsPlaylistCache.Load(channelID); ok {
+		return cached.(string), nil
+	}
 	params := url.Values{
 		"part": {"contentDetails"},
 		"id":   {channelID},
@@ -98,6 +103,10 @@ func ChannelUploadsPlaylistID(client *http.Client, channelID string) (string, er
 	if uploads == "" {
 		return "", fmt.Errorf("channel has no uploads playlist")
 	}
+	// Uploads playlist IDs are stable for a channel. Cache them for this
+	// process so refreshing Home doesn't spend another channels.list quota
+	// unit for every subscription each time.
+	uploadsPlaylistCache.Store(channelID, uploads)
 	return uploads, nil
 }
 
