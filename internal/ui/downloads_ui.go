@@ -1,5 +1,14 @@
 package ui
 
+import (
+	"os"
+	"path/filepath"
+
+	tea "github.com/charmbracelet/bubbletea"
+
+	"ytui/internal/downloader"
+)
+
 func (m Model) downloadDirectory() string {
 	if m.downloads != nil {
 		return m.downloads.DestDir()
@@ -13,15 +22,6 @@ func (m Model) downloadDirectory() string {
 	}
 	return filepath.Join(home, "Downloads", "ytui")
 }
-
-import (
-	"os"
-	"path/filepath"
-
-	tea "github.com/charmbracelet/bubbletea"
-
-	"ytui/internal/downloader"
-)
 
 func (m Model) cancelSelectedDownload() (tea.Model, tea.Cmd) {
 	if item, ok := m.list.SelectedItem().(downloadItem); ok {
@@ -64,4 +64,3 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 	}
 	return m, nil
 }
-
