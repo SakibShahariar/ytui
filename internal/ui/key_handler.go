@@ -29,7 +29,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.offlineDeletePending = nil
 		switch key {
 		case "y":
-			if err := library.Delete(*pending); err != nil {
+			if err := library.Delete(m.downloadDirectory(), *pending); err != nil {
 				m.errMsg = "delete download: " + err.Error()
 			} else {
 				m.errMsg = ""

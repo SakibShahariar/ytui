@@ -55,15 +55,59 @@ func TestScanMissingDirectoryReturnsError(t *testing.T) {
 	}
 }
 
-func TestDeleteRemovesFile(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "video.mp4")
+func TestDeleteRemovesScannedMediaFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "video.mp4")
 	if err := os.WriteFile(path, []byte("video"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(File{Path: path}); err != nil {
+	files, err := Scan(dir)
+	if err != nil || len(files) != 1 {
+		t.Fatalf("Scan() = %v, %v; want one file", files, err)
+	}
+	if err := Delete(dir, files[0]); err != nil {
 		t.Fatalf("Delete() error = %v", err)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatalf("file still exists or stat failed unexpectedly: %v", err)
+	}
+}
+
+func TestDeleteRefusesOutsideDirectory(t *testing.T) {
+	dir := t.TempDir()
+	outside := filepath.Join(t.TempDir(), "important.mp4")
+	if err := os.WriteFile(outside, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(dir, File{Path: outside}); err == nil {
+		t.Fatal("Delete() unexpectedly accepted a path outside dir")
+	}
+	if _, err := os.Stat(outside); err != nil {
+		t.Fatalf("outside file was changed: %v", err)
+	}
+}
+
+func TestDeleteRefusesUnsupportedAndSymlinkFiles(t *testing.T) {
+	dir := t.TempDir()
+	unsupported := filepath.Join(dir, "notes.txt")
+	if err := os.WriteFile(unsupported, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(dir, File{Path: unsupported}); err == nil {
+		t.Fatal("Delete() unexpectedly accepted unsupported extension")
+	}
+	target := filepath.Join(dir, "target.mp4")
+	link := filepath.Join(dir, "link.mp4")
+	if err := os.WriteFile(target, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if err := Delete(dir, File{Path: link}); err == nil {
+		t.Fatal("Delete() unexpectedly accepted symlink")
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("symlink target was changed: %v", err)
 	}
 }

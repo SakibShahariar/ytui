@@ -65,11 +65,36 @@ func Scan(dir string) ([]File, error) {
 	return files, nil
 }
 
-// Delete removes the selected media file. The caller must obtain the path
-// from Scan so this helper cannot accidentally accept arbitrary UI text.
-func Delete(file File) error {
-	if file.Path == "" {
-		return fmt.Errorf("media file path is empty")
+// Delete removes a supported media file directly inside dir. Revalidate the
+// path instead of trusting a caller-provided File: this function is exported
+// and must not turn an accidental or malicious path into arbitrary file deletion.
+func Delete(dir string, file File) error {
+	if strings.TrimSpace(dir) == "" || strings.TrimSpace(file.Path) == "" {
+		return fmt.Errorf("media directory and file path are required")
 	}
-	return os.Remove(file.Path)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("resolve media directory: %w", err)
+	}
+	absPath, err := filepath.Abs(file.Path)
+	if err != nil {
+		return fmt.Errorf("resolve media file: %w", err)
+	}
+	if filepath.Dir(absPath) != absDir {
+		return fmt.Errorf("refusing to delete a file outside the media directory")
+	}
+	if strings.HasPrefix(filepath.Base(absPath), ".") {
+		return fmt.Errorf("refusing to delete a hidden file")
+	}
+	if _, ok := mediaExtensions[strings.ToLower(filepath.Ext(absPath))]; !ok {
+		return fmt.Errorf("refusing to delete an unsupported media file")
+	}
+	info, err := os.Lstat(absPath)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("refusing to delete a non-regular file")
+	}
+	return os.Remove(absPath)
 }
