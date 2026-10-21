@@ -93,13 +93,18 @@ func (m *Manager) DestDir() string { return m.destDir }
 // no duplicate downloads of the same video.
 func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Download {
 	m.mu.Lock()
-	if existing, ok := m.byID[videoID]; ok && existing.Status != StatusError && existing.Status != StatusCanceled {
+	existing, found := m.byID[videoID]
+	if found && existing.Status != StatusError && existing.Status != StatusCanceled {
 		m.mu.Unlock()
 		return existing
 	}
 	d := &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusQueued}
 	m.byID[videoID] = d
-	m.order = append(m.order, videoID)
+	// Retrying a failed/canceled item replaces its entry without adding a
+	// second occurrence to the stable display order.
+	if !found {
+		m.order = append(m.order, videoID)
+	}
 	m.mu.Unlock()
 
 	go m.run(d)
