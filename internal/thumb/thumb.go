@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -31,9 +30,9 @@ func Supported() bool {
 	if os.Getenv("TERM_PROGRAM") == "WezTerm" {
 		return true
 	}
-	if _, err := exec.LookPath("kitty"); err != nil {
-		return false
-	}
+	// The installed Kitty executable says nothing about which terminal is
+	// currently hosting ytui. Only advertise previews when the terminal
+	// identifies itself as supporting the Kitty graphics protocol.
 	return false
 }
 
