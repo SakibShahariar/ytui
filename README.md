@@ -118,9 +118,24 @@ pause state).
 
 ## Config file
 
-`~/.config/ytui/config.json` — optional, created and edited by hand (no
-in-app editor for it yet). All fields are optional; anything unset uses
-the built-in default.
+The optional settings file is stored at `$XDG_CONFIG_HOME/ytui/config.json`
+(`~/.config/ytui/config.json` when `XDG_CONFIG_HOME` is unset). All fields
+are optional; anything unset uses the built-in default.
+
+You can back up or move these settings without copying login credentials or
+personal library data:
+
+```sh
+ytui --export-config ~/ytui-settings.json
+ytui --import-config ~/ytui-settings.json
+```
+
+Export writes the effective settings to the requested file. Import validates
+the JSON and replaces the active settings before launching the app; invalid
+input leaves the current settings unchanged. The exported file contains
+preferences only — OAuth tokens, client credentials, subscriptions, watch
+history, and the watch-later queue are not included. Config files are written
+with owner-only permissions (`0600`).
 
 ```json
 {
