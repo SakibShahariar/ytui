@@ -4,7 +4,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"ytui/internal/library"
-	"ytui/internal/thumb"
 )
 
 func (m *Model) applyListSize() {
