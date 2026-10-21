@@ -197,7 +197,8 @@ TUI frameworks — not a bug we can fully eliminate, only minimize.
 - `--flat-playlist` search results don't include `channel` reliably for
   every video (YouTube's own metadata inconsistency) — some entries may
   show a blank channel field until we do a secondary metadata fetch.
-- No thumbnail rendering yet (would use sixel/kitty graphics protocol,
-  terminal-dependent — GNOME Terminal doesn't support either natively;
-  worth trying in Kitty or Wezterm if you want that later).
+- Thumbnail previews use Kitty's graphics protocol and require a compatible terminal;
+  GNOME Terminal does not support them natively. The preview can occasionally
+  flicker or lag behind rapid selection changes because Kitty graphics and
+  Bubbletea render through separate terminal paths.
 - Single mpv instance at a time (by design, for now).
