@@ -15,16 +15,13 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"ytui/internal/auth"
 	"ytui/internal/config"
 	"ytui/internal/downloader"
 	"ytui/internal/library"
 	"ytui/internal/player"
 	"ytui/internal/store"
-	"ytui/internal/thumb"
 	"ytui/internal/ytapi"
 	"ytui/internal/ytdlp"
 )
@@ -387,159 +384,3 @@ type Model struct {
 
 // New builds the initial model.
 
-func New(s *store.Store) Model {
-	ti := textinput.New()
-	ti.Placeholder = "Search YouTube... (press enter)"
-	ti.Prompt = "🔍 "
-	ti.PromptStyle = lipgloss.NewStyle().Foreground(ctpMauve)
-	ti.TextStyle = lipgloss.NewStyle().Foreground(ctpText)
-	ti.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
-	ti.Cursor.Style = lipgloss.NewStyle().Foreground(ctpMauve)
-	ti.Focus()
-	ti.CharLimit = 200
-	ti.Width = 60
-
-	pi := textinput.New()
-	pi.Placeholder = "paste here…"
-	pi.PromptStyle = lipgloss.NewStyle().Foreground(ctpGreen)
-	pi.TextStyle = lipgloss.NewStyle().Foreground(ctpText)
-	pi.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
-	pi.Cursor.Style = lipgloss.NewStyle().Foreground(ctpGreen)
-	pi.CharLimit = 4000
-	pi.Width = 60
-
-	delegate := ytDelegate{}
-
-	l := list.New(nil, delegate, defaultWidth, defaultHeight-headerLines-2)
-	l.Title = "Results"
-	l.Styles.Title = lipgloss.NewStyle().Background(ctpMauve).Foreground(ctpBase).Bold(true).Padding(0, 1)
-	l.SetShowStatusBar(false)
-	l.SetShowHelp(false) // we render our own help line, keyed to mode
-	l.DisableQuitKeybindings()
-
-	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-
-	cfg := config.Load()
-	dl, _ := downloader.New(cfg.DownloadDir) // best-effort; nil is handled gracefully wherever it's used
-
-	m := Model{
-		store:          s,
-		cfg:            cfg,
-		activeTab:      tabSearch,
-		inputMode:      true,
-		searchInput:    ti,
-		pathInput:      pi,
-		list:           l,
-		spin:           sp,
-		width:          defaultWidth,
-		height:         defaultHeight,
-		previewEnabled: thumb.Supported(), // auto-on in Kitty; press 't' to disable if it glitches
-		downloads:      dl,
-		audioOnly:      cfg.DefaultAudioOnly,
-	}
-	m.applyListSize()
-	return m
-}
-
-func (m Model) Init() tea.Cmd {
-	if auth.HaveToken() {
-		return tea.Batch(textinput.Blink, authClientCmd())
-	}
-	return textinput.Blink
-}
-
-// refreshPreview clears any currently-drawn thumbnail and redraws one for
-// whatever's now selected, if applicable. Call this any time the *visible
-// content* changes wholesale (switching tabs, drilling into/out of a
-// playlist) — not just when moving the cursor within the same list.
-// Without this, an old thumbnail (drawn outside Bubbletea's own render
-// loop, so it isn't naturally cleared by a normal redraw) stays on screen
-// after switching to a tab/state that has nothing to do with it.
-func (m *Model) refreshPreview() tea.Cmd {
-	_ = thumb.Clear()
-	m.previewedID = ""
-	if m.activeTab == tabNowPlaying {
-		return m.nowPlayingThumbCmd()
-	}
-	if !m.previewVisible() {
-		return nil
-	}
-	if v, ok := m.selectedVideo(); ok {
-		return m.showThumbnailCmd(v)
-	}
-	return nil
-}
-
-// showThumbnailCmd downloads (if needed) and draws the thumbnail for v into
-// the preview panel region. No-op if thumbnails aren't supported/enabled or
-// the video has no thumbnail URL.
-func (m Model) showThumbnailCmd(v ytdlp.Video) tea.Cmd {
-	if !m.previewVisible() || v.Thumbnail == "" || v.ID == m.previewedID {
-		return nil
-	}
-	col, row, cols, rows := m.previewImageRegion()
-	return func() tea.Msg {
-		path, err := thumb.Download(v.Thumbnail, v.ID)
-		if err != nil {
-			return thumbErrMsg{err}
-		}
-		_ = thumb.Clear()
-		if err := thumb.Show(path, col, row, cols, rows); err != nil {
-			return thumbErrMsg{err}
-		}
-		return thumbShownMsg{id: v.ID}
-	}
-}
-
-// previewImageRegion computes the absolute terminal (col, row, cols, rows)
-// the thumbnail image should draw into, inset a little from the preview
-// panel's own borders.
-// Preview panel content is a fixed vertical recipe: label, blank, image
-// area, then a fixed-size info block. previewImageRegion and the panel
-// renderer in View() must agree on these exactly, or the image ends up
-// drawn over the label text instead of below it.
-const (
-	previewHeaderRows = 2 // "Preview" label + blank line
-	previewFooterRows = 7 // blank separator, title (2 lines), divider, channel, duration, views
-)
-
-// nowPlayingInfoRows is how many lines the Now Playing tab's info block
-// (below the thumbnail) reserves: blank, title (2 lines), divider,
-// channel/duration/views, blank, description label, then description text
-// itself gets whatever's left. Kept as a named constant — shared between
-// the region math and the renderer — specifically because mismatched
-// "how many lines does this reserve" constants have been the source of
-// real layout bugs here before (image overlapping text, overflow).
-const nowPlayingInfoRows = 7
-
-func (m Model) subscribeToSelected() (tea.Model, tea.Cmd) {
-	v, ok := m.selectedVideo()
-	if !ok || v.Channel == "" {
-		return m, nil
-	}
-	if v.ChannelID == "" && v.ChannelURL == "" {
-		m.statusMsg = "can't subscribe: channel identifier unavailable in search metadata"
-		return m, nil
-	}
-	id := v.ChannelID
-	if id == "" {
-		id = v.ChannelURL
-	}
-	if err := m.store.Subscribe(store.Channel{ID: id, Name: v.Channel, URL: v.ChannelURL}); err != nil {
-		m.statusMsg = "failed to subscribe: " + err.Error()
-		return m, nil
-	}
-	m.statusMsg = "subscribed to " + v.Channel
-	return m, nil
-}
-
-func (m Model) addSelectedToWatchLater() (tea.Model, tea.Cmd) {
-	v, ok := m.selectedVideo()
-	if !ok {
-		return m, nil
-	}
-	_ = m.store.AddWatchLater(store.WatchLaterEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail})
-	m.statusMsg = "added to watch later: " + v.Title
-	return m, nil
-}
