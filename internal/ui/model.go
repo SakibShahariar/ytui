@@ -28,6 +28,7 @@ import (
 	"ytui/internal/auth"
 	"ytui/internal/config"
 	"ytui/internal/downloader"
+	"ytui/internal/library"
 	"ytui/internal/player"
 	"ytui/internal/store"
 	"ytui/internal/thumb"
@@ -283,6 +284,22 @@ func (ytDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
 }
 
 type videoItem struct{ v ytdlp.Video }
+
+type localDownloadItem struct{ file library.File }
+
+func (i localDownloadItem) Title() string { return i.file.Name }
+func (i localDownloadItem) Description() string {
+	return fmt.Sprintf("%s · modified %s", formatBytes(i.file.Size), i.file.ModTime.Format("Jan 2 15:04"))
+}
+func (i localDownloadItem) FilterValue() string { return i.file.Name }
+
+func formatBytes(n int64) string {
+	const unit = 1024
+	if n < unit { return fmt.Sprintf("%d B", n) }
+	div, exp := int64(unit), 0
+	for v := n / unit; v >= unit; v /= unit { div *= unit; exp++ }
+	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
+}
 
 func (i videoItem) Title() string {
 	return fmt.Sprintf("%s  [%s]", i.v.Title, formatDuration(i.v.Duration))
@@ -598,7 +615,7 @@ func (m Model) notLoggedInContent(width int) string {
 // nowPlayingThumbCmd) followed by title/channel/duration/views and the
 // full description.
 func (m Model) nowPlayingContent(width int) string {
-	if m.nowPlaying == nil || m.playingVid == nil {
+	if m.nowPlaying == nil || m.playingVid == nil || m.playingLocal {
 		center := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
 		msg := center.Render(lipgloss.NewStyle().Foreground(ctpOverlay1).Render("nothing playing"))
 		hint := center.Render(lipgloss.NewStyle().Foreground(ctpOverlay0).Render("enter on a video, anywhere, to play it"))
@@ -778,6 +795,7 @@ type Model struct {
 
 	nowPlaying *player.Player
 	playingVid *ytdlp.Video
+	playingLocal bool
 	audioOnly  bool
 
 	npPos    float64
@@ -823,6 +841,9 @@ type Model struct {
 	homeFeed []list.Item
 
 	downloads *downloader.Manager
+	offlineDownloads bool
+	offlineFiles []library.File
+	offlineDeletePending *library.File
 
 	downloadPicker        bool
 	downloadPickerVideo   *ytdlp.Video
@@ -1248,6 +1269,11 @@ func (m Model) currentListItems() []list.Item {
 	case tabNowPlaying:
 		return nil
 	case tabDownloads:
+		if m.offlineDownloads {
+			items := make([]list.Item, 0, len(m.offlineFiles))
+			for _, file := range m.offlineFiles { items = append(items, localDownloadItem{file: file}) }
+			return items
+		}
 		if m.downloads == nil {
 			return nil
 		}
@@ -1717,6 +1743,28 @@ func (m *Model) applyListSize() {
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	if m.offlineDeletePending != nil {
+		pending := m.offlineDeletePending
+		m.offlineDeletePending = nil
+		switch key {
+		case "y":
+			if err := library.Delete(*pending); err != nil {
+				m.errMsg = "delete download: " + err.Error()
+			} else {
+				m.errMsg = ""
+				m.statusMsg = "deleted " + pending.Name
+			}
+			m.refreshList()
+			return m, nil
+		case "n", "esc":
+			m.statusMsg = "delete canceled"
+			return m, nil
+		default:
+			m.statusMsg = "delete canceled"
+			return m, nil
+		}
+	}
+
 	if key == "ctrl+c" {
 		if m.nowPlaying != nil {
 			m.saveResumePosition()
@@ -1866,6 +1914,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.moveSelection(msg)
 
 	case "enter":
+		if m.activeTab == tabDownloads && m.offlineDownloads {
+			if item, ok := m.list.SelectedItem().(localDownloadItem); ok {
+				return m.playLocalFile(item.file)
+			}
+			return m, nil
+		}
 		if m.inputMode {
 			query := strings.TrimSpace(m.searchInput.Value())
 			if query == "" {
@@ -1963,8 +2017,32 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.subscribeToSelected()
 	case "ctrl+w":
 		return m.addSelectedToWatchLater()
+	case "ctrl+o":
+		if m.activeTab == tabDownloads {
+			m.offlineDownloads = !m.offlineDownloads
+			m.errMsg = ""
+			m.refreshList()
+			if m.offlineDownloads {
+				m.statusMsg = fmt.Sprintf("offline downloads: %d media file(s)", len(m.offlineFiles))
+			} else {
+				m.statusMsg = "download queue"
+			}
+		}
+		return m, nil
+
+	case "delete":
+		if m.activeTab == tabDownloads && m.offlineDownloads {
+			if item, ok := m.list.SelectedItem().(localDownloadItem); ok {
+				file := item.file
+				m.offlineDeletePending = &file
+				m.statusMsg = "delete " + file.Name + "? press y to confirm, any other key to cancel"
+			}
+		}
+		return m, nil
+
 	case "ctrl+d":
 		if m.activeTab == tabDownloads {
+			if m.offlineDownloads { return m, nil }
 			return m.cancelSelectedDownload()
 		}
 		if v, ok := m.selectedVideo(); ok {
@@ -2059,8 +2137,20 @@ func (m Model) moveSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) refreshList() {
+	if m.activeTab == tabDownloads && m.offlineDownloads {
+		files, err := library.Scan(m.downloadDirectory())
+		if err != nil {
+			m.offlineFiles = nil
+			m.errMsg = "offline downloads: " + err.Error()
+		} else {
+			m.offlineFiles = files
+			m.errMsg = ""
+		}
+	}
 	m.list.SetItems(m.currentListItems())
 	switch {
+	case m.activeTab == tabDownloads && m.offlineDownloads:
+		m.list.Title = "Offline Downloads"
 	case m.activeTab == tabPlaylists && m.browsingPlaylistID != "":
 		m.list.Title = m.browsingPlaylistTitle
 	case m.activeTab == tabSubscriptions && m.browsingChannelID != "":
@@ -2102,7 +2192,15 @@ func (m Model) contextualHelp() string {
 	if _, ok := m.selectedVideo(); ok {
 		parts = append(parts, "^s: sub", "^w: later", "^d: download")
 	}
-	if hasItems && m.activeTab == tabDownloads {
+	if m.activeTab == tabDownloads {
+		if m.offlineDownloads {
+			if hasItems { parts = append(parts, "enter: play", "delete: remove (confirm with y)") }
+			parts = append(parts, "^o: queue")
+		} else {
+			parts = append(parts, "^o: offline files")
+		}
+	}
+	if hasItems && m.activeTab == tabDownloads && !m.offlineDownloads {
 		if item, ok := m.list.SelectedItem().(downloadItem); ok &&
 			(item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading) {
 			parts = append(parts, "^d: cancel")
@@ -2121,6 +2219,14 @@ func (m Model) contextualHelp() string {
 	parts = append(parts, "^c: quit")
 
 	return strings.Join(parts, " · ")
+}
+
+func (m Model) downloadDirectory() string {
+	if m.downloads != nil { return m.downloads.DestDir() }
+	if m.cfg.DownloadDir != "" { return m.cfg.DownloadDir }
+	home, err := os.UserHomeDir()
+	if err != nil { return "" }
+	return filepath.Join(home, "Downloads", "ytui")
 }
 
 func (m Model) selectedVideo() (ytdlp.Video, bool) {
@@ -2182,6 +2288,17 @@ func (m Model) saveResumePosition() {
 	})
 }
 
+func (m Model) playLocalFile(file library.File) (tea.Model, tea.Cmd) {
+	if m.nowPlaying != nil {
+		m.saveResumePosition()
+		_ = m.nowPlaying.Quit()
+	}
+	m.playingLocal = true
+	m.playingVid = &ytdlp.Video{ID: "local:" + file.Path, Title: file.Name, Channel: "Downloaded file", URL: file.Path}
+	m.statusMsg = "starting mpv: " + file.Name
+	return m, startPlayback(file.Path, m.audioOnly, 0)
+}
+
 func (m Model) playSelected() (tea.Model, tea.Cmd) {
 	v, ok := m.selectedVideo()
 	if !ok {
@@ -2191,6 +2308,7 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 		m.saveResumePosition()
 		_ = m.nowPlaying.Quit()
 	}
+	m.playingLocal = false
 	m.playingVid = &v
 	resumePos, resuming := m.store.FindHistoryPosition(v.ID)
 	if resuming {
@@ -2211,6 +2329,7 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 func (m Model) clearNowPlaying() (tea.Model, tea.Cmd) {
 	m.nowPlaying = nil
 	m.playingVid = nil
+	m.playingLocal = false
 	m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 	m.npDescription = ""
 	m.npDescriptionLoading = false
