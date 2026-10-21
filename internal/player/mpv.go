@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 )
 
@@ -21,7 +22,11 @@ import (
 type Player struct {
 	cmd        *exec.Cmd
 	conn       net.Conn
+	reader     *bufio.Reader
 	socketPath string
+
+	ipcMu       sync.Mutex
+	nextRequest uint64
 }
 
 // mpvCommand is the shape mpv's IPC protocol expects for sending commands.
@@ -79,15 +84,21 @@ func Play(videoURL string, audioOnly bool) (*Player, error) {
 		return &Player{cmd: cmd, socketPath: socketPath}, fmt.Errorf("mpv started but IPC connect failed (no in-TUI control): %w", err)
 	}
 
-	return &Player{cmd: cmd, conn: conn, socketPath: socketPath}, nil
+	return &Player{cmd: cmd, conn: conn, reader: bufio.NewReader(conn), socketPath: socketPath}, nil
 }
 
 // sendCommand sends a raw mpv IPC command, e.g. []interface{}{"set_property", "pause", true}.
 func (p *Player) sendCommand(args ...interface{}) error {
+	p.ipcMu.Lock()
+	defer p.ipcMu.Unlock()
 	if p.conn == nil {
 		return fmt.Errorf("no IPC connection to mpv")
 	}
-	payload, err := json.Marshal(mpvCommand{Command: args})
+	p.nextRequest++
+	payload, err := json.Marshal(struct {
+		Command   []interface{} `json:"command"`
+		RequestID uint64        `json:"request_id"`
+	}{Command: args, RequestID: p.nextRequest})
 	if err != nil {
 		return err
 	}
@@ -206,32 +217,50 @@ func (p *Player) Wait() error {
 // GetProperty queries an mpv property (e.g. "pause", "time-pos", "duration")
 // and returns the raw JSON response reader for the caller to decode.
 func (p *Player) GetProperty(name string) (interface{}, error) {
+	p.ipcMu.Lock()
+	defer p.ipcMu.Unlock()
 	if p.conn == nil {
 		return nil, fmt.Errorf("no IPC connection to mpv")
 	}
-	req := map[string]interface{}{
-		"command": []interface{}{"get_property", name},
+	p.nextRequest++
+	requestID := p.nextRequest
+	payload, err := json.Marshal(struct {
+		Command   []interface{} `json:"command"`
+		RequestID uint64        `json:"request_id"`
+	}{Command: []interface{}{"get_property", name}, RequestID: requestID})
+	if err != nil {
+		return nil, err
 	}
-	payload, _ := json.Marshal(req)
 	payload = append(payload, '\n')
 	if _, err := p.conn.Write(payload); err != nil {
 		return nil, err
 	}
 
-	reader := bufio.NewReader(p.conn)
-	line, err := reader.ReadBytes('\n')
-	if err != nil {
-		return nil, err
+	// mpv may send events and replies to earlier fire-and-forget commands
+	// on the same socket. Keep one reader (so buffered bytes aren't lost)
+	// and match the response ID instead of assuming the next line is ours.
+	if p.reader == nil {
+		p.reader = bufio.NewReader(p.conn)
 	}
-	var resp struct {
-		Data  interface{} `json:"data"`
-		Error string      `json:"error"`
+	for {
+		line, err := p.reader.ReadBytes('\n')
+		if err != nil {
+			return nil, err
+		}
+		var envelope struct {
+			RequestID uint64 `json:"request_id"`
+			Data      interface{} `json:"data"`
+			Error     string `json:"error"`
+		}
+		if err := json.Unmarshal(line, &envelope); err != nil {
+			continue // ignore malformed/event lines and keep waiting for our reply
+		}
+		if envelope.RequestID != requestID {
+			continue
+		}
+		if envelope.Error != "success" {
+			return nil, fmt.Errorf("mpv error: %s", envelope.Error)
+		}
+		return envelope.Data, nil
 	}
-	if err := json.Unmarshal(line, &resp); err != nil {
-		return nil, err
-	}
-	if resp.Error != "success" {
-		return nil, fmt.Errorf("mpv error: %s", resp.Error)
-	}
-	return resp.Data, nil
 }
