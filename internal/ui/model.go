@@ -2211,7 +2211,18 @@ func (m Model) subscribeToSelected() (tea.Model, tea.Cmd) {
 	if !ok || v.Channel == "" {
 		return m, nil
 	}
-	_ = m.store.Subscribe(store.Channel{ID: v.Channel, Name: v.Channel, URL: v.URL})
+	if v.ChannelID == "" && v.ChannelURL == "" {
+		m.statusMsg = "can't subscribe: channel identifier unavailable in search metadata"
+		return m, nil
+	}
+	id := v.ChannelID
+	if id == "" {
+		id = v.ChannelURL
+	}
+	if err := m.store.Subscribe(store.Channel{ID: id, Name: v.Channel, URL: v.ChannelURL}); err != nil {
+		m.statusMsg = "failed to subscribe: " + err.Error()
+		return m, nil
+	}
 	m.statusMsg = "subscribed to " + v.Channel
 	return m, nil
 }
