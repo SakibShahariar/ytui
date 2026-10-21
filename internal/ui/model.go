@@ -1706,6 +1706,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.saveResumePosition()
 			_ = m.nowPlaying.Quit()
 		}
+		if m.previewedID != "" {
+			_ = thumb.Clear()
+			m.previewedID = ""
+		}
 		return m, tea.Quit
 	}
 
