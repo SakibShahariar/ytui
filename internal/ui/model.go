@@ -2147,6 +2147,12 @@ func (m Model) saveResumePosition() {
 	}
 	pos, err := m.nowPlaying.Position()
 	if err != nil || pos <= 0 {
+		// mpv may already be exiting. Preserve the most recent position
+		// observed by the UI rather than discarding all progress since the
+		// previous periodic save.
+		pos = m.npPos
+	}
+	if pos <= 0 {
 		return
 	}
 	v := m.playingVid
