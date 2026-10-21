@@ -906,11 +906,21 @@ func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
 	return func() tea.Msg {
 		p, err := player.Play(url, audioOnly)
 		if err == nil && p != nil && resumePos > 0 {
-			// Give mpv a moment to actually load the media before seeking —
-			// sending seek immediately after the IPC socket connects can
-			// race against the file still loading.
-			time.Sleep(400 * time.Millisecond)
-			_ = p.SeekAbsolute(resumePos)
+			// The IPC socket can become available before the media is loaded.
+			// Wait for duration to become queryable before attempting the seek,
+			// rather than relying on a fixed delay that varies by network speed.
+			deadline := time.Now().Add(3 * time.Second)
+			for {
+				if _, durationErr := p.Duration(); durationErr == nil {
+					if seekErr := p.SeekAbsolute(resumePos); seekErr == nil {
+						break
+					}
+				}
+				if time.Now().After(deadline) {
+					break
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
 		}
 		return playbackStartedMsg{p: p, err: err}
 	}
