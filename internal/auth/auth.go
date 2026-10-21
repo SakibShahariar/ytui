@@ -44,6 +44,39 @@ type clientSecretsFile struct {
 	} `json:"installed"`
 }
 
+// writePrivateAtomic stores sensitive data with private permissions and an
+// atomic rename. A unique temporary file avoids predictable-temp symlink
+// attacks and collisions between concurrent token refreshes/imports.
+func writePrivateAtomic(dstPath string, data []byte) error {
+	dir := filepath.Dir(dstPath)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	tmpFile, err := os.CreateTemp(dir, "."+filepath.Base(dstPath)+"-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if err := tmpFile.Chmod(0o600); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Sync(); err != nil {
+		tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, dstPath)
+}
+
 func configDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
@@ -128,11 +161,7 @@ func ImportClientCredentials(clientID, clientSecret string) error {
 	if err != nil {
 		return err
 	}
-	tmp := dstPath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, dstPath)
+	return writePrivateAtomic(dstPath, data)
 }
 
 // ImportClientSecretsRaw validates raw JSON text (e.g. pasted directly
@@ -152,11 +181,7 @@ func ImportClientSecretsRaw(jsonText string) error {
 	if err != nil {
 		return err
 	}
-	tmp := dstPath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, dstPath)
+	return writePrivateAtomic(dstPath, data)
 }
 
 // ImportClientSecrets validates the file at srcPath looks like a Google
@@ -180,11 +205,7 @@ func ImportClientSecrets(srcPath string) error {
 	if err != nil {
 		return err
 	}
-	tmp := dstPath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, dstPath)
+	return writePrivateAtomic(dstPath, data)
 }
 
 func loadOAuthConfig() (*oauth2.Config, error) {
@@ -222,11 +243,7 @@ func saveToken(tok *oauth2.Token) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return writePrivateAtomic(path, data)
 }
 
 func loadToken() (*oauth2.Token, error) {
