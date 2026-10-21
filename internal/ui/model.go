@@ -359,11 +359,7 @@ func wrapTwoLines(s string, width int) (line1, line2 string) {
 		line2 = lines[1]
 	}
 	if len(lines) > 2 {
-		r := []rune(line2)
-		if len(r) > width-1 {
-			r = r[:width-1]
-		}
-		line2 = string(r) + "…"
+		line2 = truncate(line2, width)
 	}
 	return line1, line2
 }
