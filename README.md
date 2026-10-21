@@ -151,7 +151,7 @@ graphics protocol (`kitty +kitten icat`). This is genuinely Kitty-specific
 so the panel shows a "no preview" placeholder there instead. WezTerm has
 partial Kitty-graphics compatibility and may also work.
 
-Toggle the panel with `t` if you'd rather have the extra list width instead.
+Toggle the panel with `ctrl+t` if you'd rather have the extra list width instead.
 
 Thumbnails are cached at `~/.cache/ytui/thumbs/` so re-selecting a video
 doesn't re-download it.
