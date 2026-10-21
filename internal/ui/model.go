@@ -393,6 +393,157 @@ var logoLines = []string{
 	"  █     █    ███  █████",
 }
 
+var (
+	titleStyle       = lipgloss.NewStyle().Bold(true).Foreground(ctpMauve)
+	subtitleStyle    = lipgloss.NewStyle().Foreground(ctpOverlay1).Italic(true)
+	dividerStyle     = lipgloss.NewStyle().Foreground(ctpSurface1)
+	activeTabStyle   = lipgloss.NewStyle().Bold(true).Background(ctpMauve).Foreground(ctpBase).Padding(0, 1)
+	inactiveTabStyle = lipgloss.NewStyle().Foreground(ctpOverlay0).Padding(0, 1)
+	errorStyle       = lipgloss.NewStyle().Foreground(ctpRed).Bold(true)
+	panelBorder      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(ctpSurface1)
+	previewLabel     = lipgloss.NewStyle().Foreground(ctpLavender).Bold(true)
+	previewMutedText = lipgloss.NewStyle().Foreground(ctpOverlay0).Align(lipgloss.Center)
+	// Footer rendered as a solid bar (like a vim statusline / k9s footer)
+	// rather than plain text floating on the background — this is the
+	// single highest-signal detail that makes a TUI look "finished".
+	footerBarStyle  = lipgloss.NewStyle().Background(ctpMantle).Foreground(ctpSubtext0)
+	footerModeNav   = lipgloss.NewStyle().Background(ctpBlue).Foreground(ctpBase).Bold(true).Padding(0, 1)
+	footerModeInput = lipgloss.NewStyle().Background(ctpGreen).Foreground(ctpBase).Bold(true).Padding(0, 1)
+)
+
+// messages
+type searchResultsMsg struct {
+	results []ytdlp.Video
+	err     error
+}
+type playbackStartedMsg struct {
+	p   *player.Player
+	err error
+}
+type thumbShownMsg struct{ id string }
+type positionTickMsg struct{}
+type nowPlayingTickMsg struct{}
+type videoDescriptionMsg struct {
+	videoID string // guards against a slow fetch for a video the person already skipped past
+	desc    string
+	err     error
+}
+type downloadsTickMsg struct{}
+type thumbErrMsg struct{ err error }
+
+type loginResultMsg struct{ err error }
+type clientSecretsImportedMsg struct{ err error }
+type authClientReadyMsg struct {
+	client *http.Client
+	err    error
+}
+type subsLoadedMsg struct {
+	subs []ytapi.Subscription
+	err  error
+}
+type playlistsLoadedMsg struct {
+	playlists []ytapi.Playlist
+	err       error
+}
+type playlistVideosLoadedMsg struct {
+	videos []ytdlp.Video
+	err    error
+}
+type channelVideosLoadedMsg struct {
+	videos []ytdlp.Video
+	err    error
+}
+type homeFeedLoadedMsg struct {
+	videos []ytdlp.Video
+	failed int
+	err    error
+}
+type likedLoadedMsg struct {
+	videos []ytdlp.Video
+	err    error
+}
+
+// Model is the top-level Bubbletea model.
+type Model struct {
+	store *store.Store
+	cfg   config.Config
+
+	activeTab   tab
+	inputMode   bool // true = typing in the search box; false = list navigation
+	searchInput textinput.Model
+	list        list.Model
+	spin        spinner.Model
+	loading      bool
+	everSearched bool
+
+	width, height int
+
+	statusMsg string
+	errMsg    string
+
+	nowPlaying *player.Player
+	playingVid *ytdlp.Video
+	playingLocal bool
+	audioOnly  bool
+
+	npPos    float64
+	npDur    float64
+	npVol    float64
+	npPaused bool
+
+	npDescription        string
+	npDescriptionLoading bool
+
+	previewEnabled bool
+	previewedID    string // avoid redrawing the same thumbnail every keystroke
+
+	// searchResults holds the Search tab's items independently of the
+	// shared list widget. Without this, switching to another tab (which
+	// repoints the widget at that tab's items) and back would show
+	// whatever tab you last visited instead of your search results —
+	// there was nowhere else the results were being kept.
+	searchResults []list.Item
+
+	// --- Google login + real YouTube data (all optional; app works
+	// entirely without login using the local store) ---
+	loggedIn         bool
+	authClient       *http.Client
+	ytLoading        bool
+	showLoginHelp    bool
+	credentialStep   int // 0 = inactive, 1 = collecting Client ID, 2 = collecting Client Secret
+	pendingClientID  string
+	pathInput        textinput.Model
+
+	realSubscriptions []list.Item // populated from the API once logged in
+	browsingChannelID    string  // "" = showing the subscriptions list; else viewing this channel's uploads
+	browsingChannelTitle string
+	channelVideos         []list.Item
+
+	playlists             []list.Item // top-level: the user's playlists
+	browsingPlaylistID    string      // "" = showing the playlist list; else viewing this playlist's videos
+	browsingPlaylistTitle string
+	playlistVideos        []list.Item
+
+	likedVideos []list.Item
+
+	homeFeed []list.Item
+
+	downloads *downloader.Manager
+	offlineDownloads bool
+	offlineFiles []library.File
+	offlineDeletePending *library.File
+
+	downloadPicker        bool
+	downloadPickerVideo   *ytdlp.Video
+	downloadPickerCursor  int
+	downloadPickerQuality int
+	downloadPickerSubs    bool
+	downloadPickerThumb   bool
+	downloadPickerCookies int // index into downloadCookieBrowserValues
+}
+
+// New builds the initial model.
+
 func New(s *store.Store) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Search YouTube... (press enter)"
