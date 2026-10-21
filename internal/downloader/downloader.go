@@ -270,6 +270,9 @@ func (m *Manager) setStatus(videoID string, status Status, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if d, ok := m.byID[videoID]; ok {
+		if d.Status == StatusCanceled && status != StatusCanceled {
+			return
+		}
 		d.Status = status
 		d.Err = err
 	}
