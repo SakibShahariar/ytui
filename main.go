@@ -57,6 +57,14 @@ func main() {
 		return
 	}
 
+	if len(flag.Args()) > 0 && flag.Arg(0) == "doctor" {
+		if err := runDoctor(os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, "doctor:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if *showPaths {
 		dataPath, err := store.Path()
 		if err != nil {
