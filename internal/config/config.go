@@ -6,9 +6,11 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 // Config holds user-editable defaults. JSON deliberately keeps the format
@@ -31,26 +33,62 @@ type Config struct {
 	DefaultAudioOnly bool `json:"default_audio_only,omitempty"`
 }
 
+var qualityLabels = map[string]string{
+	"best": "Best quality (video+audio)",
+	"best-quality": "Best quality (video+audio)",
+	"best_quality": "Best quality (video+audio)",
+	"best quality (video+audio)": "Best quality (video+audio)",
+	"1080p": "1080p",
+	"720p": "720p",
+	"480p": "480p",
+	"audio-mp3": "Audio only (mp3)",
+	"audio_mp3": "Audio only (mp3)",
+	"audio only (mp3)": "Audio only (mp3)",
+	"audio-opus": "Audio only (opus)",
+	"audio_opus": "Audio only (opus)",
+	"audio only (opus)": "Audio only (opus)",
+}
+
 // normalizeQuality converts stable machine-readable identifiers to the
 // corresponding picker label. Existing display-label values remain supported
 // for backwards compatibility.
 func normalizeQuality(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "best", "best-quality", "best_quality":
-		return "Best quality (video+audio)"
-	case "1080p":
-		return "1080p"
-	case "720p":
-		return "720p"
-	case "480p":
-		return "480p"
-	case "audio-mp3", "audio_mp3":
-		return "Audio only (mp3)"
-	case "audio-opus", "audio_opus":
-		return "Audio only (opus)"
-	default:
-		return value
+	if label, ok := qualityLabels[strings.ToLower(strings.TrimSpace(value))]; ok {
+		return label
 	}
+	return value
+}
+
+// Validate checks user-provided fields before an imported config can replace
+// the active settings. Empty values mean "use the built-in default".
+func Validate(cfg Config) error {
+	if strings.TrimSpace(cfg.DownloadDir) != "" {
+		for _, r := range cfg.DownloadDir {
+			if unicode.IsControl(r) {
+				return fmt.Errorf("download_dir must not contain control characters")
+			}
+		}
+	}
+	if strings.TrimSpace(cfg.DefaultQuality) != "" {
+		if _, ok := qualityLabels[strings.ToLower(strings.TrimSpace(cfg.DefaultQuality))]; !ok {
+			return fmt.Errorf("default_quality %q is not supported", cfg.DefaultQuality)
+		}
+	}
+	if strings.TrimSpace(cfg.DefaultCookiesBrowser) != "" {
+		browser := strings.ToLower(strings.TrimSpace(cfg.DefaultCookiesBrowser))
+		switch browser {
+		case "firefox", "chrome", "chromium", "brave", "edge":
+		default:
+			return fmt.Errorf("default_cookies_browser %q is not supported (use firefox, chrome, chromium, brave, or edge)", cfg.DefaultCookiesBrowser)
+		}
+	}
+	return nil
+}
+
+func normalize(cfg Config) Config {
+	cfg.DefaultQuality = normalizeQuality(cfg.DefaultQuality)
+	cfg.DefaultCookiesBrowser = strings.ToLower(strings.TrimSpace(cfg.DefaultCookiesBrowser))
+	return cfg
 }
 
 func path() (string, error) {
@@ -89,7 +127,7 @@ func read(p string) (Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.DefaultQuality = normalizeQuality(cfg.DefaultQuality)
+	cfg = normalize(cfg)
 	return cfg, nil
 }
 
@@ -148,6 +186,9 @@ func Import(source string) error {
 	}
 	cfg, err := read(source)
 	if err != nil {
+		return err
+	}
+	if err := Validate(cfg); err != nil {
 		return err
 	}
 	return Save(cfg)

@@ -47,7 +47,7 @@ Use a stable identifier for `default_quality`; display labels remain supported f
 | `audio-mp3` | `Audio only (mp3)` |
 | `audio-opus` | `Audio only (opus)` |
 
-Legacy values such as `"Best quality (video+audio)"` and `"Audio only (mp3)"` continue to work. Identifiers are normalized when the config is read. Unknown values are left unchanged and the picker falls back to its default.
+Legacy values such as `"Best quality (video+audio)"` and `"Audio only (mp3)"` continue to work. Identifiers are normalized when the config is read.
 
 ## Browser values
 
@@ -81,7 +81,7 @@ cp ~/.config/ytui/config.json ~/.config/ytui/config.json.bak
 
 If you use `XDG_CONFIG_HOME`, back up the `ytui/config.json` file under that directory instead. Adjust the source path if your configuration file is stored elsewhere.
 
-Import validates the JSON and replaces the active settings before the app starts. Invalid input leaves the current settings unchanged. Additional field-level validation and an explicit import confirmation are tracked in [#39](https://github.com/SakibShahariar/ytui/issues/39) and [#40](https://github.com/SakibShahariar/ytui/issues/40); until those safeguards are implemented, review the file carefully before importing it.
+Imports are validated before the active configuration is replaced. Unsupported `default_quality` or `default_cookies_browser` values, and control characters in `download_dir`, produce field-specific errors; the existing settings remain unchanged. The directory does not have to exist at import time, so portable setups can configure a future path. The current config format has no numeric fields or required fields; omitted values use defaults.
 
 Exported files contain preferences only. They do not include:
 

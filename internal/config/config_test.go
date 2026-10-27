@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -70,6 +71,51 @@ func TestImportInvalidFileDoesNotReplaceConfig(t *testing.T) {
 	}
 	if got := Load(); !reflect.DeepEqual(got, want) {
 		t.Fatalf("invalid import changed config: got %#v, want %#v", got, want)
+	}
+}
+
+func TestImportInvalidFieldDoesNotReplaceConfig(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	want := Config{DefaultQuality: "720p", DefaultCookiesBrowser: "firefox"}
+	if err := Save(want); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name string
+		json string
+		want string
+	}{
+		{"quality", `{"default_quality":"8k"}`, "default_quality"},
+		{"browser", `{"default_cookies_browser":"opera"}`, "default_cookies_browser"},
+		{"download path control character", "{\"download_dir\":\"bad\\u0000path\"}", "download_dir"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			input := filepath.Join(t.TempDir(), "settings.json")
+			if err := os.WriteFile(input, []byte(tc.json), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			err := Import(input)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Import() error = %v, want field-specific error containing %q", err, tc.want)
+			}
+			if got := Load(); !reflect.DeepEqual(got, want) {
+				t.Fatalf("invalid import changed config: got %#v, want %#v", got, want)
+			}
+		})
+	}
+}
+
+func TestValidateAcceptsOptionalAndLegacyValues(t *testing.T) {
+	for _, cfg := range []Config{
+		{},
+		{DefaultQuality: "Best quality (video+audio)", DefaultCookiesBrowser: "Firefox"},
+		{DefaultQuality: "audio-mp3", DefaultCookiesBrowser: " edge "},
+	} {
+		if err := Validate(cfg); err != nil {
+			t.Errorf("Validate(%#v) error = %v", cfg, err)
+		}
 	}
 }
 
