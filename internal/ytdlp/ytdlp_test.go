@@ -34,3 +34,10 @@ func TestVideoJSONFallsBackToYouTubeThumbnail(t *testing.T) {
 		t.Errorf("Thumbnail = %q, want %q", got, want)
 	}
 }
+
+func TestVideoJSONDirectURLFallbacks(t *testing.T) {
+	video := (videoJSON{}).toVideo()
+	if video.ID != "" || video.Title != "" {
+		t.Fatalf("empty metadata unexpectedly filled ID/title: %#v", video)
+	}
+}

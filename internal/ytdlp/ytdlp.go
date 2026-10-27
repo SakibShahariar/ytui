@@ -187,6 +187,42 @@ func Search(query string, limit int) ([]Video, error) {
 // StreamURL keeps the watch-page URL intact for mpv's yt-dlp integration.
 // Resolving it here would perform a network request whose result is discarded;
 // mpv must receive the original URL so it can select compatible streams itself.
+// GetVideo extracts metadata for one URL without downloading its media.
+func GetVideo(videoURL string) (Video, error) {
+	if err := checkInstalled(); err != nil {
+		return Video{}, err
+	}
+	cmd := exec.Command(binaryName, "--dump-single-json", "--no-warnings", "--skip-download", "--no-playlist", videoURL)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" {
+			message = err.Error()
+		}
+		return Video{}, fmt.Errorf("yt-dlp could not read URL: %s", message)
+	}
+	var raw videoJSON
+	if err := json.Unmarshal(stdout.Bytes(), &raw); err != nil {
+		return Video{}, fmt.Errorf("parse yt-dlp metadata: %w", err)
+	}
+	video := raw.toVideo()
+	if video.ID == "" {
+		video.ID = videoURL
+	}
+	if video.Title == "" {
+		video.Title = videoURL
+	}
+	if video.Channel == "" {
+		video.Channel = "Direct URL"
+	}
+	if video.URL == "" {
+		video.URL = videoURL
+	}
+	return video, nil
+}
+
 func StreamURL(videoURL string) (string, error) {
 	if strings.TrimSpace(videoURL) == "" {
 		return "", fmt.Errorf("video URL is empty")
