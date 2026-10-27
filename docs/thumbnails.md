@@ -36,7 +36,7 @@ Override the limits in `$XDG_CONFIG_HOME/ytui/config.json` (or `~/.config/ytui/c
 }
 ```
 
-Run `ytui doctor` to see the cache directory, current image count, and total cache size.
+Run `ytui doctor` to see the cache directory, current image count, and total cache size. Cache cleanup runs when thumbnails are reused or displayed; the doctor command reports usage without deleting files.
 
 ## Known limitations
 
