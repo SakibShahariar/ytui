@@ -3,6 +3,7 @@ name: Go tests
 on:
   push:
     branches: [master]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -19,7 +20,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Run tests
-        run: go test ./...
+      - name: Run race-enabled tests
+        run: go test -race ./...
       - name: Run static analysis
         run: go vet ./...
+      - name: Build application
+        run: go build -o /dev/null .
