@@ -1,10 +1,13 @@
 package main
 
 import (
-	"flag"
+	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 	"runtime/debug"
+	"flag"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -27,12 +30,25 @@ func currentVersion() string {
 	return version
 }
 
+// confirmImport makes the destructive effect explicit and keeps the prompt
+// independently testable without starting Bubble Tea.
+func confirmImport(reader io.Reader, writer io.Writer, source, destination string) (bool, error) {
+	fmt.Fprintf(writer, "Import %q and replace active settings at %q? [y/N] ", source, destination)
+	line, err := bufio.NewReader(reader).ReadString('\n')
+	if err != nil && len(line) == 0 {
+		return false, err
+	}
+	answer := strings.ToLower(strings.TrimSpace(line))
+	return answer == "y" || answer == "yes", nil
+}
+
 func main() {
 	var showVersion bool
 	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.BoolVar(&showVersion, "v", false, "print version and exit")
 	exportPath := flag.String("export-config", "", "export effective settings to FILE and exit")
 	importPath := flag.String("import-config", "", "import settings from FILE before starting ytui")
+	yes := flag.Bool("yes", false, "confirm --import-config without prompting")
 	showPaths := flag.Bool("show-paths", false, "print config and data paths and exit")
 	flag.Parse()
 
@@ -65,6 +81,17 @@ func main() {
 		return
 	}
 	if *importPath != "" {
+		if !*yes {
+			confirmed, err := confirmImport(os.Stdin, os.Stderr, *importPath, config.Path())
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "failed to read import confirmation:", err)
+				os.Exit(1)
+			}
+			if !confirmed {
+				fmt.Fprintln(os.Stderr, "Config import cancelled; active settings were not changed.")
+				return
+			}
+		}
 		if err := config.Import(*importPath); err != nil {
 			fmt.Fprintln(os.Stderr, "failed to import config:", err)
 			os.Exit(1)

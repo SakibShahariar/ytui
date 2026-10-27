@@ -73,7 +73,15 @@ Import settings before launching ytui:
 ytui --import-config ~/ytui-settings.json
 ```
 
-**Import replaces the active settings.** Before importing a file you did not just export, make a backup of your current configuration. For the default location, for example:
+Importing replaces the active settings file. By default, ytui asks for confirmation and displays both the source file and destination config path. Enter `y` or `yes` to proceed; any other response cancels without changing settings.
+
+For automation, explicitly opt in to the replacement:
+
+```bash
+ytui --import-config ~/ytui-settings.json --yes
+```
+
+Before importing a file you did not just export, consider backing up your current configuration. For the default location, for example:
 
 ```bash
 cp ~/.config/ytui/config.json ~/.config/ytui/config.json.bak
