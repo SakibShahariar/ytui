@@ -72,10 +72,10 @@ func main() {
 		}
 	}
 
-	if len(flag.Args()) > 0 && flag.Arg(0) == "doctor" {
-		if err := runDoctor(os.Stdout); err != nil {
-			fmt.Fprintln(os.Stderr, "doctor:", err)
-			os.Exit(1)
+	if handled, err := runSubcommand(flag.Args(), os.Stdin, os.Stdout, os.Stderr, *yes); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "ytui:", err)
+			os.Exit(2)
 		}
 		return
 	}

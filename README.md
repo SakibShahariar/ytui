@@ -135,6 +135,18 @@ Thumbnails are cached under:
 
 Details and limitations: [Thumbnails](docs/thumbnails.md).
 
+## CLI commands
+
+The command interface is grouped around a few discoverable subcommands:
+
+- `ytui help` — show commands and legacy flags
+- `ytui doctor` — diagnose dependencies and local state
+- `ytui paths` — print effective config/data paths
+- `ytui config export PATH` — export settings
+- `ytui config import PATH` — import settings with confirmation; add `--yes` for automation
+
+Existing flags such as `--show-paths`, `--export-config`, and `--import-config` remain supported.
+
 ## Documentation
 
 - [Full keybindings](docs/keybindings.md)
