@@ -9,8 +9,8 @@ import (
 func (m *Model) applyListSize() {
 	listWidth, _ := m.paneWidths()
 	listHeight := m.panelHeight() - 2 // panel top+bottom border
-	if m.activeTab == tabSearch {
-		listHeight -= 2 // search input line + divider line rendered above the list
+	if m.activeTab == tabSearch || ((m.activeTab == tabHistory || m.activeTab == tabDownloads) && (m.libraryFilterMode || m.libraryFilter != "")) {
+		listHeight -= 2 // input/filter line + divider line rendered above the list
 	}
 	m.list.SetSize(listWidth-2, listHeight)
 }
@@ -71,7 +71,11 @@ func (m *Model) refreshList() {
 			m.errMsg = ""
 		}
 	}
-	m.list.SetItems(m.currentListItems())
+	items := m.currentListItems()
+	if m.activeTab == tabHistory || m.activeTab == tabDownloads {
+		items = m.filterLibraryItems(items)
+	}
+	m.list.SetItems(items)
 	m.restoreListPosition()
 	m.listTab = m.activeTab
 	m.listTabReady = true

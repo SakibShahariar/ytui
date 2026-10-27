@@ -351,6 +351,10 @@ type Model struct {
 	activeTab   tab
 	inputMode   bool // true = typing in the search box; false = list navigation
 	searchInput textinput.Model
+	libraryFilterInput textinput.Model
+	libraryFilter string
+	libraryFilterMode bool
+	downloadStatusFilter int
 	list        list.Model
 	listPositions map[tab]int
 	listTab tab

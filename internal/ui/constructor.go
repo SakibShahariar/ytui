@@ -31,6 +31,16 @@ func New(s *store.Store) Model {
 	ti.CharLimit = 200
 	ti.Width = 60
 
+	fi := textinput.New()
+	fi.Placeholder = "filter by title or channel…"
+	fi.Prompt = "Filter: "
+	fi.CharLimit = 200
+	fi.Width = 60
+	fi.PromptStyle = lipgloss.NewStyle().Foreground(ctpMauve)
+	fi.TextStyle = lipgloss.NewStyle().Foreground(ctpText)
+	fi.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
+	fi.Cursor.Style = lipgloss.NewStyle().Foreground(ctpMauve)
+
 	pi := textinput.New()
 	pi.Placeholder = "paste here…"
 	pi.PromptStyle = lipgloss.NewStyle().Foreground(ctpGreen)
@@ -64,6 +74,7 @@ func New(s *store.Store) Model {
 		activeTab:      tabSearch,
 		inputMode:      true,
 		searchInput:    ti,
+		libraryFilterInput: fi,
 		pathInput:      pi,
 		list:           l,
 		listPositions:  make(map[tab]int),

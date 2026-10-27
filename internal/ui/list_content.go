@@ -12,6 +12,56 @@ import (
 	"github.com/SakibShahariar/ytui/internal/ytapi"
 )
 
+
+func (m Model) filterLibraryItems(items []list.Item) []list.Item {
+	query := strings.ToLower(strings.TrimSpace(m.libraryFilter))
+	filtered := make([]list.Item, 0, len(items))
+	for _, item := range items {
+		title, channel := item.Title(), item.Description()
+		switch v := item.(type) {
+		case historyItem:
+			title, channel = v.e.Title, v.e.Channel
+		case downloadItem:
+			title, channel = v.d.Title, v.d.Channel
+		case localDownloadItem:
+			title, channel = v.file.Name, ""
+		}
+		if query != "" && !strings.Contains(strings.ToLower(title+" "+channel), query) {
+			continue
+		}
+		if m.activeTab == tabDownloads && !m.offlineDownloads && !downloadMatchesStatus(item, m.downloadStatusFilter) {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
+}
+
+func downloadMatchesStatus(item list.Item, filter int) bool {
+	if filter == 0 { return true }
+	d, ok := item.(downloadItem)
+	if !ok { return false }
+	switch filter {
+	case 1:
+		return d.d.Status == downloader.StatusQueued || d.d.Status == downloader.StatusDownloading
+	case 2:
+		return d.d.Status == downloader.StatusDone
+	case 3:
+		return d.d.Status == downloader.StatusError || d.d.Status == downloader.StatusCanceled || d.d.Status == downloader.StatusResumable
+	default:
+		return true
+	}
+}
+
+func (m Model) downloadStatusFilterLabel() string {
+	switch m.downloadStatusFilter {
+	case 1: return "active"
+	case 2: return "finished"
+	case 3: return "failed/resumable"
+	default: return "all"
+	}
+}
+
 func (m Model) currentListItems() []list.Item {
 	switch m.activeTab {
 	case tabNowPlaying:
