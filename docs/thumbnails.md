@@ -25,6 +25,19 @@ Thumbnails are cached at:
 
 Selecting the same video again does not re-download its thumbnail.
 
+By default, the cache keeps at most **250 images** and expires images older than **30 days**. When limits are exceeded, expired images are removed first, then the least-recently-used images. The currently displayed preview is protected from cleanup. Stale temporary files left by interrupted writes are removed after 24 hours.
+
+Override the limits in `$XDG_CONFIG_HOME/ytui/config.json` (or `~/.config/ytui/config.json`):
+
+```json
+{
+  "thumbnail_cache_max_entries": 250,
+  "thumbnail_cache_max_age_days": 30
+}
+```
+
+Run `ytui doctor` to see the cache directory, current image count, and total cache size.
+
 ## Known limitations
 
 Bubble Tea and Kitty’s image layer are separate rendering systems writing to the same terminal. As a result, thumbnails may occasionally flicker or lag one frame behind selection changes, especially while scrolling quickly.

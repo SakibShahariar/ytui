@@ -21,7 +21,9 @@ All fields are optional. Any unset field uses ytui’s built-in default.
   "download_dir": "/home/you/Videos/ytui",
   "default_quality": "1080p",
   "default_cookies_browser": "firefox",
-  "default_audio_only": false
+  "default_audio_only": false,
+  "thumbnail_cache_max_entries": 250,
+  "thumbnail_cache_max_age_days": 30
 }
 ```
 
@@ -33,6 +35,8 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |
+| `thumbnail_cache_max_entries` | Maximum cached thumbnail images; oldest unused entries are removed first. | `250` |
+| `thumbnail_cache_max_age_days` | Maximum age of cached thumbnails before cleanup. | `30` |
 
 ## Quality values
 

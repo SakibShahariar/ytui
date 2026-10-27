@@ -38,7 +38,10 @@ func (m Model) showThumbnailCmd(v ytdlp.Video) tea.Cmd {
 	}
 	col, row, cols, rows := m.previewImageRegion()
 	return func() tea.Msg {
-		path, err := thumb.Download(v.Thumbnail, v.ID)
+		path, err := thumb.DownloadWithPolicy(v.Thumbnail, v.ID, thumb.CachePolicy{
+			MaxEntries: m.cfg.ThumbnailCacheMaxEntries,
+			MaxAgeDays: m.cfg.ThumbnailCacheMaxAgeDays,
+		})
 		if err != nil {
 			return thumbErrMsg{err}
 		}

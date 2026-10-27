@@ -17,7 +17,9 @@ func TestImportExportRoundTrip(t *testing.T) {
 		DownloadDir:           "/tmp/ytui-downloads",
 		DefaultQuality:        "1080p",
 		DefaultCookiesBrowser: "firefox",
-		DefaultAudioOnly:      true,
+		DefaultAudioOnly:          true,
+		ThumbnailCacheMaxEntries:  120,
+		ThumbnailCacheMaxAgeDays:  14,
 	}
 	input := filepath.Join(t.TempDir(), "settings.json")
 	data, err := json.Marshal(want)
@@ -89,6 +91,8 @@ func TestImportInvalidFieldDoesNotReplaceConfig(t *testing.T) {
 		{"quality", `{"default_quality":"8k"}`, "default_quality"},
 		{"browser", `{"default_cookies_browser":"opera"}`, "default_cookies_browser"},
 		{"download path control character", "{\"download_dir\":\"bad\\u0000path\"}", "download_dir"},
+		{"negative thumbnail entry limit", `{"thumbnail_cache_max_entries":-1}`, "thumbnail_cache_max_entries"},
+		{"excessive thumbnail age", `{"thumbnail_cache_max_age_days":3651}`, "thumbnail_cache_max_age_days"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

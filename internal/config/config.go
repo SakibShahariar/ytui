@@ -31,6 +31,12 @@ type Config struct {
 
 	// DefaultAudioOnly sets the initial audio-only playback toggle.
 	DefaultAudioOnly bool `json:"default_audio_only,omitempty"`
+
+	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
+	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
+
+	// ThumbnailCacheMaxAgeDays expires cached thumbnails after this many days; zero uses the default.
+	ThumbnailCacheMaxAgeDays int `json:"thumbnail_cache_max_age_days,omitempty"`
 }
 
 var qualityLabels = map[string]string{
@@ -81,6 +87,12 @@ func Validate(cfg Config) error {
 		default:
 			return fmt.Errorf("default_cookies_browser %q is not supported (use firefox, chrome, chromium, brave, or edge)", cfg.DefaultCookiesBrowser)
 		}
+	}
+	if cfg.ThumbnailCacheMaxEntries < 0 || cfg.ThumbnailCacheMaxEntries > 10000 {
+		return fmt.Errorf("thumbnail_cache_max_entries must be between 1 and 10000, or 0 for the default")
+	}
+	if cfg.ThumbnailCacheMaxAgeDays < 0 || cfg.ThumbnailCacheMaxAgeDays > 3650 {
+		return fmt.Errorf("thumbnail_cache_max_age_days must be between 1 and 3650, or 0 for the default")
 	}
 	return nil
 }

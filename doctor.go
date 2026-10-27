@@ -14,6 +14,7 @@ import (
 	"github.com/SakibShahariar/ytui/internal/auth"
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 type doctorTool struct {
@@ -32,6 +33,8 @@ type doctorReport struct {
 	authStatus    string
 	downloadPath  string
 	downloadState string
+	thumbnailPath string
+	thumbnailState string
 	tools         []doctorTool
 }
 
@@ -74,6 +77,13 @@ func collectDoctorReport() doctorReport {
 		downloadState = pathStatus(downloadPath, true)
 	}
 
+	cacheStats, cacheErr := thumb.CacheStats()
+	thumbnailPath := cacheStats.Directory
+	thumbnailState := fmt.Sprintf("%d images, %d bytes", cacheStats.Entries, cacheStats.Bytes)
+	if cacheErr != nil {
+		thumbnailState = "unavailable: " + cleanDiagnostic(cacheErr.Error())
+	}
+
 	tools := make([]doctorTool, 0, 2)
 	for _, name := range []string{"mpv", "yt-dlp"} {
 		path, err := exec.LookPath(name)
@@ -92,7 +102,8 @@ func collectDoctorReport() doctorReport {
 	return doctorReport{
 		version: currentVersion(), configPath: configPath, configStatus: configStatus,
 		dataPath: dataPath, dataStatus: dataStatus, authStatus: authStatus,
-		downloadPath: downloadPath, downloadState: downloadState, tools: tools,
+		downloadPath: downloadPath, downloadState: downloadState,
+		thumbnailPath: thumbnailPath, thumbnailState: thumbnailState, tools: tools,
 	}
 }
 
@@ -156,6 +167,9 @@ func renderDoctorReport(w io.Writer, report doctorReport) error {
 		return err
 	}
 	if _, err := fmt.Fprintf(w, "Downloads: %s (%s)\n", cleanDiagnostic(report.downloadPath), cleanDiagnostic(report.downloadState)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Thumbnail cache: %s (%s)\n", cleanDiagnostic(report.thumbnailPath), cleanDiagnostic(report.thumbnailState)); err != nil {
 		return err
 	}
 	for _, tool := range report.tools {
