@@ -104,6 +104,13 @@ func normalize(cfg Config) Config {
 }
 
 func path() (string, error) {
+	if override := os.Getenv("YTUI_CONFIG_PATH"); override != "" {
+		p, err := filepath.Abs(override)
+		if err != nil {
+			return "", fmt.Errorf("resolve YTUI_CONFIG_PATH: %w", err)
+		}
+		return filepath.Clean(p), nil
+	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", err

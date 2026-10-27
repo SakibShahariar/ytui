@@ -121,6 +121,8 @@ Downloads are saved to:
 
 You can change this with `download_dir` in the configuration file.
 
+For isolated or portable setups, `ytui --config PATH --data PATH` overrides the config and data files for that run. The equivalent environment variables are `YTUI_CONFIG_PATH` and `YTUI_DATA_PATH`. Command-line overrides take precedence over environment variables; when neither is set, ytui uses the platform's XDG-compatible config directory.
+
 ## Thumbnails
 
 In Kitty and compatible terminals, ytui can show video thumbnails using Kitty’s graphics protocol. Toggle the preview panel with `Ctrl+T`.

@@ -50,11 +50,26 @@ func main() {
 	importPath := flag.String("import-config", "", "import settings from FILE before starting ytui")
 	yes := flag.Bool("yes", false, "confirm --import-config without prompting")
 	showPaths := flag.Bool("show-paths", false, "print config and data paths and exit")
+	configOverride := flag.String("config", "", "use config file PATH instead of the XDG default")
+	dataOverride := flag.String("data", "", "use data store file PATH instead of the XDG default")
 	flag.Parse()
 
 	if showVersion {
 		fmt.Printf("ytui %s\n", currentVersion())
 		return
+	}
+
+	if *configOverride != "" {
+		if err := os.Setenv("YTUI_CONFIG_PATH", *configOverride); err != nil {
+			fmt.Fprintln(os.Stderr, "invalid --config path:", err)
+			os.Exit(2)
+		}
+	}
+	if *dataOverride != "" {
+		if err := os.Setenv("YTUI_DATA_PATH", *dataOverride); err != nil {
+			fmt.Fprintln(os.Stderr, "invalid --data path:", err)
+			os.Exit(2)
+		}
 	}
 
 	if len(flag.Args()) > 0 && flag.Arg(0) == "doctor" {

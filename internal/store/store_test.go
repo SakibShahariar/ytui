@@ -105,3 +105,34 @@ func TestPathReturnsDataFilePath(t *testing.T) {
 		t.Fatalf("Path() = %q, want %q", got, want)
 	}
 }
+
+
+func TestDataPathOverrideLoadsAndSavesIsolatedState(t *testing.T) {
+	override := filepath.Join(t.TempDir(), "portable", "state.json")
+	t.Setenv("YTUI_DATA_PATH", override)
+	path, err := Path()
+	if err != nil {
+		t.Fatalf("Path() error = %v", err)
+	}
+	if path != override {
+		t.Fatalf("Path() = %q, want override %q", path, override)
+	}
+	s, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	s.History = []HistoryEntry{{VideoID: "isolated", Title: "Portable state"}}
+	if err := s.Save(); err != nil {
+		t.Fatalf("Save() error = %v", err)
+	}
+	if _, err := os.Stat(override); err != nil {
+		t.Fatalf("override data file was not written: %v", err)
+	}
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("reload from override error = %v", err)
+	}
+	if len(loaded.History) != 1 || loaded.History[0].VideoID != "isolated" {
+		t.Fatalf("reloaded state = %#v, want isolated history entry", loaded.History)
+	}
+}

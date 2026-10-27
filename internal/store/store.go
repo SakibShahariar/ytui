@@ -41,7 +41,8 @@ type WatchLaterEntry struct {
 
 // Store bundles all local state and handles disk I/O.
 type Store struct {
-	dir string
+	dir      string
+	filePath string
 
 	Subscriptions []Channel         `json:"subscriptions"`
 	History       []HistoryEntry    `json:"history"`
@@ -61,11 +62,22 @@ func configDir() (string, error) {
 }
 
 func (s *Store) path() string {
+	if s.filePath != "" {
+		return s.filePath
+	}
 	return filepath.Join(s.dir, "data.json")
 }
 
 // Path returns the effective local data file path without creating directories.
+// YTUI_DATA_PATH overrides the XDG-compatible default.
 func Path() (string, error) {
+	if override := os.Getenv("YTUI_DATA_PATH"); override != "" {
+		p, err := filepath.Abs(override)
+		if err != nil {
+			return "", fmt.Errorf("resolve YTUI_DATA_PATH: %w", err)
+		}
+		return filepath.Clean(p), nil
+	}
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
@@ -76,11 +88,15 @@ func Path() (string, error) {
 // Load reads existing state from disk, or returns a fresh empty Store if
 // none exists yet (first run).
 func Load() (*Store, error) {
-	dir, err := configDir()
+	p, err := Path()
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{dir: dir}
+	dir := filepath.Dir(p)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	s := &Store{dir: dir, filePath: p}
 
 	data, err := os.ReadFile(s.path())
 	if os.IsNotExist(err) {

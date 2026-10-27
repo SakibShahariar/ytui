@@ -207,3 +207,16 @@ func TestLoadWithErrorReportsInvalidConfigValues(t *testing.T) {
 		t.Fatalf("LoadWithError() error = %v, want invalid quality reported", err)
 	}
 }
+
+
+func TestConfigPathOverride(t *testing.T) {
+	override := filepath.Join(t.TempDir(), "portable", "settings.json")
+	t.Setenv("YTUI_CONFIG_PATH", override)
+	got, err := path()
+	if err != nil {
+		t.Fatalf("path() error = %v", err)
+	}
+	if got != override {
+		t.Fatalf("path() = %q, want override %q", got, override)
+	}
+}
