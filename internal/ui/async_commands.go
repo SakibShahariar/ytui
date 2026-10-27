@@ -9,6 +9,13 @@ import (
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
+func loadDirectURLCmd(videoURL string) tea.Cmd {
+	return func() tea.Msg {
+		video, err := ytdlp.GetVideo(videoURL)
+		return directURLMsg{video: video, err: err}
+	}
+}
+
 func doSearch(query string) tea.Cmd {
 	return func() tea.Msg {
 		results, err := ytdlp.Search(query, 25)

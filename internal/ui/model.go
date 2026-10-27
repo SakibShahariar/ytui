@@ -281,6 +281,10 @@ type searchResultsMsg struct {
 	results []ytdlp.Video
 	err     error
 }
+type directURLMsg struct {
+	video ytdlp.Video
+	err error
+}
 type playbackStartedMsg struct {
 	p   *player.Player
 	err error
@@ -332,6 +336,7 @@ type likedLoadedMsg struct {
 type Model struct {
 	store *store.Store
 	cfg   config.Config
+	directURL string
 
 	activeTab   tab
 	inputMode   bool // true = typing in the search box; false = list navigation

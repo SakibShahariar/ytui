@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
@@ -31,6 +32,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+
+	case directURLMsg:
+		m.directURL = ""
+		if msg.err != nil {
+			m.errMsg = "open URL: " + msg.err.Error()
+			return m, nil
+		}
+		m.errMsg = ""
+		m.playingLocal = false
+		m.playingVid = &msg.video
+		m.statusMsg = "starting mpv: " + msg.video.Title
+		_ = m.store.AddHistory(store.HistoryEntry{
+			VideoID: msg.video.ID, Title: msg.video.Title, Channel: msg.video.Channel,
+			URL: msg.video.URL, Thumbnail: msg.video.Thumbnail,
+		})
+		return m, startPlayback(msg.video.URL, m.audioOnly, 0)
 
 	case searchResultsMsg:
 		m.loading = false
