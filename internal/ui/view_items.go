@@ -11,8 +11,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/rivo/uniseg"
 
-	"ytui/internal/library"
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 // videoItem adapts ytdlp.Video to the list.Item interface bubbles/list needs.

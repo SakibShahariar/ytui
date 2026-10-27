@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 // nowPlayingImageRegion computes where the Now Playing tab's (much larger,

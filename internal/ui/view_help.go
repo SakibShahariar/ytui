@@ -3,8 +3,8 @@ package ui
 import (
 	"strings"
 
-	"ytui/internal/downloader"
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 func (m Model) contextualHelp() string {

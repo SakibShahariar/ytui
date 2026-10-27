@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 func renderLogo() string {
