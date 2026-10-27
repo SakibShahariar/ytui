@@ -2,6 +2,18 @@
 
 A terminal YouTube client: search, play with mpv, manage subscriptions, Watch Later, history, and downloads—without opening a browser.
 
+## Contents
+
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Essential keys](#essential-keys)
+- [Google login](#google-login)
+- [Configuration](#configuration)
+- [Downloads](#downloads)
+- [Thumbnails](#thumbnails)
+- [Documentation](#documentation)
+- [License](#license)
+
 ## Requirements
 
 - Go
