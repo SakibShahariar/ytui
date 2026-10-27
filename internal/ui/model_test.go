@@ -16,6 +16,15 @@ func TestWrapTwoLinesTruncatesByDisplayWidth(t *testing.T) {
 	}
 }
 
+func TestAudioOnlyLabel(t *testing.T) {
+	if got := audioOnlyLabel(false); got != "" {
+		t.Errorf("audioOnlyLabel(false) = %q, want empty", got)
+	}
+	if got := audioOnlyLabel(true); got != "AUDIO" {
+		t.Errorf("audioOnlyLabel(true) = %q, want AUDIO", got)
+	}
+}
+
 func TestVisibleTabsAndCycling(t *testing.T) {
 	tests := []struct {
 		name string

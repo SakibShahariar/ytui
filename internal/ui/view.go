@@ -9,6 +9,13 @@ import (
 	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
+func audioOnlyLabel(enabled bool) string {
+	if enabled {
+		return "AUDIO"
+	}
+	return ""
+}
+
 func (m Model) View() string {
 	var b strings.Builder
 
@@ -69,16 +76,11 @@ func (m Model) View() string {
 	if m.previewVisible() {
 		var pv strings.Builder
 		pv.WriteString(previewLabel.Render("Preview"))
-		pv.WriteString("\n\n") // header rows — must match previewHeaderRows
+		pv.WriteString("\n\n")
 
 		_, _, _, imageRows := m.previewImageRegion()
 		haveImage := thumb.Supported() && m.previewedID != ""
 		if haveImage {
-			// Leave exactly this many blank lines for icat to draw into —
-			// getting this wrong is what caused the image to overlap the
-			// "Preview" label earlier, and sizing it to the actual 16:9
-			// aspect ratio (see previewImageRegion) means the image now
-			// fills this space instead of leaving a gap before the text.
 			pv.WriteString(strings.Repeat("\n", imageRows))
 		} else {
 			msg := "select a video to\npreview it here"
@@ -87,18 +89,14 @@ func (m Model) View() string {
 			}
 			pv.WriteString(previewMutedText.Width(previewWidth - 4).Height(imageRows).Render(msg))
 		}
-		pv.WriteString("\n") // spacer between image and info block — footer row 1
+		pv.WriteString("\n")
 
 		innerW := previewWidth - 4
 		if innerW < 8 {
 			innerW = 8
 		}
-		footer := make([]string, previewFooterRows-1) // -1: spacer above already counted as row 0
+		footer := make([]string, previewFooterRows-1)
 		if v, ok := m.selectedVideo(); ok {
-			// MaxWidth is a hard cell-width clamp (accounts for double-width
-			// emoji correctly, unlike counting runes) — it's the safety net
-			// underneath the rough truncate() pre-cut, so a narrow panel
-			// can never push a line past the border and corrupt the layout.
 			titleStyle := lipgloss.NewStyle().Foreground(ctpText).Bold(true)
 			titleLine1, titleLine2 := wrapTwoLines(v.Title, innerW)
 			footer[0] = titleStyle.MaxWidth(innerW).Render(titleLine1)
@@ -133,6 +131,9 @@ func (m Model) View() string {
 	} else if m.inputMode {
 		modeBar = footerModeInput.Render("SEARCH")
 		help = "enter: run search · ↑↓: back to browsing · esc: cancel · ctrl+c: quit"
+	}
+	if label := audioOnlyLabel(m.audioOnly); label != "" {
+		modeBar = lipgloss.JoinHorizontal(lipgloss.Top, modeBar, " ", footerModeInput.Render(label))
 	}
 	loadingIndicator := ""
 	if m.ytLoading {
