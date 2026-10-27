@@ -55,6 +55,16 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
 		listContent.WriteString("\n")
+	} else if m.libraryFilterMode {
+		listContent.WriteString(m.libraryFilterInput.View())
+		listContent.WriteString("\n")
+		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
+		listContent.WriteString("\n")
+	} else if (m.activeTab == tabHistory || m.activeTab == tabDownloads) && m.libraryFilter != "" {
+		listContent.WriteString(lipgloss.NewStyle().Foreground(ctpSubtext0).Render("Filter: "+m.libraryFilter))
+		listContent.WriteString("\n")
+		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
+		listContent.WriteString("\n")
 	}
 	switch {
 	case m.downloadPicker:
@@ -132,6 +142,9 @@ func (m Model) View() string {
 	if m.downloadPicker {
 		modeBar = footerModeInput.Render("DOWNLOAD")
 		help = "↑↓: move · enter/space: select · esc: cancel"
+	} else if m.libraryFilterMode {
+		modeBar = footerModeInput.Render("FILTER")
+		help = "enter: apply · ctrl+u: clear text · esc: cancel"
 	} else if m.resumePrompt != nil {
 		modeBar = footerModeInput.Render("RESUME")
 		help = "enter/r: resume · b: start from beginning · esc: cancel"
@@ -141,6 +154,12 @@ func (m Model) View() string {
 	} else if m.inputMode {
 		modeBar = footerModeInput.Render("SEARCH")
 		help = "enter: run search · ↑↓: back to browsing · esc: cancel · ctrl+c: quit"
+	}
+	if !m.libraryFilterMode && (m.activeTab == tabHistory || m.activeTab == tabDownloads) {
+		help += " · ctrl+f: filter · ctrl+u: clear"
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			help += " · ctrl+g: status " + m.downloadStatusFilterLabel()
+		}
 	}
 	if label := audioOnlyLabel(m.audioOnly); label != "" {
 		modeBar = lipgloss.JoinHorizontal(lipgloss.Top, modeBar, " ", footerModeInput.Render(label))

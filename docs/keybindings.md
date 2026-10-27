@@ -44,3 +44,7 @@ On the Subs, Watch Later, and History tabs, `j` and `k` also move through the li
 | `y` | Confirm deletion |
 
 `?` opens or closes the in-app keyboard help when you are not typing a search query. Use arrow keys or Page Up/Page Down to scroll, Home/End to jump, and Esc to close.
+
+## History and download filters
+
+On **History** and **Downloads**, press `Ctrl+F` to search titles and channels (offline files are searchable by filename). Press `Enter` to apply the text filter, `Esc` to cancel editing, or `Ctrl+U` to clear all library filters. On the live Downloads queue, `Ctrl+G` cycles status filters: all, active, finished, and failed/resumable. Text and status filters combine; changing a filter preserves the current selection where possible.

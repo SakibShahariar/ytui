@@ -52,6 +52,30 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
+	if m.libraryFilterMode {
+		switch key {
+		case "enter":
+			m.libraryFilter = strings.TrimSpace(m.libraryFilterInput.Value())
+			m.libraryFilterMode = false
+			m.libraryFilterInput.Blur()
+			m.refreshList()
+			m.statusMsg = "library filter applied"
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+		case "esc":
+			m.libraryFilterMode = false
+			m.libraryFilterInput.Blur()
+			m.libraryFilterInput.SetValue(m.libraryFilter)
+			return m, nil
+		case "ctrl+u":
+			m.libraryFilterInput.SetValue("")
+			return m, nil
+		default:
+			var cmd tea.Cmd
+			m.libraryFilterInput, cmd = m.libraryFilterInput.Update(msg)
+			return m, cmd
+		}
+	}
+
 	if m.resumePrompt != nil {
 		prompt := *m.resumePrompt
 		switch key {
@@ -312,6 +336,35 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.channelVideos = nil
 			m.refreshList()
 			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+		}
+		return m, nil
+
+	case "ctrl+f":
+		if m.activeTab == tabHistory || m.activeTab == tabDownloads {
+			m.libraryFilterMode = true
+			m.libraryFilterInput.SetValue(m.libraryFilter)
+			m.libraryFilterInput.Focus()
+			return m, tea.Batch(tea.ClearScreen, textinput.Blink)
+		}
+		return m, nil
+
+	case "ctrl+u":
+		if m.activeTab == tabHistory || m.activeTab == tabDownloads {
+			m.libraryFilter = ""
+			m.libraryFilterInput.SetValue("")
+			m.downloadStatusFilter = 0
+			m.refreshList()
+			m.statusMsg = "library filters cleared"
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+		}
+		return m, nil
+
+	case "ctrl+g":
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			m.downloadStatusFilter = (m.downloadStatusFilter + 1) % 4
+			m.refreshList()
+			m.statusMsg = "download status filter: " + m.downloadStatusFilterLabel()
+			return m, nil
 		}
 		return m, nil
 
