@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -278,7 +279,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case homeFeedLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
-			m.errMsg = "home feed: " + msg.err.Error()
+			if len(m.homeFeed) > 0 {
+				m.errMsg = "home feed refresh failed (showing cached results): " + homeFeedErrorMessage(msg.err)
+			} else {
+				m.errMsg = "home feed: " + homeFeedErrorMessage(msg.err)
+			}
 			return m, nil
 		}
 		if msg.failed > 0 {
@@ -289,9 +294,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			items = append(items, videoItem{v})
 		}
 		m.homeFeed = items
+		if msg.fromCache {
+			m.statusMsg = fmt.Sprintf("showing cached Home feed (%s old)", msg.cacheAge.Round(time.Minute))
+			if msg.refresh {
+				m.statusMsg += "; refreshing in background…"
+				m.ytLoading = true
+			}
+		} else if msg.failed == 0 {
+			m.statusMsg = "Home feed refreshed"
+		}
 		if m.activeTab == tabHome {
 			m.refreshList()
-			return m, m.refreshPreview()
+			previewCmd := m.refreshPreview()
+			if msg.fromCache && msg.refresh {
+				return m, tea.Batch(previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
+			}
+			return m, previewCmd
+		}
+		if msg.fromCache && msg.refresh {
+			return m, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions)
 		}
 		return m, nil
 

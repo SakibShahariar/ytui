@@ -10,6 +10,7 @@ package ui
 import (
 	"net/http"
 	"os"
+	"time"
 	"path/filepath"
 	"runtime"
 
@@ -330,7 +331,11 @@ type channelVideosLoadedMsg struct {
 type homeFeedLoadedMsg struct {
 	videos []ytdlp.Video
 	failed int
-	err    error
+	err error
+	fromCache bool
+	cacheAge time.Duration
+	refresh bool
+	subscriptions []ytapi.Subscription
 }
 type likedLoadedMsg struct {
 	videos []ytdlp.Video
