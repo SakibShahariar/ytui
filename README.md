@@ -140,6 +140,7 @@ Details and limitations: [Thumbnails](docs/thumbnails.md).
 - [Configuration reference](docs/configuration.md)
 - [Thumbnails](docs/thumbnails.md)
 - [Architecture](docs/architecture.md)
+- [Diagnostics](#diagnostics): run `ytui doctor` for dependency versions, config/data paths, authentication state, and download-directory status without printing credentials.
 
 ## License
 
