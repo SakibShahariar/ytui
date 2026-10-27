@@ -82,7 +82,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if key == "?" && !m.inputMode && m.credentialStep == 0 {
+	if key == "?" && !m.inputMode && m.credentialStep == 0 && !m.downloadPicker && !m.showLoginHelp && m.offlineDeletePending == nil {
 		m.keyboardHelp = true
 		m.keyboardHelpOffset = 0
 		return m, nil

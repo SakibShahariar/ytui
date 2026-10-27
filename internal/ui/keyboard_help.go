@@ -20,7 +20,7 @@ func keyboardHelpLines() []string {
 		"Esc                 Cancel search, close help, or back out",
 		"",
 		"Search and lists",
-		"Type letters        Start or edit a Search query",
+		"Plain letters       Start or edit a Search query",
 		"Ctrl+S              Subscribe to selected channel",
 		"Ctrl+W              Add selected video to Watch Later",
 		"Ctrl+D              Open download options; cancel selected download",
