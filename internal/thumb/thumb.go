@@ -230,10 +230,11 @@ func cleanupCache(policy CachePolicy, protectPath string) (CacheStats, error) {
 	}
 
 	sort.Slice(entries, func(i, j int) bool { return entries[i].modTime.Before(entries[j].modTime) })
+	failedRemovals := make(map[string]bool)
 	for len(entries) > policy.MaxEntries {
 		removeIndex := -1
 		for i, entry := range entries {
-			if entry.path != activePreviewPath && entry.path != protectPath {
+			if entry.path != activePreviewPath && entry.path != protectPath && !failedRemovals[entry.path] {
 				removeIndex = i
 				break
 			}
@@ -241,11 +242,10 @@ func cleanupCache(policy CachePolicy, protectPath string) (CacheStats, error) {
 		if removeIndex < 0 {
 			break
 		}
-		if err := os.Remove(entries[removeIndex].path); err != nil && !os.IsNotExist(err) {
+		path := entries[removeIndex].path
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			cleanupErrs = append(cleanupErrs, err)
-			// Avoid looping forever if this file cannot be removed.
-			entries[removeIndex].modTime = time.Time{}
-			entries[removeIndex].path = activePreviewPath
+			failedRemovals[path] = true
 			continue
 		}
 		entries = append(entries[:removeIndex], entries[removeIndex+1:]...)
@@ -278,20 +278,21 @@ func ShowWithPolicy(path string, col, row, cols, rows int, policy CachePolicy) e
 	err := func() error {
 		cacheMu.Lock()
 		defer cacheMu.Unlock()
+
 		cmd := exec.Command("kitty", "+kitten", "icat",
-		"--transfer-mode=memory",
-		"--stdin=no",
-		"--align=left",
-		"--scale-up",
-		"--place", fmt.Sprintf("%dx%d@%dx%d", cols, rows, col, row),
-		path,
-	)
-	// Buffer both streams instead of piping stdout live — icat sometimes
-	// writes its actual error message to stdout, not stderr, and piping
-	// it straight to the real terminal was silently swallowing it.
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+			"--transfer-mode=memory",
+			"--stdin=no",
+			"--align=left",
+			"--scale-up",
+			"--place", fmt.Sprintf("%dx%d@%dx%d", cols, rows, col, row),
+			path,
+		)
+		// Buffer both streams instead of piping stdout live — icat sometimes
+		// writes its actual error message to stdout, not stderr, and piping
+		// it straight to the real terminal was silently swallowing it.
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		if err := cmd.Run(); err != nil {
 			msg := strings.TrimSpace(stderr.String())
 			if msg == "" {
