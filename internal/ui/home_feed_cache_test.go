@@ -104,3 +104,13 @@ func TestHomeFeedErrorMessageExplainsQuotaAndAuthorizationFailures(t *testing.T)
 
 type fakeError string
 func (e fakeError) Error() string { return string(e) }
+
+func TestHomeFeedCacheDoesNotCrossSubscriptionSets(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	if err := saveHomeFeedCache([]ytdlp.Video{{ID: "private-interest"}}, "account-a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := loadHomeFeedCache("account-b"); err == nil {
+		t.Fatal("cache from another subscription set should not be reused")
+	}
+}

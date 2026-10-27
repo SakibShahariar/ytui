@@ -152,6 +152,7 @@ Existing flags such as `--show-paths`, `--export-config`, and `--import-config` 
 
 - [Full keybindings](docs/keybindings.md)
 - [Google login setup](docs/google-login.md)
+- [Home feed cache and API errors](docs/home-feed.md)
 - [Configuration reference](docs/configuration.md)
 - [Thumbnails](docs/thumbnails.md)
 - [Architecture](docs/architecture.md)
