@@ -27,6 +27,10 @@ type Player struct {
 
 	ipcMu       sync.Mutex
 	nextRequest uint64
+
+	waitOnce sync.Once
+	waitDone chan struct{}
+	waitErr  error
 }
 
 // mpvCommand is the shape mpv's IPC protocol expects for sending commands.
@@ -190,13 +194,16 @@ func (p *Player) Quit() error {
 		_ = p.conn.Close()
 	}
 	if p.cmd != nil && p.cmd.Process != nil {
-		// Give mpv a moment to exit cleanly before hard-killing.
+		// Give mpv a moment to exit cleanly before hard-killing. Wait is
+		// shared with the degraded-IPC exit watcher, so concurrent callers
+		// must not invoke exec.Cmd.Wait more than once.
 		done := make(chan error, 1)
-		go func() { done <- p.cmd.Wait() }()
+		go func() { done <- p.Wait() }()
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
 			_ = p.cmd.Process.Kill()
+			<-done
 		}
 	}
 	if p.socketPath != "" {
@@ -208,10 +215,18 @@ func (p *Player) Quit() error {
 // Wait blocks until mpv exits (e.g. user pressed 'q' inside mpv itself,
 // or the video finished). Useful when running without IPC control.
 func (p *Player) Wait() error {
-	if p.cmd == nil {
+	if p == nil || p.cmd == nil {
 		return nil
 	}
-	return p.cmd.Wait()
+	p.waitOnce.Do(func() {
+		p.waitDone = make(chan struct{})
+		go func() {
+			p.waitErr = p.cmd.Wait()
+			close(p.waitDone)
+		}()
+	})
+	<-p.waitDone
+	return p.waitErr
 }
 
 // GetProperty queries an mpv property (e.g. "pause", "time-pos", "duration")

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os/exec"
 	"sync"
 	"testing"
 )
@@ -98,5 +99,31 @@ func TestGetPropertyMatchesItsRequestAndSkipsEvents(t *testing.T) {
 	}
 	if err := <-serverErr; err != nil {
 		t.Errorf("fake mpv server error = %v", err)
+	}
+}
+
+
+func TestWaitCanBeCalledConcurrently(t *testing.T) {
+	cmd := exec.Command("sh", "-c", "exit 0")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	p := &Player{cmd: cmd}
+	const callers = 8
+	errs := make(chan error, callers)
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- p.Wait()
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Errorf("concurrent Wait() error = %v", err)
+		}
 	}
 }
