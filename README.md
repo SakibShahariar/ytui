@@ -61,7 +61,7 @@ For development, run `go run .` from the cloned repository.
 | `Ctrl+P` | Pause or resume |
 | `Ctrl+X` | Stop playback |
 | `Ctrl+L` | Google login / logout |
-| `Ctrl+C` | Quit ytui and stop playback |
+| `Ctrl+C` | Quit ytui and stop the current mpv playback session |
 
 See the [full keybinding reference](docs/keybindings.md).
 
