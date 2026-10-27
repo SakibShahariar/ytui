@@ -36,7 +36,7 @@ Install the latest release directly with Go (requires Go 1.22 or newer):
 go install github.com/SakibShahariar/ytui@latest
 ```
 
-Make sure your Go bin directory is on `PATH`, then run `ytui`. You still need `mpv` and `yt-dlp` installed separately.
+Make sure your Go bin directory is on `PATH`, then run `ytui`. Check the installed build with `ytui --version`. You still need `mpv` and `yt-dlp` installed separately.
 
 To build from source instead:
 

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -12,10 +13,32 @@ import (
 	"github.com/SakibShahariar/ytui/internal/ui"
 )
 
+// version may be set at build time with -ldflags "-X main.version=vX.Y.Z".
+var version = "dev"
+
+func currentVersion() string {
+	if version != "dev" {
+		return version
+	}
+	info, ok := debug.ReadBuildInfo()
+	if ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return version
+}
+
 func main() {
+	var showVersion bool
+	flag.BoolVar(&showVersion, "version", false, "print version and exit")
+	flag.BoolVar(&showVersion, "v", false, "print version and exit")
 	exportPath := flag.String("export-config", "", "export effective settings to FILE and exit")
 	importPath := flag.String("import-config", "", "import settings from FILE before starting ytui")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("ytui %s\\n", currentVersion())
+		return
+	}
 
 	if *exportPath != "" && *importPath != "" {
 		fmt.Fprintln(os.Stderr, "use either --export-config or --import-config, not both")
