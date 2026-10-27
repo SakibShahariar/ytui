@@ -1,6 +1,11 @@
 package downloader
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
 
 func TestProgressRegex(t *testing.T) {
 	line := "[download]  42.3% of  123.45MiB at  5.67MiB/s ETA 00:12"
@@ -54,5 +59,57 @@ func TestShutdownPreventsNewDownloads(t *testing.T) {
 	}
 	if m.Active() {
 		t.Fatal("manager reports active downloads after Shutdown")
+	}
+}
+
+
+func TestCleanupStalePartialsOnlyRemovesOldArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	oldPart := filepath.Join(dir, "video [abc].mp4.part")
+	oldYtdl := filepath.Join(dir, "video [def].ytdl")
+	freshPart := filepath.Join(dir, "fresh [ghi].mp4.part")
+	ordinary := filepath.Join(dir, "completed.mp4")
+	for _, path := range []string{oldPart, oldYtdl, freshPart, ordinary} {
+		if err := os.WriteFile(path, []byte("data"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	oldTime := time.Now().Add(-40 * 24 * time.Hour)
+	for _, path := range []string{oldPart, oldYtdl} {
+		if err := os.Chtimes(path, oldTime, oldTime); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	removed, err := CleanupStalePartials(dir, 30*24*time.Hour)
+	if err != nil {
+		t.Fatalf("CleanupStalePartials() error = %v", err)
+	}
+	if removed != 2 {
+		t.Fatalf("removed = %d, want 2", removed)
+	}
+	for _, path := range []string{oldPart, oldYtdl} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("stale artifact %q remains, stat err = %v", path, err)
+		}
+	}
+	for _, path := range []string{freshPart, ordinary} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("non-stale or completed file %q was removed: %v", path, err)
+		}
+	}
+}
+
+func TestHasPartialForVideo(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "title [video123].webm.part")
+	if err := os.WriteFile(path, []byte("partial"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if !hasPartialForVideo(dir, "video123") {
+		t.Fatal("hasPartialForVideo() = false for matching partial file")
+	}
+	if hasPartialForVideo(dir, "other") {
+		t.Fatal("hasPartialForVideo() = true for unrelated video")
 	}
 }

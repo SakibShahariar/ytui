@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Status is where a download currently stands.
@@ -23,6 +24,7 @@ const (
 	StatusDownloading
 	StatusDone
 	StatusError
+	StatusResumable
 	StatusCanceled
 )
 
@@ -66,6 +68,9 @@ type Manager struct {
 	destDir string
 	closed  bool
 	wg      sync.WaitGroup
+
+	stalePartialsRemoved int
+	staleCleanupErr      error
 }
 
 // New creates a Manager that saves into destDir (created if it doesn't
@@ -81,14 +86,27 @@ func New(destDir string) (*Manager, error) {
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return nil, fmt.Errorf("couldn't create download directory: %w", err)
 	}
+	removed, cleanupErr := CleanupStalePartials(destDir, 30*24*time.Hour)
 	return &Manager{
-		byID:    make(map[string]*Download),
-		destDir: destDir,
+		byID:                 make(map[string]*Download),
+		destDir:              destDir,
+		stalePartialsRemoved: removed,
+		staleCleanupErr:      cleanupErr,
 	}, nil
 }
 
 // DestDir returns where downloads are being saved.
 func (m *Manager) DestDir() string { return m.destDir }
+
+// StaleCleanupResult reports how many old partial artifacts were removed at
+// startup and whether any cleanup operation failed. Cleanup errors do not
+// prevent the application from starting or downloading.
+func (m *Manager) StaleCleanupResult() (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	return m.stalePartialsRemoved, m.staleCleanupErr
+}
 
 // Enqueue starts a download in the background. If videoID is already
 // queued/downloading/done, this is a no-op (returns the existing entry) —
@@ -100,7 +118,7 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 		return &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusCanceled}
 	}
 	existing, found := m.byID[videoID]
-	if found && existing.Status != StatusError && existing.Status != StatusCanceled {
+	if found && existing.Status != StatusError && existing.Status != StatusResumable && existing.Status != StatusCanceled {
 		m.mu.Unlock()
 		return existing
 	}
@@ -190,6 +208,70 @@ func (m *Manager) Shutdown() {
 	m.wg.Wait()
 }
 
+const stalePartialAge = 30 * 24 * time.Hour
+
+// CleanupStalePartials removes yt-dlp partial/temp artifacts older than maxAge.
+// It only scans the dedicated download directory's immediate children and
+// never removes recent files that may still be resumable.
+func CleanupStalePartials(destDir string, maxAge time.Duration) (int, error) {
+	if maxAge <= 0 {
+		return 0, fmt.Errorf("partial-file cleanup age must be positive")
+	}
+	entries, err := os.ReadDir(destDir)
+	if err != nil {
+		return 0, err
+	}
+	cutoff := time.Now().Add(-maxAge)
+	removed := 0
+	var firstErr error
+	for _, entry := range entries {
+		if entry.IsDir() || !isPartialArtifact(entry.Name()) {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if info.ModTime().After(cutoff) {
+			continue
+		}
+		err = os.Remove(filepath.Join(destDir, entry.Name()))
+		if err != nil && !os.IsNotExist(err) {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		removed++
+	}
+	return removed, firstErr
+}
+
+func isPartialArtifact(name string) bool {
+	name = strings.ToLower(name)
+	return strings.HasSuffix(name, ".part") ||
+		strings.Contains(name, ".part-frag") ||
+		strings.HasSuffix(name, ".ytdl") ||
+		strings.HasSuffix(name, ".tmp")
+}
+
+func hasPartialForVideo(destDir, videoID string) bool {
+	entries, err := os.ReadDir(destDir)
+	if err != nil {
+		return false
+	}
+	needle := "[" + videoID + "]"
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.Contains(entry.Name(), needle) && isPartialArtifact(entry.Name()) {
+			return true
+		}
+	}
+	return false
+}
+
 var progressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)%.*?at\s+(\S+)\s+ETA\s+(\S+)`)
 var destRe = regexp.MustCompile(`\[download\]\s+Destination:\s+(.+)`)
 var alreadyDoneRe = regexp.MustCompile(`has already been downloaded`)
@@ -204,7 +286,7 @@ func (m *Manager) run(d *Download) {
 	m.mu.Unlock()
 
 	outputTemplate := filepath.Join(m.destDir, "%(title).100s [%(id)s].%(ext)s")
-	args := []string{"--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate}
+	args := []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate}
 
 	if d.Opts.ExtractAudio {
 		args = append(args, "-x")
@@ -283,6 +365,7 @@ func (m *Manager) run(d *Download) {
 	}
 
 	err = cmd.Wait()
+	resumable := err != nil && hasPartialForVideo(m.destDir, d.VideoID)
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -290,12 +373,17 @@ func (m *Manager) run(d *Download) {
 		return // Cancel() already set the final status — don't overwrite it
 	}
 	if err != nil {
-		d.Status = StatusError
 		msg := strings.TrimSpace(lastLine)
 		if msg == "" {
 			msg = err.Error()
 		}
-		d.Err = fmt.Errorf("%s", msg)
+		if resumable {
+			d.Status = StatusResumable
+			d.Err = fmt.Errorf("%s (partial files retained; press Ctrl+R to resume)", msg)
+		} else {
+			d.Status = StatusError
+			d.Err = fmt.Errorf("%s (press Ctrl+R to retry)", msg)
+		}
 		return
 	}
 	d.Status = StatusDone

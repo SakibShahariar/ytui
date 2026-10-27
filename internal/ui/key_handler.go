@@ -315,6 +315,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "ctrl+r":
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			return m.retrySelectedDownload()
+		}
+		return m, nil
+
 	case "ctrl+d":
 		if m.activeTab == tabDownloads {
 			if m.offlineDownloads { return m, nil }

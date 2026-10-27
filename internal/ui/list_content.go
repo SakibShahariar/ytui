@@ -172,6 +172,12 @@ func (i downloadItem) Description() string {
 		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", q, bar, i.d.Progress, i.d.Speed, i.d.ETA)
 	case downloader.StatusDone:
 		return "✓ done — " + i.d.FilePath
+	case downloader.StatusResumable:
+		msg := "partial file available"
+		if i.d.Err != nil {
+			msg = i.d.Err.Error()
+		}
+		return "↻ resumable: " + msg
 	case downloader.StatusError:
 		msg := "unknown error"
 		if i.d.Err != nil {
@@ -179,7 +185,7 @@ func (i downloadItem) Description() string {
 		}
 		return "✗ error: " + msg
 	case downloader.StatusCanceled:
-		return "canceled"
+		return "canceled — Ctrl+R to retry/resume"
 	}
 	return ""
 }

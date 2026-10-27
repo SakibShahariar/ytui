@@ -23,6 +23,34 @@ func (m Model) downloadDirectory() string {
 	return filepath.Join(home, "Downloads", "ytui")
 }
 
+func (m Model) retrySelectedDownload() (tea.Model, tea.Cmd) {
+	if m.offlineDownloads {
+		return m, nil
+	}
+	item, ok := m.list.SelectedItem().(downloadItem)
+	if !ok {
+		m.statusMsg = "select a failed or canceled download to retry"
+		return m, nil
+	}
+	switch item.d.Status {
+	case downloader.StatusError, downloader.StatusResumable, downloader.StatusCanceled:
+	default:
+		m.statusMsg = "only failed, resumable, or canceled downloads can be retried"
+		return m, nil
+	}
+	if m.downloads == nil {
+		m.statusMsg = "downloads unavailable"
+		return m, nil
+	}
+	wasActive := m.downloads.Active()
+	m.downloads.Enqueue(item.d.VideoID, item.d.Title, item.d.Channel, item.d.URL, item.d.Opts)
+	m.statusMsg = "retrying/resuming: " + item.d.Title
+	if !wasActive {
+		return m, downloadsTickCmd()
+	}
+	return m, nil
+}
+
 func (m Model) cancelSelectedDownload() (tea.Model, tea.Cmd) {
 	if item, ok := m.list.SelectedItem().(downloadItem); ok {
 		if m.downloads != nil && (item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading) {

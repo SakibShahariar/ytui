@@ -4,6 +4,8 @@ import (
 	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -70,9 +72,16 @@ func New(s *store.Store) Model {
 	if cfgErr != nil {
 		m.errMsg = "config: " + cfgErr.Error()
 	}
+	if removed, cleanupErr := dl.StaleCleanupResult(); cleanupErr != nil {
+		m.statusMsg = "partial-file cleanup warning: " + cleanupErr.Error()
+	} else if removed > 0 {
+		m.statusMsg = fmt.Sprintf("removed %d stale partial download file(s)", removed)
+	}
 	if warning := dependencyWarning(exec.LookPath); warning != "" {
 		if m.errMsg != "" {
 			m.errMsg += "; " + warning
+		} else if m.statusMsg != "" {
+			m.statusMsg += "; " + warning
 		} else {
 			m.statusMsg = warning
 		}

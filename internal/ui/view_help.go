@@ -43,9 +43,13 @@ func (m Model) contextualHelp() string {
 		}
 	}
 	if hasItems && m.activeTab == tabDownloads && !m.offlineDownloads {
-		if item, ok := m.list.SelectedItem().(downloadItem); ok &&
-			(item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading) {
-			parts = append(parts, "^d: cancel")
+		if item, ok := m.list.SelectedItem().(downloadItem); ok {
+			if item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading {
+				parts = append(parts, "^d: cancel")
+			}
+			if item.d.Status == downloader.StatusError || item.d.Status == downloader.StatusResumable || item.d.Status == downloader.StatusCanceled {
+				parts = append(parts, "^r: retry/resume")
+			}
 		}
 	}
 
