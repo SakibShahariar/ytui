@@ -131,3 +131,19 @@ func TestCleanupCacheProtectsRequestedPreviewDuringTransition(t *testing.T) {
 		t.Fatalf("CacheStats = %#v, want requested 1 entry / 4 bytes", stats)
 	}
 }
+
+
+func TestGetCacheStatsReportsCurrentUsage(t *testing.T) {
+	dir := testCacheDir(t)
+	writeCacheFile(t, dir, "one.jpg", 6, time.Hour)
+	writeCacheFile(t, dir, "two.jpg", 9, time.Minute)
+	writeCacheFile(t, dir, "ignored.tmp", 30, time.Minute)
+
+	stats, err := GetCacheStats()
+	if err != nil {
+		t.Fatalf("GetCacheStats() error = %v", err)
+	}
+	if stats.Directory != dir || stats.Entries != 2 || stats.Bytes != 15 {
+		t.Fatalf("GetCacheStats() = %#v, want directory %q, 2 entries, 15 bytes", stats, dir)
+	}
+}
