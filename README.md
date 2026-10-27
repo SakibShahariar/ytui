@@ -111,7 +111,7 @@ Full reference: [Configuration](docs/configuration.md).
 
 ## Downloads
 
-Press `Ctrl+D` to queue a download. Use the Downloads tab and `Ctrl+O` to switch between the active queue and saved offline files.
+Press `Ctrl+D` to queue a download. In the Downloads queue, `Ctrl+D` cancels an active transfer and `Ctrl+R` retries failed/canceled entries or resumes retained partials. `Ctrl+O` switches between the active queue and saved offline files. On startup, ytui removes `.part`, `.ytdl`, and temporary artifacts older than 30 days from the dedicated download directory; newer partials are kept for resuming.
 
 Downloads are saved to:
 

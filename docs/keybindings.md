@@ -16,6 +16,7 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+A` | Toggle audio-only mode for the next play |
 | `Ctrl+T` | Toggle the thumbnail preview panel |
 | `Ctrl+D` | Open download options, or cancel a download from the Downloads tab |
+| `Ctrl+R` | Retry a failed/canceled download or resume a retained partial download |
 | `Ctrl+O` | Switch Downloads between the live queue and saved offline files |
 | `Ctrl+L` | Log in with Google, or log out if already signed in |
 | `Ctrl+X` | Stop current playback |
