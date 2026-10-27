@@ -77,7 +77,7 @@ func collectDoctorReport() doctorReport {
 		downloadState = pathStatus(downloadPath, true)
 	}
 
-	cacheStats, cacheErr := thumb.CacheStats()
+	cacheStats, cacheErr := thumb.GetCacheStats()
 	thumbnailPath := cacheStats.Directory
 	thumbnailState := fmt.Sprintf("%d images, %d bytes", cacheStats.Entries, cacheStats.Bytes)
 	if cacheErr != nil {

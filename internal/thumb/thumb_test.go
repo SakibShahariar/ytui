@@ -94,3 +94,40 @@ func TestCleanupCacheRemovesStaleTemporaryFiles(t *testing.T) {
 		t.Errorf("fresh temp file was removed: %v", err)
 	}
 }
+
+
+func TestCleanupCacheProtectsRequestedPreviewDuringTransition(t *testing.T) {
+	dir := testCacheDir(t)
+	active := writeCacheFile(t, dir, "active.jpg", 3, 90*24*time.Hour)
+	requested := writeCacheFile(t, dir, "requested.jpg", 4, 60*24*time.Hour)
+	cacheMu.Lock()
+	activePreviewPath = active
+	cacheMu.Unlock()
+
+	if _, err := cleanupCache(CachePolicy{MaxEntries: 1, MaxAgeDays: 30}, requested); err != nil {
+		t.Fatalf("cleanupCache() error = %v", err)
+	}
+	if _, err := os.Stat(active); err != nil {
+		t.Fatalf("current preview was removed before replacement: %v", err)
+	}
+	if _, err := os.Stat(requested); err != nil {
+		t.Fatalf("requested preview was removed before display: %v", err)
+	}
+
+	cacheMu.Lock()
+	activePreviewPath = requested
+	cacheMu.Unlock()
+	stats, err := CleanupCache(CachePolicy{MaxEntries: 1, MaxAgeDays: 30})
+	if err != nil {
+		t.Fatalf("CleanupCache() after transition error = %v", err)
+	}
+	if _, err := os.Stat(requested); err != nil {
+		t.Fatalf("new active preview was removed: %v", err)
+	}
+	if _, err := os.Stat(active); !os.IsNotExist(err) {
+		t.Fatalf("replaced preview remains after cleanup, stat err = %v", err)
+	}
+	if stats.Entries != 1 || stats.Bytes != 4 {
+		t.Fatalf("CacheStats = %#v, want requested 1 entry / 4 bytes", stats)
+	}
+}

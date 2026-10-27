@@ -46,7 +46,10 @@ func (m Model) showThumbnailCmd(v ytdlp.Video) tea.Cmd {
 			return thumbErrMsg{err}
 		}
 		_ = thumb.Clear()
-		if err := thumb.Show(path, col, row, cols, rows); err != nil {
+		if err := thumb.ShowWithPolicy(path, col, row, cols, rows, thumb.CachePolicy{
+			MaxEntries: m.cfg.ThumbnailCacheMaxEntries,
+			MaxAgeDays: m.cfg.ThumbnailCacheMaxAgeDays,
+		}); err != nil {
 			return thumbErrMsg{err}
 		}
 		return thumbShownMsg{id: v.ID}

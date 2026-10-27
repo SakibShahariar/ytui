@@ -111,7 +111,7 @@ func DownloadWithPolicy(url, videoID string, policy CachePolicy) (string, error)
 	if info, err := os.Stat(path); err == nil && info.Size() > 0 {
 		now := time.Now()
 		_ = os.Chtimes(path, now, now) // treat reuse as recent use for LRU pruning
-		_, _ = CleanupCache(policy)
+		_, _ = cleanupCache(policy, path)
 		return path, nil
 	}
 
@@ -141,13 +141,13 @@ func DownloadWithPolicy(url, videoID string, policy CachePolicy) (string, error)
 	if err := os.Rename(tmp, path); err != nil {
 		return "", err
 	}
-	_, _ = CleanupCache(policy) // cache cleanup is best-effort; it must not hide a usable preview
+	_, _ = cleanupCache(policy, path) // protect the current and requested previews during transition
 	return path, nil
 }
 
 // CacheStats reports the current on-disk thumbnail count and size without
 // reading image contents or touching authentication data.
-func CacheStats() (CacheStats, error) {
+func GetCacheStats() (CacheStats, error) {
 	dir, err := cacheDir()
 	if err != nil {
 		return CacheStats{}, err
@@ -178,6 +178,10 @@ func CacheStats() (CacheStats, error) {
 // is protected until the terminal image is cleared or replaced. Old temporary
 // files from interrupted writes are removed after 24 hours.
 func CleanupCache(policy CachePolicy) (CacheStats, error) {
+	return cleanupCache(policy, "")
+}
+
+func cleanupCache(policy CachePolicy, protectPath string) (CacheStats, error) {
 	policy = normalizedPolicy(policy)
 	dir, err := cacheDir()
 	if err != nil {
@@ -215,7 +219,7 @@ func CleanupCache(policy CachePolicy) (CacheStats, error) {
 		if !strings.HasSuffix(file.Name(), ".jpg") {
 			continue
 		}
-		if path != activePreviewPath && now.Sub(info.ModTime()) > maxAge {
+		if path != activePreviewPath && path != protectPath && now.Sub(info.ModTime()) > maxAge {
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				cleanupErrs = append(cleanupErrs, err)
 				entries = append(entries, cacheEntry{path: path, modTime: info.ModTime(), size: info.Size()})
@@ -229,7 +233,7 @@ func CleanupCache(policy CachePolicy) (CacheStats, error) {
 	for len(entries) > policy.MaxEntries {
 		removeIndex := -1
 		for i, entry := range entries {
-			if entry.path != activePreviewPath {
+			if entry.path != activePreviewPath && entry.path != protectPath {
 				removeIndex = i
 				break
 			}
@@ -265,9 +269,16 @@ func CleanupCache(policy CachePolicy) (CacheStats, error) {
 // state of terminal graphics protocols, and is the same technique used by
 // TUI file managers like yazi/ranger for image previews.
 func Show(path string, col, row, cols, rows int) error {
-	cacheMu.Lock()
-	defer cacheMu.Unlock()
-	cmd := exec.Command("kitty", "+kitten", "icat",
+	return ShowWithPolicy(path, col, row, cols, rows, CachePolicy{})
+}
+
+// ShowWithPolicy marks the new preview active before enforcing limits, so
+// pruning can remove the previous image without deleting the new one.
+func ShowWithPolicy(path string, col, row, cols, rows int, policy CachePolicy) error {
+	err := func() error {
+		cacheMu.Lock()
+		defer cacheMu.Unlock()
+		cmd := exec.Command("kitty", "+kitten", "icat",
 		"--transfer-mode=memory",
 		"--stdin=no",
 		"--align=left",
@@ -281,21 +292,27 @@ func Show(path string, col, row, cols, rows int) error {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" {
-			msg = strings.TrimSpace(stdout.String())
+		if err := cmd.Run(); err != nil {
+			msg := strings.TrimSpace(stderr.String())
+			if msg == "" {
+				msg = strings.TrimSpace(stdout.String())
+			}
+			if msg == "" {
+				msg = err.Error()
+			}
+			return fmt.Errorf("icat: %s", msg)
 		}
-		if msg == "" {
-			msg = err.Error()
+		// Success — forward the captured image bytes to the real terminal now.
+		if _, err := os.Stdout.Write(stdout.Bytes()); err != nil {
+			return err
 		}
-		return fmt.Errorf("icat: %s", msg)
-	}
-	// Success — forward the captured image bytes to the real terminal now.
-	if _, err := os.Stdout.Write(stdout.Bytes()); err != nil {
+		activePreviewPath = path
+		return nil
+	}()
+	if err != nil {
 		return err
 	}
-	activePreviewPath = path
+	_, _ = CleanupCache(policy)
 	return nil
 }
 
