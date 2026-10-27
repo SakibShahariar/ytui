@@ -30,19 +30,24 @@ sudo dnf install golang mpv yt-dlp
 
 ## Quick start
 
+Install the latest release directly with Go (requires Go 1.22 or newer):
+
+```bash
+go install github.com/SakibShahariar/ytui@latest
+```
+
+Make sure your Go bin directory is on `PATH`, then run `ytui`. You still need `mpv` and `yt-dlp` installed separately.
+
+To build from source instead:
+
 ```bash
 git clone https://github.com/SakibShahariar/ytui.git
 cd ytui
-go mod tidy
 go build -o ytui .
 ./ytui
 ```
 
-For development:
-
-```bash
-go run .
-```
+For development, run `go run .` from the cloned repository.
 
 ## Essential keys
 

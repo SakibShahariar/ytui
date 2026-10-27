@@ -1,4 +1,4 @@
-module ytui
+module github.com/SakibShahariar/ytui
 
 go 1.22
 

@@ -7,9 +7,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/config"
-	"ytui/internal/store"
-	"ytui/internal/ui"
+	"github.com/SakibShahariar/ytui/internal/config"
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/ui"
 )
 
 func main() {
