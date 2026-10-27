@@ -63,7 +63,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.p != nil && msg.err != nil {
 			// mpv started but its IPC socket was unavailable. Keep the
 			// process represented as Now Playing until it actually exits.
-			m.errMsg = "mpv is playing without IPC control: pause/seek/volume unavailable"
+			m.errMsg = "mpv is playing (no IPC control: pause/seek/volume unavailable)"
 			return m, tea.Batch(tea.ClearScreen, waitForPlaybackExitCmd(msg.p))
 		}
 		if msg.err != nil {
