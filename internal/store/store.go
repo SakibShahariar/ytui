@@ -64,7 +64,16 @@ func (s *Store) path() string {
 	return filepath.Join(s.dir, "data.json")
 }
 
-// Path returns the effective local data file path without creating directories.\nfunc Path() (string, error) {\n\tdir, err := os.UserConfigDir()\n\tif err != nil {\n\t\treturn "", err\n\t}\n\treturn filepath.Join(dir, "ytui", "data.json"), nil\n}\n\n// Load reads existing state from disk, or returns a fresh empty Store if
+// Path returns the effective local data file path without creating directories.
+func Path() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "ytui", "data.json"), nil
+}
+
+// Load reads existing state from disk, or returns a fresh empty Store if
 // none exists yet (first run).
 func Load() (*Store, error) {
 	dir, err := configDir()
