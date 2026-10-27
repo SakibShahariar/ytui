@@ -42,3 +42,19 @@ func TestAddHistoryCapsAndPrepends(t *testing.T) {
 		t.Errorf("first history video = %q, want newest", got)
 	}
 }
+
+
+func TestPathReturnsDataFilePath(t *testing.T) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(configDir, "ytui", "data.json")
+	if got != want {
+		t.Fatalf("Path() = %q, want %q", got, want)
+	}
+}

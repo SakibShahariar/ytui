@@ -33,10 +33,22 @@ func main() {
 	flag.BoolVar(&showVersion, "v", false, "print version and exit")
 	exportPath := flag.String("export-config", "", "export effective settings to FILE and exit")
 	importPath := flag.String("import-config", "", "import settings from FILE before starting ytui")
+	showPaths := flag.Bool("show-paths", false, "print config and data paths and exit")
 	flag.Parse()
 
 	if showVersion {
 		fmt.Printf("ytui %s\n", currentVersion())
+		return
+	}
+
+	if *showPaths {
+		dataPath, err := store.Path()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "failed to resolve data path:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Config:", config.Path())
+		fmt.Println("Data:", dataPath)
 		return
 	}
 
