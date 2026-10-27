@@ -65,6 +65,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.libraryFilterMode = false
 			m.libraryFilterInput.Blur()
 			m.libraryFilterInput.SetValue(m.libraryFilter)
+			m.applyListSize()
 			return m, nil
 		case "ctrl+u":
 			m.libraryFilterInput.SetValue("")
@@ -344,6 +345,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.libraryFilterMode = true
 			m.libraryFilterInput.SetValue(m.libraryFilter)
 			m.libraryFilterInput.Focus()
+			m.applyListSize()
 			return m, tea.Batch(tea.ClearScreen, textinput.Blink)
 		}
 		return m, nil
