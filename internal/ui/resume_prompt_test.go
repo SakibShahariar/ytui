@@ -70,3 +70,20 @@ func TestPlaySelectedIgnoresStaleResumePosition(t *testing.T) {
 		t.Fatalf("history position = %v, want reset to 0", got.store.History[0].PositionS)
 	}
 }
+
+func TestResumePromptEnterResumesAtSavedPosition(t *testing.T) {
+	m := resumeTestModel(t, 125, 600)
+	updated, _ := m.playSelected()
+	prompted := updated.(Model)
+	updated, cmd := prompted.handleKey(tea.KeyMsg{Type: tea.KeyEnter})
+	got := updated.(Model)
+	if cmd == nil {
+		t.Fatal("resume choice should return a playback command")
+	}
+	if got.resumePrompt != nil || got.playingVid == nil {
+		t.Fatal("resume choice did not transition into playback")
+	}
+	if got.store.History[0].PositionS != 125 {
+		t.Fatalf("history position = %v, want preserved resume position 125", got.store.History[0].PositionS)
+	}
+}
