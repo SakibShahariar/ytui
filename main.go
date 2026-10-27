@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"runtime/debug"
-	"flag"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -107,8 +107,20 @@ func main() {
 
 	m := ui.New(s)
 	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		fmt.Fprintln(os.Stderr, "error running ytui:", err)
+	finalModel, runErr := p.Run()
+	if final, ok := finalModel.(ui.Model); ok {
+		if cleanupErr := final.Cleanup(); cleanupErr != nil {
+			fmt.Fprintln(os.Stderr, "cleanup warning:", cleanupErr)
+		}
+	} else {
+		// Even if Bubble Tea cannot return its final model, release shared
+		// resources created before the program started.
+		if cleanupErr := m.Cleanup(); cleanupErr != nil {
+			fmt.Fprintln(os.Stderr, "cleanup warning:", cleanupErr)
+		}
+	}
+	if runErr != nil {
+		fmt.Fprintln(os.Stderr, "error running ytui:", runErr)
 		os.Exit(1)
 	}
 }

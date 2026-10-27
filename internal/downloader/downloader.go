@@ -64,6 +64,8 @@ type Manager struct {
 	byID    map[string]*Download
 	order   []string // VideoIDs in the order they were enqueued, for stable listing
 	destDir string
+	closed  bool
+	wg      sync.WaitGroup
 }
 
 // New creates a Manager that saves into destDir (created if it doesn't
@@ -93,6 +95,10 @@ func (m *Manager) DestDir() string { return m.destDir }
 // no duplicate downloads of the same video.
 func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Download {
 	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusCanceled}
+	}
 	existing, found := m.byID[videoID]
 	if found && existing.Status != StatusError && existing.Status != StatusCanceled {
 		m.mu.Unlock()
@@ -105,9 +111,13 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 	if !found {
 		m.order = append(m.order, videoID)
 	}
+	m.wg.Add(1)
 	m.mu.Unlock()
 
-	go m.run(d)
+	go func() {
+		defer m.wg.Done()
+		m.run(d)
+	}()
 	return d
 }
 
@@ -152,6 +162,32 @@ func (m *Manager) Cancel(videoID string) {
 		return
 	}
 	_ = d.cmd.Process.Kill()
+}
+
+// Shutdown prevents new downloads, cancels queued and active work, and waits
+// for all download workers to finish before the application exits.
+func (m *Manager) Shutdown() {
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	m.closed = true
+	processes := make([]*os.Process, 0)
+	for _, d := range m.byID {
+		if d.Status != StatusQueued && d.Status != StatusDownloading {
+			continue
+		}
+		d.Status = StatusCanceled
+		if d.cmd != nil && d.cmd.Process != nil {
+			processes = append(processes, d.cmd.Process)
+		}
+	}
+	m.mu.Unlock()
+
+	for _, process := range processes {
+		_ = process.Kill()
+	}
+	m.wg.Wait()
 }
 
 var progressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)%.*?at\s+(\S+)\s+ETA\s+(\S+)`)

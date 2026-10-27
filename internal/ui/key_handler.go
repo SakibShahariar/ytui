@@ -47,14 +47,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if key == "ctrl+c" {
-		if m.nowPlaying != nil {
-			m.saveResumePosition()
-			_ = m.nowPlaying.Quit()
-		}
-		if m.previewedID != "" {
-			_ = thumb.Clear()
-			m.previewedID = ""
-		}
+		// The application-level cleanup hook owns player, download, and
+		// terminal-image cleanup for every exit path, not just this key.
 		return m, tea.Quit
 	}
 

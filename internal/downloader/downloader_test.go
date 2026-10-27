@@ -40,3 +40,19 @@ func TestRunDoesNotRestartCanceledDownload(t *testing.T) {
 		t.Error("canceled download unexpectedly created a process")
 	}
 }
+
+
+func TestShutdownPreventsNewDownloads(t *testing.T) {
+	m, err := New(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Shutdown()
+	d := m.Enqueue("video", "title", "channel", "https://example.com/video", Options{})
+	if d.Status != StatusCanceled {
+		t.Fatalf("Enqueue() after Shutdown status = %v, want canceled", d.Status)
+	}
+	if m.Active() {
+		t.Fatal("manager reports active downloads after Shutdown")
+	}
+}
