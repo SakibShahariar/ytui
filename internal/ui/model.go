@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -116,6 +117,29 @@ var browserConfigPaths = map[string]string{
 	"edge":     ".config/microsoft-edge",
 }
 
+func browserConfigPathsForOS(goos string) map[string]string {
+	switch goos {
+	case "darwin":
+		return map[string]string{
+			"firefox":  "Library/Application Support/Firefox",
+			"chrome":   "Library/Application Support/Google/Chrome",
+			"chromium": "Library/Application Support/Chromium",
+			"brave":    "Library/Application Support/BraveSoftware/Brave-Browser",
+			"edge":     "Library/Application Support/Microsoft Edge",
+		}
+	case "windows":
+		return map[string]string{
+			"firefox":  "AppData/Roaming/Mozilla/Firefox",
+			"chrome":   "AppData/Local/Google/Chrome/User Data",
+			"chromium": "AppData/Local/Chromium/User Data",
+			"brave":    "AppData/Local/BraveSoftware/Brave-Browser/User Data",
+			"edge":     "AppData/Local/Microsoft/Edge/User Data",
+		}
+	default:
+		return browserConfigPaths
+	}
+}
+
 // detectDefaultCookieBrowser scans standard config paths and returns the
 // index (into downloadCookieBrowserValues) of the first browser that looks
 // installed, so the picker can default to it instead of forcing the person
@@ -127,11 +151,12 @@ func detectDefaultCookieBrowser() int {
 	if err != nil {
 		return 0
 	}
+	paths := browserConfigPathsForOS(runtime.GOOS)
 	for i, name := range downloadCookieBrowserValues {
 		if name == "" {
 			continue
 		}
-		rel, ok := browserConfigPaths[name]
+		rel, ok := paths[name]
 		if !ok {
 			continue
 		}
