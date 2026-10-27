@@ -5,9 +5,9 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/library"
-	"ytui/internal/store"
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 func (m Model) selectedVideo() (ytdlp.Video, bool) {

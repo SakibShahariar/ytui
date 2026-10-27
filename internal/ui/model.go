@@ -17,13 +17,13 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 
-	"ytui/internal/config"
-	"ytui/internal/downloader"
-	"ytui/internal/library"
-	"ytui/internal/player"
-	"ytui/internal/store"
-	"ytui/internal/ytapi"
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/config"
+	"github.com/SakibShahariar/ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/player"
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/ytapi"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 type tab int

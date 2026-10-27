@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

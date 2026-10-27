@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/auth"
+	"github.com/SakibShahariar/ytui/internal/auth"
 )
 
 func loginCmd() tea.Cmd {

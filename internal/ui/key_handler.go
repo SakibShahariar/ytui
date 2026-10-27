@@ -7,9 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/auth"
-	"ytui/internal/library"
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/auth"
+	"github.com/SakibShahariar/ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 // handleKey is the single source of truth for keyboard routing.

@@ -7,11 +7,11 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 
-	"ytui/internal/auth"
-	"ytui/internal/config"
-	"ytui/internal/downloader"
-	"ytui/internal/store"
-	"ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/auth"
+	"github.com/SakibShahariar/ytui/internal/config"
+	"github.com/SakibShahariar/ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
 func New(s *store.Store) Model {

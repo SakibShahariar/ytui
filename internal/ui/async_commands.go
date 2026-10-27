@@ -5,8 +5,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/player"
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/player"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 func doSearch(query string) tea.Cmd {

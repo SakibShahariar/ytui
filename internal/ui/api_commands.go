@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/ytapi"
+	"github.com/SakibShahariar/ytui/internal/ytapi"
 )
 
 func fetchSubsCmd(client *http.Client) tea.Cmd {
