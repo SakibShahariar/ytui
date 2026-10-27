@@ -69,7 +69,15 @@ Import settings before launching ytui:
 ytui --import-config ~/ytui-settings.json
 ```
 
-Import validates the JSON and replaces the active settings before the app starts. Invalid input leaves the current settings unchanged.
+**Import replaces the active settings.** Before importing a file you did not just export, make a backup of your current configuration. For the default location, for example:
+
+```bash
+cp ~/.config/ytui/config.json ~/.config/ytui/config.json.bak
+```
+
+If you use `XDG_CONFIG_HOME`, back up the `ytui/config.json` file under that directory instead. Adjust the source path if your configuration file is stored elsewhere.
+
+Import validates the JSON and replaces the active settings before the app starts. Invalid input leaves the current settings unchanged. Additional field-level validation and an explicit import confirmation are tracked in [#39](https://github.com/SakibShahariar/ytui/issues/39) and [#40](https://github.com/SakibShahariar/ytui/issues/40); until those safeguards are implemented, review the file carefully before importing it.
 
 Exported files contain preferences only. They do not include:
 
@@ -78,6 +86,8 @@ Exported files contain preferences only. They do not include:
 - Subscriptions
 - Watch history
 - Watch Later queue
+
+An exported preferences file is therefore **not a complete backup** of ytui's local state. Back up any data you need separately.
 
 Configuration files are written with owner-only permissions (`0600`).
 
