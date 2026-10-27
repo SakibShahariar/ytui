@@ -135,8 +135,9 @@ func cleanDiagnostic(value string) string {
 		return r
 	}, value)
 	value = strings.TrimSpace(value)
-	if len(value) > 160 {
-		value = value[:160] + "…"
+	runes := []rune(value)
+	if len(runes) > 160 {
+		value = string(runes[:160]) + "…"
 	}
 	return value
 }
