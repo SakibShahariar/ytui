@@ -52,6 +52,42 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
+	if m.keyboardHelp {
+		switch key {
+		case "esc", "?":
+			m.keyboardHelp = false
+			m.keyboardHelpOffset = 0
+			return m, nil
+		case "up":
+			if m.keyboardHelpOffset > 0 { m.keyboardHelpOffset-- }
+			return m, nil
+		case "down":
+			m.keyboardHelpOffset++
+			return m, nil
+		case "pgup":
+			m.keyboardHelpOffset -= 8
+			if m.keyboardHelpOffset < 0 { m.keyboardHelpOffset = 0 }
+			return m, nil
+		case "pgdown":
+			m.keyboardHelpOffset += 8
+			return m, nil
+		case "home":
+			m.keyboardHelpOffset = 0
+			return m, nil
+		case "end":
+			m.keyboardHelpOffset = len(keyboardHelpLines())
+			return m, nil
+		default:
+			return m, nil
+		}
+	}
+
+	if key == "?" && !m.inputMode && m.credentialStep == 0 {
+		m.keyboardHelp = true
+		m.keyboardHelpOffset = 0
+		return m, nil
+	}
+
 	if m.downloadPicker {
 		switch key {
 		case "up":

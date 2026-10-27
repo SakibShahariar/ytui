@@ -42,3 +42,5 @@ On the Subs, Watch Later, and History tabs, `j` and `k` also move through the li
 | `Enter` | Play the selected downloaded file with mpv |
 | `Delete` | Request deletion of the selected file |
 | `y` | Confirm deletion |
+
+`?` opens or closes the in-app keyboard help when you are not typing a search query. Use arrow keys or Page Up/Page Down to scroll, Home/End to jump, and Esc to close.

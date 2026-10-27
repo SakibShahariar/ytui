@@ -378,6 +378,8 @@ type Model struct {
 	authClient       *http.Client
 	ytLoading        bool
 	showLoginHelp    bool
+	keyboardHelp     bool
+	keyboardHelpOffset int
 	credentialStep   int // 0 = inactive, 1 = collecting Client ID, 2 = collecting Client Secret
 	pendingClientID  string
 	pathInput        textinput.Model

@@ -59,6 +59,8 @@ func (m Model) View() string {
 	switch {
 	case m.downloadPicker:
 		listContent.WriteString(m.downloadPickerContent(listWidth - 2))
+	case m.keyboardHelp:
+		listContent.WriteString(m.keyboardHelpContent(listWidth-2, panelH-4))
 	case m.showLoginHelp:
 		listContent.WriteString(m.loginHelpContent(listWidth - 2))
 	case m.activeTab == tabNowPlaying:
@@ -128,6 +130,9 @@ func (m Model) View() string {
 	if m.downloadPicker {
 		modeBar = footerModeInput.Render("DOWNLOAD")
 		help = "↑↓: move · enter/space: select · esc: cancel"
+	} else if m.keyboardHelp {
+		modeBar = footerModeInput.Render("HELP")
+		help = "↑↓: scroll · pgup/pgdn: page · home/end: jump · esc or ?: close"
 	} else if m.inputMode {
 		modeBar = footerModeInput.Render("SEARCH")
 		help = "enter: run search · ↑↓: back to browsing · esc: cancel · ctrl+c: quit"

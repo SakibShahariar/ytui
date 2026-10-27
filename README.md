@@ -57,6 +57,7 @@ For development, run `go run .` from the cloned repository.
 | `↑` / `↓` | Move through lists |
 | `Tab` / `Shift+Tab` | Switch tabs |
 | `/` | Jump to Search |
+| `?` | Open in-app keyboard help |
 | `Ctrl+D` | Download options |
 | `Ctrl+P` | Pause or resume |
 | `Ctrl+X` | Stop playback |
