@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("ytui %s\\n", currentVersion())
+		fmt.Printf("ytui %s\n", currentVersion())
 		return
 	}
 
