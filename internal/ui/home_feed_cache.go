@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/SakibShahariar/ytui/internal/ytapi"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
@@ -15,7 +19,20 @@ const homeFeedCacheTTL = 10 * time.Minute
 
 type homeFeedCache struct {
 	CachedAt time.Time    `json:"cached_at"`
+	SubscriptionKey string `json:"subscription_key"`
 	Videos   []ytdlp.Video `json:"videos"`
+}
+
+func homeFeedSubscriptionKey(subs []ytapi.Subscription) string {
+	ids := make([]string, 0, len(subs))
+	for _, sub := range subs {
+		if sub.ChannelID != "" {
+			ids = append(ids, sub.ChannelID)
+		}
+	}
+	sort.Strings(ids)
+	sum := sha256.Sum256([]byte(strings.Join(ids, "\n")))
+	return hex.EncodeToString(sum[:])
 }
 
 func homeFeedCachePath() (string, error) {
@@ -26,7 +43,7 @@ func homeFeedCachePath() (string, error) {
 	return filepath.Join(cacheRoot, "ytui", "home-feed.json"), nil
 }
 
-func loadHomeFeedCache() ([]ytdlp.Video, time.Duration, error) {
+func loadHomeFeedCache(subscriptionKey string) ([]ytdlp.Video, time.Duration, error) {
 	path, err := homeFeedCachePath()
 	if err != nil {
 		return nil, 0, err
@@ -42,6 +59,9 @@ func loadHomeFeedCache() ([]ytdlp.Video, time.Duration, error) {
 	if cached.CachedAt.IsZero() || len(cached.Videos) == 0 {
 		return nil, 0, fmt.Errorf("Home feed cache has no usable entries")
 	}
+	if cached.SubscriptionKey == "" || cached.SubscriptionKey != subscriptionKey {
+		return nil, 0, fmt.Errorf("Home feed cache belongs to a different subscription set")
+	}
 	age := time.Since(cached.CachedAt)
 	if age < 0 {
 		age = 0
@@ -49,7 +69,7 @@ func loadHomeFeedCache() ([]ytdlp.Video, time.Duration, error) {
 	return cached.Videos, age, nil
 }
 
-func saveHomeFeedCache(videos []ytdlp.Video) error {
+func saveHomeFeedCache(videos []ytdlp.Video, subscriptionKey string) error {
 	if len(videos) == 0 {
 		return fmt.Errorf("refusing to cache an empty Home feed")
 	}
@@ -60,7 +80,7 @@ func saveHomeFeedCache(videos []ytdlp.Video) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	data, err := json.Marshal(homeFeedCache{CachedAt: time.Now(), Videos: videos})
+	data, err := json.Marshal(homeFeedCache{CachedAt: time.Now(), SubscriptionKey: subscriptionKey, Videos: videos})
 	if err != nil {
 		return err
 	}

@@ -38,7 +38,18 @@ func fetchChannelVideosCmd(client *http.Client, channelID string) tea.Cmd {
 
 func fetchHomeFeedCmd(client *http.Client, subs []ytapi.Subscription) tea.Cmd {
 	return func() tea.Msg {
-		cached, age, cacheErr := loadHomeFeedCache()
+		if len(subs) == 0 {
+			var err error
+			subs, err = ytapi.Subscriptions(client)
+			if err != nil {
+				return homeFeedLoadedMsg{err: err}
+			}
+		}
+		if len(subs) == 0 {
+			return homeFeedLoadedMsg{}
+		}
+		key := homeFeedSubscriptionKey(subs)
+		cached, age, cacheErr := loadHomeFeedCache(key)
 		if cacheErr == nil && len(cached) > 0 {
 			return homeFeedLoadedMsg{
 				videos: cached, fromCache: true, cacheAge: age,
@@ -62,8 +73,8 @@ func fetchHomeFeedNetworkCmd(client *http.Client, subs []ytapi.Subscription) tea
 			return homeFeedLoadedMsg{videos: nil}
 		}
 		videos, failed, err := ytapi.HomeFeed(client, subs, 5)
-		if err == nil && len(videos) > 0 {
-			_ = saveHomeFeedCache(videos)
+		if err == nil && len(videos) > 0 && len(subs) > 0 {
+			_ = saveHomeFeedCache(videos, homeFeedSubscriptionKey(subs))
 		}
 		return homeFeedLoadedMsg{videos: videos, failed: failed, err: err}
 	}

@@ -14,10 +14,10 @@ import (
 func TestHomeFeedCacheRoundTripAndAge(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	videos := []ytdlp.Video{{ID: "one", Title: "Cached video", URL: "https://example.com/video"}}
-	if err := saveHomeFeedCache(videos); err != nil {
+	if err := saveHomeFeedCache(videos, "account-a"); err != nil {
 		t.Fatalf("saveHomeFeedCache() error = %v", err)
 	}
-	got, age, err := loadHomeFeedCache()
+	got, age, err := loadHomeFeedCache("account-a")
 	if err != nil {
 		t.Fatalf("loadHomeFeedCache() error = %v", err)
 	}
@@ -51,6 +51,7 @@ func TestHomeFeedCacheAgeSupportsStaleRefreshDecision(t *testing.T) {
 	}
 	cached := homeFeedCache{
 		CachedAt: time.Now().Add(-homeFeedCacheTTL - time.Minute),
+		SubscriptionKey: "account-a",
 		Videos: []ytdlp.Video{{ID: "stale", Title: "Stale video"}},
 	}
 	data, err := json.Marshal(cached)
@@ -84,7 +85,7 @@ func TestHomeFeedCacheRejectsCorruptAndEmptyFiles(t *testing.T) {
 	if _, _, err := loadHomeFeedCache(); err == nil {
 		t.Fatal("corrupt cache should be rejected")
 	}
-	if err := saveHomeFeedCache(nil); err == nil {
+	if err := saveHomeFeedCache(nil, "account-a"); err == nil {
 		t.Fatal("empty feed should not be cached")
 	}
 }
