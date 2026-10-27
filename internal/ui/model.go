@@ -337,6 +337,9 @@ type Model struct {
 	inputMode   bool // true = typing in the search box; false = list navigation
 	searchInput textinput.Model
 	list        list.Model
+	listPositions map[tab]int
+	listTab tab
+	listTabReady bool
 	spin        spinner.Model
 	loading      bool
 	everSearched bool

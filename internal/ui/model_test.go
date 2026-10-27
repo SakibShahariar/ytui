@@ -5,8 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/rivo/uniseg"
 	"github.com/SakibShahariar/ytui/internal/player"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 func TestWrapTwoLinesTruncatesByDisplayWidth(t *testing.T) {
@@ -104,5 +106,71 @@ func TestPlaybackFailureWithoutProcessDoesNotStartExitWatcher(t *testing.T) {
 	if cmd == nil {
 		// tea.ClearScreen is a valid command even for a failed start.
 		return
+	}
+}
+
+
+func TestListPositionRestoredPerTabAndClampedWhenItemsShrink(t *testing.T) {
+	searchItems := []list.Item{
+		videoItem{v: ytdlp.Video{ID: "s1", Title: "Search 1"}},
+		videoItem{v: ytdlp.Video{ID: "s2", Title: "Search 2"}},
+		videoItem{v: ytdlp.Video{ID: "s3", Title: "Search 3"}},
+		videoItem{v: ytdlp.Video{ID: "s4", Title: "Search 4"}},
+		videoItem{v: ytdlp.Video{ID: "s5", Title: "Search 5"}},
+	}
+	homeItems := []list.Item{
+		videoItem{v: ytdlp.Video{ID: "h1", Title: "Home 1"}},
+		videoItem{v: ytdlp.Video{ID: "h2", Title: "Home 2"}},
+	}
+	l := list.New(searchItems, ytDelegate{}, defaultWidth, defaultHeight)
+	m := Model{
+		list: l,
+		listPositions: make(map[tab]int),
+		listTab: tabSearch,
+		listTabReady: true,
+		activeTab: tabSearch,
+		searchResults: searchItems,
+		homeFeed: homeItems,
+		width: defaultWidth,
+		height: defaultHeight,
+	}
+	m.list.Select(3)
+
+	m.activeTab = tabHome
+	m.refreshList()
+	if got := m.list.Index(); got != 0 {
+		t.Fatalf("first visit to Home selected index %d, want 0", got)
+	}
+	if got := m.listPositions[tabSearch]; got != 3 {
+		t.Fatalf("saved Search index = %d, want 3", got)
+	}
+
+	m.list.Select(1)
+	m.activeTab = tabSearch
+	m.refreshList()
+	if got := m.list.Index(); got != 3 {
+		t.Fatalf("return to Search selected index %d, want 3", got)
+	}
+
+	m.searchResults = searchItems[:2]
+	m.refreshList()
+	if got := m.list.Index(); got != 1 {
+		t.Fatalf("shrunk Search list selected index %d, want clamped index 1", got)
+	}
+	if got := m.listPositions[tabSearch]; got != 1 {
+		t.Fatalf("saved Search index after clamp = %d, want 1", got)
+	}
+}
+
+func TestClampListIndex(t *testing.T) {
+	for _, tc := range []struct{ index, count, want int }{
+		{index: 3, count: 5, want: 3},
+		{index: 9, count: 5, want: 4},
+		{index: -1, count: 5, want: 0},
+		{index: 4, count: 0, want: 0},
+	} {
+		if got := clampListIndex(tc.index, tc.count); got != tc.want {
+			t.Errorf("clampListIndex(%d, %d) = %d, want %d", tc.index, tc.count, got, tc.want)
+		}
 	}
 }

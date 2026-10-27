@@ -32,7 +32,35 @@ func (m Model) moveSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func clampListIndex(index, itemCount int) int {
+	if itemCount <= 0 || index < 0 {
+		return 0
+	}
+	if index >= itemCount {
+		return itemCount - 1
+	}
+	return index
+}
+
+func (m *Model) restoreListPosition() {
+	if m.listPositions == nil {
+		m.listPositions = make(map[tab]int)
+	}
+	index := clampListIndex(m.listPositions[m.activeTab], len(m.list.Items()))
+	m.list.Select(index)
+	m.listPositions[m.activeTab] = index
+}
+
 func (m *Model) refreshList() {
+	// The shared list widget still contains items from listTab, even if a
+	// caller already changed activeTab. Save against the tab those items
+	// belong to before replacing them.
+	if m.listTabReady {
+		if m.listPositions == nil {
+			m.listPositions = make(map[tab]int)
+		}
+		m.listPositions[m.listTab] = m.list.Index()
+	}
 	if m.activeTab == tabDownloads && m.offlineDownloads {
 		files, err := library.Scan(m.downloadDirectory())
 		if err != nil {
@@ -44,6 +72,9 @@ func (m *Model) refreshList() {
 		}
 	}
 	m.list.SetItems(m.currentListItems())
+	m.restoreListPosition()
+	m.listTab = m.activeTab
+	m.listTabReady = true
 	switch {
 	case m.activeTab == tabDownloads && m.offlineDownloads:
 		m.list.Title = "Offline Downloads"

@@ -45,7 +45,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			items = append(items, videoItem{v})
 		}
 		m.searchResults = items
+		if m.listPositions == nil {
+			m.listPositions = make(map[tab]int)
+		}
+		// A new query is a new result set; start at the top rather than
+		// restoring the index from the previous search.
+		m.listPositions[tabSearch] = 0
 		m.list.SetItems(items)
+		m.list.Select(0)
+		m.listTab = tabSearch
+		m.listTabReady = true
 		m.applyListSize()
 		m.statusMsg = fmt.Sprintf("%d results", len(items))
 		var cmd tea.Cmd
