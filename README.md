@@ -36,7 +36,7 @@ Install the latest release directly with Go (requires Go 1.22 or newer):
 go install github.com/SakibShahariar/ytui@latest
 ```
 
-Make sure your Go bin directory is on `PATH`, then run `ytui`. Use `ytui --dir /path/to/downloads` to override the download/offline-library directory for this run; the configured `download_dir` remains the default when `--dir` is omitted. Check the installed build with `ytui --version`, locate its settings with `ytui --show-paths`, or run `ytui doctor` to collect dependency, configuration, authentication-state, and storage diagnostics without printing credentials. You still need `mpv` and `yt-dlp` installed separately.
+Make sure your Go bin directory is on `PATH`, then run `ytui`. To open a video directly, pass its URL, for example `ytui https://www.youtube.com/watch?v=VIDEO_ID`. Use `ytui --dir /path/to/downloads` to override the download/offline-library directory for this run; the configured `download_dir` remains the default when `--dir` is omitted. Check the installed build with `ytui --version`, locate its settings with `ytui --show-paths`, or run `ytui doctor` to collect dependency, configuration, authentication-state, and storage diagnostics without printing credentials. You still need `mpv` and `yt-dlp` installed separately.
 
 To build from source instead:
 

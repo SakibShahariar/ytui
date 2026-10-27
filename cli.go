@@ -16,7 +16,8 @@ func runSubcommand(args []string, stdin io.Reader, stdout, stderr io.Writer, ass
 	}
 	switch args[0] {
 	case "help":
-		_, err := fmt.Fprintln(stdout, `Usage: ytui [flags]
+		_, err := fmt.Fprintln(stdout, `Usage: ytui [flags] [VIDEO_URL]
+       ytui https://www.youtube.com/watch?v=VIDEO_ID
 
 Commands:
   help                         Show this command reference
