@@ -105,10 +105,21 @@ func New(s *store.Store) Model {
 	return m
 }
 
+// NewWithURL starts ytui in direct-play mode after the CLI validates the URL.
+func NewWithURL(s *store.Store, videoURL string) Model {
+	m := New(s)
+	m.directURL = videoURL
+	return m
+}
+
 func (m Model) Init() tea.Cmd {
+	cmds := []tea.Cmd{textinput.Blink}
 	if auth.HaveToken() {
-		return tea.Batch(textinput.Blink, authClientCmd())
+		cmds = append(cmds, authClientCmd())
 	}
-	return textinput.Blink
+	if m.directURL != "" {
+		cmds = append(cmds, loadDirectURLCmd(m.directURL))
+	}
+	return tea.Batch(cmds...)
 }
 
