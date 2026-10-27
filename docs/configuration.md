@@ -31,7 +31,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 
 | Field | Description | Default |
 |---|---|---|
-| `download_dir` | Directory where `Ctrl+D` downloads are saved. | `~/Downloads/ytui` |
+| `download_dir` | Directory where `Ctrl+D` downloads are saved. `--dir DIR` overrides it for one run. | `~/Downloads/ytui` |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -52,7 +53,10 @@ func New(s *store.Store) Model {
 	sp.Spinner = spinner.Dot
 
 	cfg, cfgErr := config.LoadWithError()
-	dl, _ := downloader.New(cfg.DownloadDir) // best-effort; nil is handled gracefully wherever it's used
+	if override := os.Getenv("YTUI_DOWNLOAD_DIR"); override != "" {
+		cfg.DownloadDir = override
+	}
+	dl, downloadErr := downloader.New(cfg.DownloadDir)
 
 	m := Model{
 		store:          s,
@@ -75,10 +79,18 @@ func New(s *store.Store) Model {
 	if cfgErr != nil {
 		m.errMsg = "config: " + cfgErr.Error()
 	}
-	if removed, cleanupErr := dl.StaleCleanupResult(); cleanupErr != nil {
-		m.statusMsg = "partial-file cleanup warning: " + cleanupErr.Error()
-	} else if removed > 0 {
-		m.statusMsg = fmt.Sprintf("removed %d stale partial download file(s)", removed)
+	if downloadErr != nil {
+		if m.errMsg != "" {
+			m.errMsg += "; "
+		}
+		m.errMsg += "downloads: " + downloadErr.Error()
+	}
+	if dl != nil {
+		if removed, cleanupErr := dl.StaleCleanupResult(); cleanupErr != nil {
+			m.statusMsg = "partial-file cleanup warning: " + cleanupErr.Error()
+		} else if removed > 0 {
+			m.statusMsg = fmt.Sprintf("removed %d stale partial download file(s)", removed)
+		}
 	}
 	if warning := dependencyWarning(exec.LookPath); warning != "" {
 		if m.errMsg != "" {

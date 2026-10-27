@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -51,3 +53,42 @@ type errorReader struct{}
 func (errorReader) Read([]byte) (int, error) { return 0, errors.New("input unavailable") }
 
 var _ io.Reader = errorReader{}
+
+
+func TestPrepareDownloadDirCreatesAbsoluteDirectory(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "portable", "downloads")
+	got, err := prepareDownloadDir(path)
+	if err != nil {
+		t.Fatalf("prepareDownloadDir() error = %v", err)
+	}
+	if !filepath.IsAbs(got) || filepath.Clean(got) != got {
+		t.Fatalf("prepareDownloadDir() = %q, want cleaned absolute path", got)
+	}
+	info, err := os.Stat(got)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("prepared path is not a directory: info=%v err=%v", info, err)
+	}
+}
+
+func TestPrepareDownloadDirRejectsInvalidPaths(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "empty", path: "  ", want: "must not be empty"},
+		{name: "control character", path: "bad\npath", want: "control characters"},
+		{name: "existing file", path: file, want: "not a directory"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := prepareDownloadDir(tc.path)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("prepareDownloadDir(%q) error = %v, want %q", tc.path, err, tc.want)
+			}
+		})
+	}
+}

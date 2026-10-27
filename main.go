@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strings"
 
@@ -52,11 +53,24 @@ func main() {
 	showPaths := flag.Bool("show-paths", false, "print config and data paths and exit")
 	configOverride := flag.String("config", "", "use config file PATH instead of the XDG default")
 	dataOverride := flag.String("data", "", "use data store file PATH instead of the XDG default")
+	downloadDir := flag.String("dir", "", "save downloads and browse offline files in DIR")
 	flag.Parse()
 
 	if showVersion {
 		fmt.Printf("ytui %s\n", currentVersion())
 		return
+	}
+
+	if *downloadDir != "" {
+		resolved, err := prepareDownloadDir(*downloadDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "invalid --dir:", err)
+			os.Exit(2)
+		}
+		if err := os.Setenv("YTUI_DOWNLOAD_DIR", resolved); err != nil {
+			fmt.Fprintln(os.Stderr, "invalid --dir:", err)
+			os.Exit(2)
+		}
 	}
 
 	if *configOverride != "" {
@@ -146,4 +160,33 @@ func main() {
 		fmt.Fprintln(os.Stderr, "error running ytui:", runErr)
 		os.Exit(1)
 	}
+}
+
+
+// prepareDownloadDir validates a CLI download root and creates it if needed.
+func prepareDownloadDir(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", fmt.Errorf("directory path must not be empty")
+	}
+	for _, r := range path {
+		if r < 32 || r == 127 {
+			return "", fmt.Errorf("directory path must not contain control characters")
+		}
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve directory: %w", err)
+	}
+	if err := os.MkdirAll(abs, 0o755); err != nil {
+		return "", fmt.Errorf("create directory: %w", err)
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", fmt.Errorf("inspect directory: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%q is not a directory", abs)
+	}
+	return filepath.Clean(abs), nil
 }
