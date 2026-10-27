@@ -10,6 +10,30 @@ import (
 	"github.com/SakibShahariar/ytui/internal/config"
 )
 
+func TestValidateVideoURL(t *testing.T) {
+	for _, tc := range []struct {
+		input string
+		want  string
+		ok    bool
+	}{
+		{"https://www.youtube.com/watch?v=abc123", "https://www.youtube.com/watch?v=abc123", true},
+		{" https://example.com/video.mp4 ", "https://example.com/video.mp4", true},
+		{"", "", false},
+		{"not a URL", "", false},
+		{"file:///tmp/video.mp4", "", false},
+		{"https:///missing-host", "", false},
+		{"https://user:pass@example.com/video", "", false},
+	} {
+		got, err := validateVideoURL(tc.input)
+		if (err == nil) != tc.ok {
+			t.Errorf("validateVideoURL(%q) error = %v, want success=%v", tc.input, err, tc.ok)
+		}
+		if err == nil && got != tc.want {
+			t.Errorf("validateVideoURL(%q) = %q, want %q", tc.input, got, tc.want)
+		}
+	}
+}
+
 func TestRunSubcommandHelpAndUnknownFallback(t *testing.T) {
 	var output bytes.Buffer
 	handled, err := runSubcommand([]string{"help"}, strings.NewReader(""), &output, &output, false)

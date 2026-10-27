@@ -136,6 +136,20 @@ func main() {
 		fmt.Println("Imported settings from", *importPath)
 	}
 
+	var directURL string
+	if len(flag.Args()) > 0 {
+		if len(flag.Args()) != 1 {
+			fmt.Fprintln(os.Stderr, "expected a single video URL argument")
+			os.Exit(2)
+		}
+		var err error
+		directURL, err = validateVideoURL(flag.Arg(0))
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "invalid video URL:", err)
+			os.Exit(2)
+		}
+	}
+
 	s, err := store.Load()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to load local data:", err)
@@ -143,6 +157,9 @@ func main() {
 	}
 
 	m := ui.New(s)
+	if directURL != "" {
+		m = ui.NewWithURL(s, directURL)
+	}
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	finalModel, runErr := p.Run()
 	if final, ok := finalModel.(ui.Model); ok {

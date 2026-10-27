@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io"
+	"net/url"
+	"strings"
 
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/store"
@@ -105,4 +107,22 @@ func runConfigSubcommand(args []string, stdin io.Reader, stdout io.Writer, assum
 	default:
 		return fmt.Errorf("unknown config command %q; use ytui config help", args[0])
 	}
+}
+
+func validateVideoURL(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", fmt.Errorf("URL is empty")
+	}
+	parsed, err := url.ParseRequestURI(raw)
+	if err != nil {
+		return "", fmt.Errorf("enter a complete http(s) URL")
+	}
+	if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return "", fmt.Errorf("only absolute http:// or https:// URLs are supported")
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("URLs containing embedded credentials are not supported")
+	}
+	return parsed.String(), nil
 }
