@@ -3,8 +3,8 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/thumb"
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/thumb"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 // refreshPreview clears any currently-drawn thumbnail and redraws one for

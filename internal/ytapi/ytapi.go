@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 const apiBase = "https://www.googleapis.com/youtube/v3"

@@ -7,9 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/downloader"
-	"ytui/internal/store"
-	"ytui/internal/ytapi"
+	"github.com/SakibShahariar/ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/ytapi"
 )
 
 func (m Model) currentListItems() []list.Item {

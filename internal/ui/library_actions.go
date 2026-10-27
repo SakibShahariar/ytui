@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/store"
 )
 
 func (m Model) subscribeToSelected() (tea.Model, tea.Cmd) {

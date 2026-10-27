@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/downloader"
 )
 
 func (m Model) downloadDirectory() string {

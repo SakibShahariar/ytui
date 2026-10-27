@@ -3,7 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/library"
 )
 
 func (m *Model) applyListSize() {
