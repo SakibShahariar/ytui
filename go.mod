@@ -1,13 +1,13 @@
 module github.com/SakibShahariar/ytui
 
-go 1.22
+go 1.26.0
 
 require (
 	github.com/charmbracelet/bubbles v0.20.0
 	github.com/charmbracelet/bubbletea v1.1.0
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/rivo/uniseg v0.4.7
-	golang.org/x/oauth2 v0.24.0
+	golang.org/x/oauth2 v0.37.0
 )
 
 require (
