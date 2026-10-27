@@ -19,7 +19,7 @@ func TestHomeFeedCacheRoundTripAndAge(t *testing.T) {
 	}
 	got, age, err := loadHomeFeedCache("account-a")
 	if err != nil {
-		t.Fatalf("loadHomeFeedCache("account-a") error = %v", err)
+		t.Fatalf("loadHomeFeedCache() error = %v", err)
 	}
 	if len(got) != 1 || got[0].ID != videos[0].ID || got[0].Title != videos[0].Title {
 		t.Fatalf("cached videos = %#v, want %#v", got, videos)
@@ -61,7 +61,7 @@ func TestHomeFeedCacheAgeSupportsStaleRefreshDecision(t *testing.T) {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, age, err := loadHomeFeedCache()
+	_, age, err := loadHomeFeedCache("account-a")
 	if err != nil {
 		t.Fatalf("loadHomeFeedCache() error = %v", err)
 	}
@@ -82,7 +82,7 @@ func TestHomeFeedCacheRejectsCorruptAndEmptyFiles(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{broken"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := loadHomeFeedCache(); err == nil {
+	if _, _, err := loadHomeFeedCache("account-a"); err == nil {
 		t.Fatal("corrupt cache should be rejected")
 	}
 	if err := saveHomeFeedCache(nil, "account-a"); err == nil {
