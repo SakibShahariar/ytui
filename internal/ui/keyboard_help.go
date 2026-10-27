@@ -42,15 +42,24 @@ func keyboardHelpLines() []string {
 	}
 }
 
+func (m Model) keyboardHelpMaxOffset() int {
+	visibleRows := m.panelHeight() - 5 // one header row plus panel borders/search header
+	if visibleRows < 1 { visibleRows = 1 }
+	maxOffset := len(keyboardHelpLines()) - visibleRows
+	if maxOffset < 0 { return 0 }
+	return maxOffset
+}
+
 func (m Model) keyboardHelpContent(width, height int) string {
 	lines := keyboardHelpLines()
-	if height < 1 { height = 1 }
-	maxOffset := len(lines) - height
+	if height < 2 { height = 2 }
+	visibleRows := height - 1 // reserve one row for the help title
+	maxOffset := len(lines) - visibleRows
 	if maxOffset < 0 { maxOffset = 0 }
 	offset := m.keyboardHelpOffset
 	if offset < 0 { offset = 0 }
 	if offset > maxOffset { offset = maxOffset }
-	end := offset + height
+	end := offset + visibleRows
 	if end > len(lines) { end = len(lines) }
 	visible := make([]string, 0, end-offset)
 	for _, line := range lines[offset:end] {

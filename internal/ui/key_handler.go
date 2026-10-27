@@ -62,7 +62,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if m.keyboardHelpOffset > 0 { m.keyboardHelpOffset-- }
 			return m, nil
 		case "down":
-			m.keyboardHelpOffset++
+			if m.keyboardHelpOffset < m.keyboardHelpMaxOffset() { m.keyboardHelpOffset++ }
 			return m, nil
 		case "pgup":
 			m.keyboardHelpOffset -= 8
@@ -70,6 +70,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "pgdown":
 			m.keyboardHelpOffset += 8
+			if m.keyboardHelpOffset > m.keyboardHelpMaxOffset() { m.keyboardHelpOffset = m.keyboardHelpMaxOffset() }
 			return m, nil
 		case "home":
 			m.keyboardHelpOffset = 0

@@ -20,7 +20,7 @@ func TestKeyboardHelpListsRealControlBindings(t *testing.T) {
 }
 
 func TestKeyboardHelpContentScrollsAndClamps(t *testing.T) {
-	m := Model{keyboardHelpOffset: 4}
+	m := Model{keyboardHelpOffset: 8}
 	got := m.keyboardHelpContent(60, 5)
 	if !strings.Contains(got, "Search and lists") { t.Fatalf("expected scrolled help section, got:\n%s", got) }
 	m.keyboardHelpOffset = 1000
