@@ -72,3 +72,42 @@ func TestImportInvalidFileDoesNotReplaceConfig(t *testing.T) {
 		t.Fatalf("invalid import changed config: got %#v, want %#v", got, want)
 	}
 }
+
+func TestNormalizeQuality(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"best", "Best quality (video+audio)"},
+		{"best-quality", "Best quality (video+audio)"},
+		{"1080p", "1080p"},
+		{"720p", "720p"},
+		{"480p", "480p"},
+		{"audio-mp3", "Audio only (mp3)"},
+		{"audio-opus", "Audio only (opus)"},
+		{" Audio_MP3 ", "Audio only (mp3)"},
+		{"Audio only (opus)", "Audio only (opus)"},
+		{"unknown-value", "unknown-value"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := normalizeQuality(tt.input); got != tt.want {
+				t.Errorf("normalizeQuality(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadNormalizesStableQualityIdentifier(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"default_quality":"audio-mp3"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.DefaultQuality != "Audio only (mp3)" {
+		t.Fatalf("DefaultQuality = %q, want %q", got.DefaultQuality, "Audio only (mp3)")
+	}
+}

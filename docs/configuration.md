@@ -36,14 +36,18 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 
 ## Quality values
 
-`default_quality` must match one of the download picker’s labels exactly:
+Use a stable identifier for `default_quality`; display labels remain supported for existing configurations:
 
-- `"Best quality (video+audio)"`
-- `"1080p"`
-- `"720p"`
-- `"480p"`
-- `"Audio only (mp3)"`
-- `"Audio only (opus)"`
+| Stable identifier | Display label |
+|---|---|
+| `best` | `Best quality (video+audio)` |
+| `1080p` | `1080p` |
+| `720p` | `720p` |
+| `480p` | `480p` |
+| `audio-mp3` | `Audio only (mp3)` |
+| `audio-opus` | `Audio only (opus)` |
+
+Legacy values such as `"Best quality (video+audio)"` and `"Audio only (mp3)"` continue to work. Identifiers are normalized when the config is read. Unknown values are left unchanged and the picker falls back to its default.
 
 ## Browser values
 

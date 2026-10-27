@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Config holds user-editable defaults. JSON deliberately keeps the format
@@ -18,7 +19,8 @@ type Config struct {
 	DownloadDir string `json:"download_dir,omitempty"`
 
 	// DefaultQuality pre-selects a row in the ctrl+d download-options
-	// picker by label. Empty means "Best quality (video+audio)".
+	// picker by stable identifier or legacy display label. Empty means
+	// "Best quality (video+audio)".
 	DefaultQuality string `json:"default_quality,omitempty"`
 
 	// DefaultCookiesBrowser overrides browser auto-detection (e.g. "firefox").
@@ -27,6 +29,28 @@ type Config struct {
 
 	// DefaultAudioOnly sets the initial audio-only playback toggle.
 	DefaultAudioOnly bool `json:"default_audio_only,omitempty"`
+}
+
+// normalizeQuality converts stable machine-readable identifiers to the
+// corresponding picker label. Existing display-label values remain supported
+// for backwards compatibility.
+func normalizeQuality(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "best", "best-quality", "best_quality":
+		return "Best quality (video+audio)"
+	case "1080p":
+		return "1080p"
+	case "720p":
+		return "720p"
+	case "480p":
+		return "480p"
+	case "audio-mp3", "audio_mp3":
+		return "Audio only (mp3)"
+	case "audio-opus", "audio_opus":
+		return "Audio only (opus)"
+	default:
+		return value
+	}
 }
 
 func path() (string, error) {
@@ -65,6 +89,7 @@ func read(p string) (Config, error) {
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.DefaultQuality = normalizeQuality(cfg.DefaultQuality)
 	return cfg, nil
 }
 
