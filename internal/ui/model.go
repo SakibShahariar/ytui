@@ -289,6 +289,11 @@ type playbackStartedMsg struct {
 	p   *player.Player
 	err error
 }
+
+type resumePrompt struct {
+	video ytdlp.Video
+	position float64
+}
 type thumbShownMsg struct{ id string }
 type positionTickMsg struct{}
 type nowPlayingTickMsg struct{}
@@ -407,6 +412,8 @@ type Model struct {
 	offlineDownloads bool
 	offlineFiles []library.File
 	offlineDeletePending *library.File
+
+	resumePrompt *resumePrompt
 
 	downloadPicker        bool
 	downloadPickerVideo   *ytdlp.Video

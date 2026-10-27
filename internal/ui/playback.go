@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -89,13 +90,24 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 		m.saveResumePosition()
 		_ = m.nowPlaying.Quit()
 	}
+	resumePos, resuming := m.store.FindHistoryPosition(v.ID)
+	validPosition := resuming && !math.IsNaN(resumePos) && !math.IsInf(resumePos, 0) && resumePos > 0 &&
+		(v.Duration <= 0 || resumePos < v.Duration)
+	if validPosition {
+		m.resumePrompt = &resumePrompt{video: v, position: resumePos}
+		m.statusMsg = fmt.Sprintf("resume %s or start from beginning: %s", formatDuration(resumePos), v.Title)
+		return m, nil
+	}
+	return m.startSelectedVideo(v, 0)
+}
+
+func (m Model) startSelectedVideo(v ytdlp.Video, resumePos float64) (tea.Model, tea.Cmd) {
+	m.resumePrompt = nil
 	m.playingLocal = false
 	m.playingVid = &v
-	resumePos, resuming := m.store.FindHistoryPosition(v.ID)
-	if resuming {
+	if resumePos > 0 {
 		m.statusMsg = fmt.Sprintf("starting mpv (resuming from %s): %s", formatDuration(resumePos), v.Title)
 	} else {
-		resumePos = 0
 		m.statusMsg = "starting mpv: " + v.Title
 	}
 	_ = m.store.AddHistory(store.HistoryEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail, PositionS: resumePos})

@@ -52,6 +52,22 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
+	if m.resumePrompt != nil {
+		prompt := *m.resumePrompt
+		switch key {
+		case "enter", "r":
+			return m.startSelectedVideo(prompt.video, prompt.position)
+		case "b":
+			return m.startSelectedVideo(prompt.video, 0)
+		case "esc":
+			m.resumePrompt = nil
+			m.statusMsg = "playback canceled"
+			return m, nil
+		default:
+			return m, nil
+		}
+	}
+
 	if m.keyboardHelp {
 		switch key {
 		case "esc", "?":
