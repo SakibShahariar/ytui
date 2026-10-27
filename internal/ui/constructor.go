@@ -47,7 +47,7 @@ func New(s *store.Store) Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
-	cfg := config.Load()
+	cfg, cfgErr := config.LoadWithError()
 	dl, _ := downloader.New(cfg.DownloadDir) // best-effort; nil is handled gracefully wherever it's used
 
 	m := Model{
@@ -64,6 +64,9 @@ func New(s *store.Store) Model {
 		previewEnabled: thumb.Supported(), // auto-on in Kitty; press 't' to disable if it glitches
 		downloads:      dl,
 		audioOnly:      cfg.DefaultAudioOnly,
+	}
+	if cfgErr != nil {
+		m.errMsg = "config: " + cfgErr.Error()
 	}
 	m.applyListSize()
 	return m

@@ -16,6 +16,15 @@ func doSearch(query string) tea.Cmd {
 	}
 }
 
+type playbackExitedMsg struct{ p *player.Player }
+
+func waitForPlaybackExitCmd(p *player.Player) tea.Cmd {
+	return func() tea.Msg {
+		_ = p.Wait()
+		return playbackExitedMsg{p: p}
+	}
+}
+
 func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
 	return func() tea.Msg {
 		p, err := player.Play(url, audioOnly)

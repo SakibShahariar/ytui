@@ -157,3 +157,49 @@ func TestReadNormalizesStableQualityIdentifier(t *testing.T) {
 		t.Fatalf("DefaultQuality = %q, want %q", got.DefaultQuality, "Audio only (mp3)")
 	}
 }
+
+
+func TestLoadWithErrorMissingFileUsesDefaults(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	got, err := LoadWithError()
+	if err != nil {
+		t.Fatalf("LoadWithError() error = %v, want nil for missing config", err)
+	}
+	if !reflect.DeepEqual(got, Config{}) {
+		t.Fatalf("LoadWithError() = %#v, want zero-value defaults", got)
+	}
+}
+
+func TestLoadWithErrorReportsCorruptConfigAndUsesDefaults(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", home)
+	path := filepath.Join(home, "ytui", "config.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("{broken"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadWithError()
+	if err == nil || !strings.Contains(err.Error(), "config.json") {
+		t.Fatalf("LoadWithError() error = %v, want config path context", err)
+	}
+	if !reflect.DeepEqual(got, Config{}) {
+		t.Fatalf("LoadWithError() = %#v, want safe defaults", got)
+	}
+}
+
+func TestLoadWithErrorReportsInvalidConfigValues(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", home)
+	path := filepath.Join(home, "ytui", "config.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(`{"default_quality":"8k"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadWithError(); err == nil || !strings.Contains(err.Error(), "default_quality") {
+		t.Fatalf("LoadWithError() error = %v, want invalid quality reported", err)
+	}
+}

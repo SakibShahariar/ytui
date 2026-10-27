@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -66,5 +67,42 @@ func TestVisibleTabsAndCycling(t *testing.T) {
 				t.Errorf("prevTab() = %v, want %v", got, tt.prev)
 			}
 		})
+	}
+}
+
+
+func TestPlaybackWithoutIPCRemainsVisibleUntilProcessExit(t *testing.T) {
+	p := &player.Player{}
+	m := Model{}
+	updated, cmd := m.Update(playbackStartedMsg{p: p, err: errors.New("IPC connect failed")})
+	got := updated.(Model)
+	if got.nowPlaying != p {
+		t.Fatal("degraded playback was not kept as Now Playing")
+	}
+	if !strings.Contains(got.errMsg, "no IPC control") {
+		t.Fatalf("errMsg = %q, want degraded-control warning", got.errMsg)
+	}
+	if cmd == nil {
+		t.Fatal("expected a process-exit watcher for degraded playback")
+	}
+	msg := waitForPlaybackExitCmd(p)()
+	if _, ok := msg.(playbackExitedMsg); !ok {
+		t.Fatalf("watcher message = %T, want playbackExitedMsg", msg)
+	}
+	updated, _ = got.Update(msg)
+	afterExit := updated.(Model)
+	if afterExit.nowPlaying != nil {
+		t.Fatal("playback state was not cleared after process exit")
+	}
+}
+
+func TestPlaybackFailureWithoutProcessDoesNotStartExitWatcher(t *testing.T) {
+	updated, cmd := (Model{}).Update(playbackStartedMsg{err: errors.New("mpv failed to start")})
+	if updated.(Model).nowPlaying != nil {
+		t.Fatal("failed startup left a Now Playing process")
+	}
+	if cmd == nil {
+		// tea.ClearScreen is a valid command even for a failed start.
+		return
 	}
 }

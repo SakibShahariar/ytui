@@ -106,16 +106,31 @@ func Path() string {
 }
 
 // Load reads the config file, returning defaults if it is missing or invalid.
+// Use LoadWithError when the caller needs to explain why defaults were used.
 func Load() Config {
+	cfg, _ := LoadWithError()
+	return cfg
+}
+
+// LoadWithError returns defaults for a missing config file. If an existing
+// config cannot be read, parsed, or validated, it returns defaults alongside
+// an error so the application can surface the problem without failing startup.
+func LoadWithError() (Config, error) {
 	p, err := path()
 	if err != nil {
-		return Config{}
+		return Config{}, fmt.Errorf("resolve config path: %w", err)
 	}
 	cfg, err := read(p)
-	if err != nil {
-		return Config{}
+	if os.IsNotExist(err) {
+		return Config{}, nil
 	}
-	return cfg
+	if err != nil {
+		return Config{}, fmt.Errorf("read config %q: %w", p, err)
+	}
+	if err := Validate(cfg); err != nil {
+		return Config{}, fmt.Errorf("invalid config %q: %w", p, err)
+	}
+	return cfg, nil
 }
 
 func read(p string) (Config, error) {

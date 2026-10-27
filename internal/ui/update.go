@@ -57,14 +57,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case playbackStartedMsg:
+		m.nowPlaying = msg.p
+		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
+		m.npDescription = ""
+		if msg.p != nil && msg.err != nil {
+			// mpv started but its IPC socket was unavailable. Keep the
+			// process represented as Now Playing until it actually exits.
+			m.errMsg = "mpv is playing without IPC control: pause/seek/volume unavailable"
+			return m, tea.Batch(tea.ClearScreen, waitForPlaybackExitCmd(msg.p))
+		}
 		if msg.err != nil {
 			m.errMsg = msg.err.Error()
 		} else {
 			m.errMsg = ""
 		}
-		m.nowPlaying = msg.p
-		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
-		m.npDescription = ""
 		if msg.err == nil && msg.p != nil {
 			cmds := []tea.Cmd{tea.ClearScreen, positionTickCmd(), nowPlayingTickCmd()}
 			if m.playingVid != nil {
@@ -77,6 +83,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmds...)
 		}
 		return m, tea.ClearScreen
+
+	case playbackExitedMsg:
+		if msg.p == m.nowPlaying {
+			m.saveResumePosition()
+			return m.clearNowPlaying()
+		}
+		return m, nil
 
 	case videoDescriptionMsg:
 		m.npDescriptionLoading = false
