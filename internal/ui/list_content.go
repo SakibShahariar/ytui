@@ -17,7 +17,7 @@ func (m Model) filterLibraryItems(items []list.Item) []list.Item {
 	query := strings.ToLower(strings.TrimSpace(m.libraryFilter))
 	filtered := make([]list.Item, 0, len(items))
 	for _, item := range items {
-		title, channel := item.Title(), item.Description()
+		title, channel := item.FilterValue(), ""
 		switch v := item.(type) {
 		case historyItem:
 			title, channel = v.e.Title, v.e.Channel
