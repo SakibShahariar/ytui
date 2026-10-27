@@ -19,7 +19,7 @@ func TestHomeFeedCacheRoundTripAndAge(t *testing.T) {
 	}
 	got, age, err := loadHomeFeedCache("account-a")
 	if err != nil {
-		t.Fatalf("loadHomeFeedCache() error = %v", err)
+		t.Fatalf("loadHomeFeedCache("account-a") error = %v", err)
 	}
 	if len(got) != 1 || got[0].ID != videos[0].ID || got[0].Title != videos[0].Title {
 		t.Fatalf("cached videos = %#v, want %#v", got, videos)
