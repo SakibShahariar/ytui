@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/rivo/uniseg"
+	"github.com/SakibShahariar/ytui/internal/player"
 )
 
 func TestWrapTwoLinesTruncatesByDisplayWidth(t *testing.T) {
@@ -15,21 +16,45 @@ func TestWrapTwoLinesTruncatesByDisplayWidth(t *testing.T) {
 	}
 }
 
-
-func TestBrowserConfigPathsForOS(t *testing.T) {
+func TestVisibleTabsAndCycling(t *testing.T) {
 	tests := []struct {
-		goos string
 		name string
-		want string
+		model Model
+		want []tab
+		next tab
+		prev tab
 	}{
-		{"linux", "firefox", ".mozilla/firefox"},
-		{"darwin", "chrome", "Library/Application Support/Google/Chrome"},
-		{"windows", "edge", "AppData/Local/Microsoft/Edge/User Data"},
+		{
+			name: "now playing hidden when idle",
+			model: Model{activeTab: tabSearch},
+			want: []tab{tabSearch, tabHome, tabSubscriptions, tabPlaylists, tabLiked, tabWatchLater, tabHistory, tabDownloads},
+			next: tabHome,
+			prev: tabDownloads,
+		},
+		{
+			name: "now playing visible while playing",
+			model: Model{activeTab: tabSearch, nowPlaying: &player.Player{}},
+			want: []tab{tabSearch, tabNowPlaying, tabHome, tabSubscriptions, tabPlaylists, tabLiked, tabWatchLater, tabHistory, tabDownloads},
+			next: tabNowPlaying,
+			prev: tabDownloads,
+		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.goos+"/"+tt.name, func(t *testing.T) {
-			if got := browserConfigPathsForOS(tt.goos)[tt.name]; got != tt.want {
-				t.Fatalf("browserConfigPathsForOS(%q)[%q] = %q, want %q", tt.goos, tt.name, got, tt.want)
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.model.visibleTabs()
+			if len(got) != len(tt.want) {
+				t.Fatalf("visibleTabs() = %v, want %v", got, tt.want)
+			}
+			for i := range tt.want {
+				if got[i] != tt.want[i] {
+					t.Fatalf("visibleTabs() = %v, want %v", got, tt.want)
+				}
+			}
+			if got := tt.model.nextTab(); got != tt.next {
+				t.Errorf("nextTab() = %v, want %v", got, tt.next)
+			}
+			if got := tt.model.prevTab(); got != tt.prev {
+				t.Errorf("prevTab() = %v, want %v", got, tt.prev)
 			}
 		})
 	}

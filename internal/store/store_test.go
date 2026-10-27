@@ -44,6 +44,52 @@ func TestAddHistoryCapsAndPrepends(t *testing.T) {
 	}
 }
 
+func TestAddHistoryUpdatesExistingVideoWithoutDuplicate(t *testing.T) {
+	s := &Store{dir: t.TempDir()}
+	s.History = []HistoryEntry{{VideoID: "same", Title: "old title"}}
+	if err := s.AddHistory(HistoryEntry{VideoID: "same", Title: "new title"}); err != nil {
+		t.Fatalf("AddHistory() error = %v", err)
+	}
+	if len(s.History) != 1 {
+		t.Fatalf("history length = %d, want 1", len(s.History))
+	}
+	if got := s.History[0].Title; got != "new title" {
+		t.Errorf("updated title = %q, want new title", got)
+	}
+}
+
+func TestSubscribeDeduplicatesChannelID(t *testing.T) {
+	s := &Store{dir: t.TempDir()}
+	channel := Channel{ID: "channel-1", Name: "First name"}
+	if err := s.Subscribe(channel); err != nil {
+		t.Fatalf("first Subscribe() error = %v", err)
+	}
+	if err := s.Subscribe(Channel{ID: "channel-1", Name: "Changed name"}); err != nil {
+		t.Fatalf("duplicate Subscribe() error = %v", err)
+	}
+	if len(s.Subscriptions) != 1 {
+		t.Fatalf("subscription count = %d, want 1", len(s.Subscriptions))
+	}
+	if got := s.Subscriptions[0].Name; got != "First name" {
+		t.Errorf("duplicate subscription replaced existing entry: name = %q", got)
+	}
+}
+
+func TestAddWatchLaterDeduplicatesVideoID(t *testing.T) {
+	s := &Store{dir: t.TempDir()}
+	if err := s.AddWatchLater(WatchLaterEntry{VideoID: "video-1", Title: "Original"}); err != nil {
+		t.Fatalf("first AddWatchLater() error = %v", err)
+	}
+	if err := s.AddWatchLater(WatchLaterEntry{VideoID: "video-1", Title: "Duplicate"}); err != nil {
+		t.Fatalf("duplicate AddWatchLater() error = %v", err)
+	}
+	if len(s.WatchLater) != 1 {
+		t.Fatalf("watch-later count = %d, want 1", len(s.WatchLater))
+	}
+	if got := s.WatchLater[0].Title; got != "Original" {
+		t.Errorf("duplicate queue entry replaced existing entry: title = %q", got)
+	}
+}
 
 func TestPathReturnsDataFilePath(t *testing.T) {
 	configDir, err := os.UserConfigDir()
