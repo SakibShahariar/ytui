@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os/exec"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -67,6 +69,13 @@ func New(s *store.Store) Model {
 	}
 	if cfgErr != nil {
 		m.errMsg = "config: " + cfgErr.Error()
+	}
+	if warning := dependencyWarning(exec.LookPath); warning != "" {
+		if m.errMsg != "" {
+			m.errMsg += "; " + warning
+		} else {
+			m.statusMsg = warning
+		}
 	}
 	m.applyListSize()
 	return m
