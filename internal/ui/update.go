@@ -286,6 +286,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		m.errMsg = ""
 		if msg.failed > 0 {
 			m.statusMsg = fmt.Sprintf("home feed loaded with partial results: %d channel(s) failed", msg.failed)
 		}
