@@ -74,3 +74,25 @@ func mustProfilesDir(t *testing.T) string {
 	if err != nil { t.Fatal(err) }
 	return dir
 }
+
+type fixedProfileTokenSource struct { token *oauth2.Token }
+func (s fixedProfileTokenSource) Token() (*oauth2.Token, error) { return s.token, nil }
+
+func TestTokenRefreshPersistsToOriginalProfileAfterSwitch(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := CreateProfile("work"); err != nil { t.Fatal(err) }
+	if err := SelectProfile("work"); err != nil { t.Fatal(err) }
+	source := &persistingTokenSource{
+		base: fixedProfileTokenSource{token: &oauth2.Token{AccessToken: "refreshed-work-token"}},
+		last: "old-work-token",
+		profile: "work",
+	}
+	if err := SelectProfile("default"); err != nil { t.Fatal(err) }
+	if _, err := source.Token(); err != nil { t.Fatal(err) }
+	workToken, err := loadTokenForProfile("work")
+	if err != nil { t.Fatal(err) }
+	if workToken.AccessToken != "refreshed-work-token" { t.Fatalf("work token = %q", workToken.AccessToken) }
+	if _, err := loadTokenForProfile("default"); !os.IsNotExist(err) {
+		t.Fatalf("default profile unexpectedly received work token; err = %v", err)
+	}
+}
