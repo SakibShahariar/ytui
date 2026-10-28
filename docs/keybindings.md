@@ -13,6 +13,7 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+S` | Subscribe to the selected video’s channel |
 | `Ctrl+W` | Add the selected video to Watch Later |
 | `Ctrl+P` | Pause or resume current playback |
+| `Ctrl+N` | Toggle autoplay next; saves the preference |
 | `Ctrl+A` | Toggle audio-only mode for the next play |
 | `Ctrl+T` | Toggle the thumbnail preview panel |
 | `Ctrl+D` | Open download options, or cancel a download from the Downloads tab |
@@ -30,6 +31,10 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Enter` | Run the search while typing; play the selected video otherwise |
 | `Esc` | Cancel typing and return to browsing; does not quit ytui |
 | `↑` `↓` `Page Up` `Page Down` `Home` `End` | Move the list selection; also exits typing mode |
+
+## Playback autoplay
+
+Autoplay is disabled by default. With it enabled, ytui plays the next Watch Later entry first, then the next playable item after the current selection. `Ctrl+X` is an explicit stop and does not trigger autoplay. Local downloaded files are not followed by online videos. The preference is stored as `autoplay_next` in `config.json`.
 
 ## Lists
 
