@@ -234,7 +234,12 @@ func (s *Store) SortWatchLater(mode string) error {
 			return strings.ToLower(s.WatchLater[i].Title) < strings.ToLower(s.WatchLater[j].Title)
 		})
 	case "duration":
-		sort.SliceStable(s.WatchLater, func(i, j int) bool { return s.WatchLater[i].DurationS < s.WatchLater[j].DurationS })
+		sort.SliceStable(s.WatchLater, func(i, j int) bool {
+			a, b := s.WatchLater[i].DurationS, s.WatchLater[j].DurationS
+			if a <= 0 { return false }
+			if b <= 0 { return true }
+			return a < b
+		})
 	case "channel":
 		sort.SliceStable(s.WatchLater, func(i, j int) bool {
 			return strings.ToLower(s.WatchLater[i].Channel) < strings.ToLower(s.WatchLater[j].Channel)
