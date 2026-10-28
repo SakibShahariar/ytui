@@ -89,14 +89,15 @@ By default, that is:
 ~/.config/ytui/config.json
 ```
 
-Common settings include the download directory, default quality, preferred cookie browser, and audio-only playback.
+Common settings include the download directory, default quality, preferred cookie browser, audio-only playback, and optional desktop notifications.
 
 ```json
 {
   "download_dir": "~/Videos/ytui",
   "default_quality": "1080p",
   "default_cookies_browser": "firefox",
-  "default_audio_only": false
+  "default_audio_only": false,
+  "desktop_notifications": false
 }
 ```
 
@@ -124,6 +125,9 @@ ytui --log-level debug
 The log is appended to `$XDG_CACHE_HOME/ytui/ytui.log` (normally `~/.cache/ytui/ytui.log`). Use `--log-level off` to keep logging disabled. The log directory is created with private permissions and the log file is restricted to the current user (`0600`). Error messages are filtered for common credential fields and sensitive URL query parameters; still review logs before sharing them publicly.
 
 ## Downloads
+
+Set `desktop_notifications` to `true` in `config.json` to receive best-effort Linux desktop notifications when downloads complete or fail. Notifications use `notify-send` (provided by libnotify); if it is unavailable, downloads continue normally without notifications. Notifications are disabled by default.
+
 
 Press `Ctrl+D` to queue a download. In the Downloads queue, `Ctrl+D` cancels an active transfer and `Ctrl+R` retries failed/canceled entries or resumes retained partials. `Ctrl+O` switches between the active queue and saved offline files. On startup, ytui removes `.part`, `.ytdl`, and temporary artifacts older than 30 days from the dedicated download directory; newer partials are kept for resuming.
 
