@@ -62,6 +62,12 @@ On the live Downloads tab, `Ctrl+Space` pauses or resumes the selected queued or
 
 Select a video and press `Ctrl+V` to inspect available manual subtitles and automatic captions. Choose a language with `↑` / `↓` and `Enter`; the selected language is used for subsequent playback and for downloads when the subtitle option is enabled in `Ctrl+D`. Press `Ctrl+E` to fetch and read the transcript in the TUI. The transcript viewer scrolls with `↑` / `↓`, pages with `PgUp` / `PgDn`, jumps with `Home` / `End`, and closes with `Esc` or `q`. Caption availability depends on yt-dlp and the video; errors are reported without interrupting playback.
 
+## Shared queue with Ytrawl
+
+ytui imports pending Ytrawl requests at startup. To import again while running, press `:` and select **Import shared queue from Ytrawl**. Accepted items move into the Downloads queue and are acknowledged by ID; if the inbox cannot be read, local downloads continue and inbox items are retained.
+
+See [the shared queue format](shared-queue.md) for the versioned JSON schema, path, and locking rules.
+
 ## SponsorBlock
 
 SponsorBlock is disabled by default. Press `Ctrl+B` to enable it and choose categories for automatic skipping. Categories left unchecked are still highlighted when their segments are near or active, and `Ctrl+J` manually skips an active segment. If the API is unavailable or a video has no submitted segments, playback continues normally. The lookup sends only the first four characters of the SHA-256 video-ID hash to SponsorBlock, not the raw video ID.
