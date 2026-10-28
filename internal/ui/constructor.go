@@ -144,8 +144,8 @@ func NewWithURL(s *store.Store, videoURL string) Model {
 
 func (m Model) Init() tea.Cmd {
 	cmds := []tea.Cmd{textinput.Blink}
-	if auth.HaveToken() {
-		cmds = append(cmds, authClientCmd())
+	if auth.HaveTokenForProfile(m.activeProfile) {
+		cmds = append(cmds, authClientCmd(m.activeProfile))
 	}
 	if m.directURL != "" {
 		cmds = append(cmds, loadDirectURLCmd(m.directURL))
