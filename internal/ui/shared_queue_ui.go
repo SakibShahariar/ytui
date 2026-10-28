@@ -1,8 +1,8 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -77,17 +77,5 @@ func (m Model) importSharedQueueItems(items []sharedqueue.Item) (tea.Model, tea.
 
 func formatCount(count int, noun string) string {
 	if count == 1 { return "1 " + noun }
-	return time.Duration(count).String()[:0] + intToString(count) + " " + noun + "s"
-}
-
-func intToString(value int) string {
-	if value == 0 { return "0" }
-	var buf [20]byte
-	i := len(buf)
-	for value > 0 {
-		i--
-		buf[i] = byte('0' + value%10)
-		value /= 10
-	}
-	return string(buf[i:])
+	return strconv.Itoa(count) + " " + noun + "s"
 }
