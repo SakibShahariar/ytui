@@ -19,6 +19,7 @@ func TestImportExportRoundTrip(t *testing.T) {
 		DefaultCookiesBrowser: "firefox",
 		DefaultAudioOnly:          true,
 		DesktopNotifications:      true,
+		AutoplayNext:              true,
 		ThumbnailCacheMaxEntries:  120,
 		ThumbnailCacheMaxAgeDays:  14,
 	}
