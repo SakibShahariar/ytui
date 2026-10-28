@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -57,6 +58,20 @@ func validateItem(item Item) error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
 		return fmt.Errorf("shared queue item URL must be an absolute http(s) URL without embedded credentials")
 	}
+	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
+	if host == "" || host == "localhost" || strings.HasSuffix(host, ".localhost") ||
+		strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".internal") ||
+		strings.HasSuffix(host, ".lan") || strings.HasSuffix(host, ".home.arpa") {
+		return fmt.Errorf("shared queue URL must use a public host")
+	}
+	ipHost := host
+	if zone := strings.IndexByte(ipHost, '%'); zone >= 0 { ipHost = ipHost[:zone] }
+	if ip := net.ParseIP(ipHost); ip != nil &&
+		(ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()) {
+		return fmt.Errorf("shared queue URL must not target a private or local IP address")
+	}
+	if item.URL != strings.TrimSpace(item.URL) { return fmt.Errorf("shared queue URL contains surrounding whitespace") }
+	if strings.ContainsAny(item.Title, "\x00\r\n\x1b") { return fmt.Errorf("shared queue title contains terminal control characters") }
 	if item.Mode != "" && item.Mode != "video" && item.Mode != "audio" { return fmt.Errorf("shared queue item has unsupported mode %q", item.Mode) }
 	if len(item.Title) > 512 || len(item.Quality) > 128 || len(item.AudioFormat) > 32 { return fmt.Errorf("shared queue item metadata is too long") }
 	return nil
