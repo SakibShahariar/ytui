@@ -19,10 +19,12 @@ func audioOnlyLabel(enabled bool) string {
 func (m Model) View() string {
 	var b strings.Builder
 
-	loginStatus := lipgloss.NewStyle().Foreground(ctpOverlay0).Render("○ not logged in")
+	profileName := m.activeProfile
+	if profileName == "" { profileName = "default" }
+	loginStatus := lipgloss.NewStyle().Foreground(ctpOverlay0).Render("○ not logged in · profile: " + profileName)
 	if m.loggedIn {
 		loginStatus = lipgloss.NewStyle().Foreground(ctpGreen).Render("●") + " " +
-			lipgloss.NewStyle().Foreground(ctpSubtext0).Render("logged in")
+			lipgloss.NewStyle().Foreground(ctpSubtext0).Render("logged in · profile: " + profileName)
 	}
 	titleLine := titleStyle.Render("ytui") + "  " + subtitleStyle.Render("youtube, in your terminal") +
 		"   " + loginStatus
