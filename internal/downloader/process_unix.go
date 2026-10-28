@@ -23,3 +23,11 @@ func resumeProcess(cmd *exec.Cmd) error {
 	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGCONT); err != nil { return fmt.Errorf("resume download process group: %w", err) }
 	return nil
 }
+
+func killProcess(cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil { return nil }
+	if err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL); err != nil {
+		return cmd.Process.Kill()
+	}
+	return nil
+}
