@@ -67,6 +67,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.commandPalette:
+		listContent.WriteString(m.commandPaletteContent(listWidth-4, panelH-4))
 	case m.downloadPicker:
 		listContent.WriteString(m.downloadPickerContent(listWidth - 2))
 	case m.resumePrompt != nil:
