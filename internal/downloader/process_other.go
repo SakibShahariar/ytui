@@ -16,3 +16,8 @@ func pauseProcess(cmd *exec.Cmd) error {
 func resumeProcess(cmd *exec.Cmd) error {
 	return fmt.Errorf("resuming active downloads is not supported on this platform")
 }
+
+func killProcess(cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil { return nil }
+	return cmd.Process.Kill()
+}
