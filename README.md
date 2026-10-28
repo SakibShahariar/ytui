@@ -75,6 +75,8 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 | `Ctrl+L` | Google login / logout |
 | `Ctrl+C` | Quit ytui and stop the current mpv playback session |
 
+Paste a YouTube playlist URL into Search and press `Enter` to list its videos in order. Select an entry to play it, use `Ctrl+W` to add it to Watch Later, or `Ctrl+D` to download it.
+
 See the [full keybinding reference](docs/keybindings.md).
 
 ## Google login
