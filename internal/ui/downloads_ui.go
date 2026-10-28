@@ -104,12 +104,12 @@ func (m Model) toggleSelectedDownloadPause() (tea.Model, tea.Cmd) {
 	}
 	var err error
 	switch item.d.Status {
-	case downloader.StatusQueued:
+	case downloader.StatusQueued, downloader.StatusDownloading:
 		err = m.downloads.Pause(item.d.VideoID)
 	case downloader.StatusPaused:
 		err = m.downloads.Resume(item.d.VideoID)
 	default:
-		m.statusMsg = "only queued downloads can be paused or resumed"
+		m.statusMsg = "only queued or active downloads can be paused or resumed"
 		return m, nil
 	}
 	if err != nil {
@@ -117,7 +117,7 @@ func (m Model) toggleSelectedDownloadPause() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	m.errMsg = ""
-	if item.d.Status == downloader.StatusQueued {
+	if item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading {
 		m.statusMsg = "paused: " + item.d.Title
 	} else {
 		m.statusMsg = "resumed: " + item.d.Title
