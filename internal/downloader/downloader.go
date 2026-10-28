@@ -215,8 +215,9 @@ func (m *Manager) Cancel(videoID string) {
 	}
 }
 
-// Shutdown prevents new downloads, cancels queued and active work, and waits
-// for all download workers to finish before the application exits.
+// Shutdown prevents new downloads, preserves queued work for the next launch,
+// stops active transfers so their partial files can be resumed, and waits for
+// all workers to finish before the application exits.
 func (m *Manager) Shutdown() {
 	if m == nil {
 		return
