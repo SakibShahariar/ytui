@@ -22,6 +22,7 @@ func keyboardHelpLines() []string {
 		"",
 		"Search and lists",
 		"Plain letters       Start or edit a Search query",
+		"Playlist URL        Paste into Search and press Enter to open",
 		"Ctrl+S              Subscribe to selected channel",
 		"Ctrl+W              Add selected video to Watch Later",
 		"Watch Later: Space   Select/deselect an item",
