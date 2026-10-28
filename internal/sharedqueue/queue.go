@@ -52,7 +52,7 @@ func Path() (string, error) {
 
 func validateItem(item Item) error {
 	if strings.TrimSpace(item.ID) == "" || len(item.ID) > 128 { return fmt.Errorf("shared queue item has an invalid ID") }
-	if strings.ContainsAny(item.ID, "/\\\x00\r\n") { return fmt.Errorf("shared queue item ID contains invalid characters") }
+	if strings.ContainsAny(item.ID, "/\\\x00\r\n\x1b") { return fmt.Errorf("shared queue item ID contains invalid characters") }
 	if len(item.URL) == 0 || len(item.URL) > 4096 { return fmt.Errorf("shared queue item has an invalid URL length") }
 	u, err := url.ParseRequestURI(strings.TrimSpace(item.URL))
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
@@ -71,7 +71,7 @@ func validateItem(item Item) error {
 		return fmt.Errorf("shared queue URL must not target a private or local IP address")
 	}
 	if item.URL != strings.TrimSpace(item.URL) { return fmt.Errorf("shared queue URL contains surrounding whitespace") }
-	if strings.ContainsAny(item.Title, "\x00\r\n\x1b") { return fmt.Errorf("shared queue title contains terminal control characters") }
+	if strings.ContainsAny(item.Title+item.Quality+item.AudioFormat, "\x00\r\n\x1b") { return fmt.Errorf("shared queue metadata contains terminal control characters") }
 	if item.Mode != "" && item.Mode != "video" && item.Mode != "audio" { return fmt.Errorf("shared queue item has unsupported mode %q", item.Mode) }
 	if len(item.Title) > 512 || len(item.Quality) > 128 || len(item.AudioFormat) > 32 { return fmt.Errorf("shared queue item metadata is too long") }
 	return nil
