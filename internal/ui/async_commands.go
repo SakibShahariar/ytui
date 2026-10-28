@@ -27,6 +27,17 @@ func doSearch(query string) tea.Cmd {
 	return doSearchWith(query, ytdlp.Search)
 }
 
+func loadSubtitleTracksCmd(video ytdlp.Video) tea.Cmd {
+	return loadSubtitleTracksWith(video, ytdlp.GetSubtitleTracks)
+}
+
+func loadSubtitleTracksWith(video ytdlp.Video, getTracks func(string) ([]ytdlp.SubtitleTrack, error)) tea.Cmd {
+	return func() tea.Msg {
+		tracks, err := getTracks(video.URL)
+		return subtitleTracksMsg{video: video, tracks: tracks, err: err}
+	}
+}
+
 func loadPlaylistCmd(playlistURL string) tea.Cmd {
 	return loadPlaylistWith(playlistURL, ytdlp.GetPlaylist)
 }
