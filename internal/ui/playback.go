@@ -120,17 +120,70 @@ func (m Model) startSelectedVideo(v ytdlp.Video, resumePos float64) (tea.Model, 
 // viewing the Now Playing tab, navigates them away from it since it'd
 // otherwise show stale/empty content while still being "selected".
 func (m Model) clearNowPlaying() (tea.Model, tea.Cmd) {
+	endedID := ""
+	if m.playingVid != nil {
+		endedID = m.playingVid.ID
+	}
+	shouldAutoplay := m.cfg.AutoplayNext && m.statusMsg != "playback stopped" && !m.playingLocal && endedID != ""
 	m.nowPlaying = nil
 	m.playingVid = nil
 	m.playingLocal = false
 	m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 	m.npDescription = ""
 	m.npDescriptionLoading = false
+	if shouldAutoplay {
+		if next, ok := m.nextWatchLaterVideo(endedID); ok {
+			m.statusMsg = "autoplay next: " + next.Title
+			return m.startSelectedVideo(next, 0)
+		}
+		if next, ok := m.nextCurrentListVideo(); ok {
+			m.statusMsg = "autoplay next: " + next.Title
+			return m.startSelectedVideo(next, 0)
+		}
+	}
 	if m.activeTab == tabNowPlaying {
 		m.activeTab = tabSearch
 		m.refreshList()
 		return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 	}
 	return m, tea.ClearScreen
+}
+
+// nextWatchLaterVideo prefers the item after the finished video when it is
+// already in Watch Later; otherwise it starts at the queue's first item.
+func (m Model) nextWatchLaterVideo(currentID string) (ytdlp.Video, bool) {
+	entries := m.store.WatchLater
+	start := 0
+	for i, entry := range entries {
+		if entry.VideoID == currentID {
+			start = i + 1
+			break
+		}
+	}
+	if start >= len(entries) {
+		return ytdlp.Video{}, false
+	}
+	entry := entries[start]
+	return ytdlp.Video{ID: entry.VideoID, Title: entry.Title, Channel: entry.Channel, URL: entry.URL,
+		Thumbnail: thumbnailFor(entry.VideoID, entry.Thumbnail)}, true
+}
+
+// nextCurrentListVideo advances from the current selection when the active
+// list contains another playable video. Watch Later takes priority.
+func (m Model) nextCurrentListVideo() (ytdlp.Video, bool) {
+	items := m.list.Items()
+	for i := m.list.Index() + 1; i < len(items); i++ {
+		switch item := items[i].(type) {
+		case videoItem:
+			return item.v, true
+		case watchLaterItem:
+			return ytdlp.Video{ID: item.e.VideoID, Title: item.e.Title, Channel: item.e.Channel, URL: item.e.URL,
+				Thumbnail: thumbnailFor(item.e.VideoID, item.e.Thumbnail)}, true
+		case historyItem:
+			return ytdlp.Video{ID: item.e.VideoID, Title: item.e.Title, Channel: item.e.Channel, URL: item.e.URL,
+				Thumbnail: thumbnailFor(item.e.VideoID, item.e.Thumbnail)}, true
+		}
+	}
+	return ytdlp.Video{}, false
 }
 
