@@ -32,4 +32,6 @@ func TestSharedQueueOptionsMapVideoQualityAndAudio(t *testing.T) {
 	if !audio.ExtractAudio || audio.AudioFormat != "opus" || audio.QualityLabel != "Audio only (opus)" {
 		t.Fatalf("audio options = %#v", audio)
 	}
+	invalidAudio := sharedQueueOptions(sharedqueue.Item{Mode: "audio", AudioFormat: "--exec=malicious"})
+	if invalidAudio.AudioFormat != "mp3" { t.Fatalf("invalid audio format was not replaced safely: %#v", invalidAudio) }
 }
