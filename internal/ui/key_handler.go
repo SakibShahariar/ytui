@@ -25,6 +25,30 @@ import (
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	if m.watchLaterBulkPending {
+		m.watchLaterBulkPending = false
+		switch key {
+		case "y":
+			ids := make([]string, 0, len(m.watchLaterSelected))
+			for id, selected := range m.watchLaterSelected { if selected { ids = append(ids, id) } }
+			if err := m.store.RemoveWatchLaterMany(ids); err != nil {
+				m.errMsg = "remove selected Watch Later items: " + err.Error()
+			} else {
+				m.errMsg = ""
+				m.watchLaterSelected = make(map[string]bool)
+				m.statusMsg = fmt.Sprintf("removed %d Watch Later item(s)", len(ids))
+				m.refreshList()
+			}
+			return m, nil
+		case "n", "esc":
+			m.statusMsg = "bulk removal canceled"
+			return m, nil
+		default:
+			m.statusMsg = "bulk removal canceled"
+			return m, nil
+		}
+	}
+
 	if m.watchLaterClearPending {
 		m.watchLaterClearPending = false
 		switch key {
@@ -232,10 +256,23 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	if m.activeTab == tabWatchLater && !m.inputMode {
 		switch key {
+		case " ":
+			item, ok := m.list.SelectedItem().(watchLaterItem)
+			if !ok { return m, nil }
+			if m.watchLaterSelected == nil { m.watchLaterSelected = make(map[string]bool) }
+			if m.watchLaterSelected[item.e.VideoID] { delete(m.watchLaterSelected, item.e.VideoID) } else { m.watchLaterSelected[item.e.VideoID] = true }
+			m.refreshList()
+			if len(m.watchLaterSelected) == 0 { m.statusMsg = "Watch Later selection cleared" } else { m.statusMsg = fmt.Sprintf("%d Watch Later item(s) selected", len(m.watchLaterSelected)) }
+			return m, nil
+		case "m":
+			if len(m.watchLaterSelected) == 0 { m.statusMsg = "select items with Space before bulk removal"; return m, nil }
+			m.watchLaterBulkPending = true
+			m.statusMsg = fmt.Sprintf("remove %d selected Watch Later item(s)? press y to confirm, any other key to cancel", len(m.watchLaterSelected))
+			return m, nil
 		case "s":
-			m.watchLaterSortMode = (m.watchLaterSortMode + 1) % 3
-			modes := []string{"added", "title", "channel"}
-			labels := []string{"oldest added", "title A–Z", "channel A–Z"}
+			m.watchLaterSortMode = (m.watchLaterSortMode + 1) % 4
+			modes := []string{"added", "title", "duration", "channel"}
+			labels := []string{"oldest added", "title A–Z", "shortest duration", "channel A–Z"}
 			if err := m.store.SortWatchLater(modes[m.watchLaterSortMode]); err != nil {
 				m.errMsg = "sort Watch Later: " + err.Error()
 				return m, nil
