@@ -29,6 +29,7 @@ const (
 	StatusError
 	StatusResumable
 	StatusCanceled
+	StatusPaused
 )
 
 // Download tracks one queued/active/finished download. Fields are only
@@ -71,6 +72,8 @@ type Manager struct {
 	destDir string
 	closed  bool
 	notificationsEnabled bool
+	pending []string
+	wake chan struct{}
 	wg      sync.WaitGroup
 
 	stalePartialsRemoved int
@@ -91,12 +94,16 @@ func New(destDir string) (*Manager, error) {
 		return nil, fmt.Errorf("couldn't create download directory: %w", err)
 	}
 	removed, cleanupErr := CleanupStalePartials(destDir, 30*24*time.Hour)
-	return &Manager{
+	m := &Manager{
 		byID:                 make(map[string]*Download),
 		destDir:              destDir,
+		wake:                 make(chan struct{}, 1),
 		stalePartialsRemoved: removed,
 		staleCleanupErr:      cleanupErr,
-	}, nil
+	}
+	m.wg.Add(1)
+	go m.schedule()
+	return m, nil
 }
 
 // DestDir returns where downloads are being saved.
@@ -141,13 +148,10 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 	if !found {
 		m.order = append(m.order, videoID)
 	}
-	m.wg.Add(1)
+	m.removePendingLocked(videoID)
+	m.pending = append(m.pending, videoID)
 	m.mu.Unlock()
-
-	go func() {
-		defer m.wg.Done()
-		m.run(d)
-	}()
+	m.signalScheduler()
 	return d
 }
 
@@ -210,6 +214,7 @@ func (m *Manager) Shutdown() {
 	}
 	m.mu.Lock()
 	m.closed = true
+	m.pending = nil
 	processes := make([]*os.Process, 0)
 	for _, d := range m.byID {
 		if d.Status != StatusQueued && d.Status != StatusDownloading {
@@ -221,6 +226,7 @@ func (m *Manager) Shutdown() {
 		}
 	}
 	m.mu.Unlock()
+	m.signalScheduler()
 
 	for _, process := range processes {
 		_ = process.Kill()
@@ -329,7 +335,7 @@ func buildArgs(destDir string, d *Download) []string {
 
 func (m *Manager) run(d *Download) {
 	m.mu.Lock()
-	if d.Status == StatusCanceled {
+	if d.Status != StatusQueued {
 		m.mu.Unlock()
 		return
 	}
@@ -480,4 +486,100 @@ func (m *Manager) setStatus(videoID string, status Status, err error) {
 
 func (m *Manager) setError(videoID string, err error) {
 	m.setStatus(videoID, StatusError, err)
+}
+
+
+// signalScheduler wakes the single-download scheduler without blocking callers.
+func (m *Manager) signalScheduler() {
+	select {
+	case m.wake <- struct{}{}:
+	default:
+	}
+}
+
+func (m *Manager) removePendingLocked(videoID string) {
+	out := m.pending[:0]
+	for _, id := range m.pending {
+		if id != videoID { out = append(out, id) }
+	}
+	m.pending = out
+}
+
+// schedule runs at most one yt-dlp process at a time, preserving the explicit
+// pending order and ensuring queue controls affect actual execution order.
+func (m *Manager) schedule() {
+	defer m.wg.Done()
+	for {
+		m.mu.Lock()
+		for !m.closed && len(m.pending) == 0 {
+			m.mu.Unlock()
+			<-m.wake
+			m.mu.Lock()
+		}
+		if m.closed {
+			m.mu.Unlock()
+			return
+		}
+		id := m.pending[0]
+		m.pending = m.pending[1:]
+		d := m.byID[id]
+		if d == nil || d.Status != StatusQueued {
+			m.mu.Unlock()
+			continue
+		}
+		m.mu.Unlock()
+		m.run(d)
+	}
+}
+
+// MoveQueued moves a pending item one position up (-1) or down (+1).
+func (m *Manager) MoveQueued(videoID string, delta int) bool {
+	if delta != -1 && delta != 1 { return false }
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.closed { return false }
+	from := -1
+	for i, id := range m.pending {
+		if id == videoID { from = i; break }
+	}
+	to := from + delta
+	if from < 0 || to < 0 || to >= len(m.pending) { return false }
+	m.pending[from], m.pending[to] = m.pending[to], m.pending[from]
+	// Keep the visible order consistent with the pending order.
+	posA, posB := -1, -1
+	for i, id := range m.order {
+		if id == videoID { posA = i }
+		if id == m.pending[from] { posB = i }
+	}
+	if posA >= 0 && posB >= 0 { m.order[posA], m.order[posB] = m.order[posB], m.order[posA] }
+	return true
+}
+
+// Pause suspends a queued download until it is resumed. Active process
+// suspension is intentionally not attempted on platforms without a portable
+// process-stop API.
+func (m *Manager) Pause(videoID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	d, ok := m.byID[videoID]
+	if !ok { return fmt.Errorf("download not found") }
+	if d.Status != StatusQueued { return fmt.Errorf("only queued downloads can be paused") }
+	m.removePendingLocked(videoID)
+	d.Status = StatusPaused
+	return nil
+}
+
+// Resume puts a paused queued download at the end of the pending queue.
+func (m *Manager) Resume(videoID string) error {
+	m.mu.Lock()
+	d, ok := m.byID[videoID]
+	if !ok { m.mu.Unlock(); return fmt.Errorf("download not found") }
+	if d.Status != StatusPaused { m.mu.Unlock(); return fmt.Errorf("download is not paused") }
+	if m.closed { m.mu.Unlock(); return fmt.Errorf("download manager is shut down") }
+	d.Status = StatusQueued
+	m.removePendingLocked(videoID)
+	m.pending = append(m.pending, videoID)
+	m.mu.Unlock()
+	m.signalScheduler()
+	return nil
 }
