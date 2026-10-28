@@ -259,3 +259,53 @@ func TestRunDrainsOversizedOutputLine(t *testing.T) {
 		t.Fatalf("error = %v, want diagnostic after oversized line", d.Err)
 	}
 }
+
+func TestCancelActiveDownloadStopsProcess(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	if err := os.WriteFile(fakeYTDLP, []byte("#!/bin/sh\nwhile :; do :; done\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	d := &Download{VideoID: "active-cancel-test", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{d.VideoID: d}, order: []string{d.VideoID}, destDir: t.TempDir()}
+	done := make(chan struct{})
+	go func() {
+		m.run(d)
+		close(done)
+	}()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		m.mu.Lock()
+		started := d.cmd != nil && d.cmd.Process != nil
+		m.mu.Unlock()
+		if started {
+			break
+		}
+		if time.Now().After(deadline) {
+			m.Cancel(d.VideoID)
+			t.Fatal("fake yt-dlp process did not start")
+		}
+		select {
+		case <-done:
+			t.Fatal("download worker exited before the fake process could be canceled")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	m.Cancel(d.VideoID)
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("download worker did not stop after cancellation")
+	}
+	if d.Status != StatusCanceled {
+		t.Fatalf("status after cancellation = %v, want canceled", d.Status)
+	}
+}
