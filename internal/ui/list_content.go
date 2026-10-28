@@ -105,7 +105,7 @@ func (m Model) currentListItems() []list.Item {
 	case tabWatchLater:
 		items := make([]list.Item, 0, len(m.store.WatchLater))
 		for _, e := range m.store.WatchLater {
-			items = append(items, watchLaterItem{e})
+			items = append(items, watchLaterItem{e: e, selected: m.watchLaterSelected[e.VideoID]})
 		}
 		return items
 	case tabHistory:
@@ -192,9 +192,12 @@ func (i playlistItemUI) Description() string {
 }
 func (i playlistItemUI) FilterValue() string { return i.p.Title }
 
-type watchLaterItem struct{ e store.WatchLaterEntry }
+type watchLaterItem struct { e store.WatchLaterEntry; selected bool }
 
-func (i watchLaterItem) Title() string       { return i.e.Title }
+func (i watchLaterItem) Title() string {
+	if i.selected { return "☑ " + i.e.Title }
+	return i.e.Title
+}
 func (i watchLaterItem) Description() string { return i.e.Channel }
 func (i watchLaterItem) FilterValue() string { return i.e.Title }
 
