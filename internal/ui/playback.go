@@ -111,7 +111,7 @@ func (m Model) startSelectedVideo(v ytdlp.Video, resumePos float64) (tea.Model, 
 		m.statusMsg = "starting mpv: " + v.Title
 	}
 	_ = m.store.AddHistory(store.HistoryEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail, PositionS: resumePos})
-	return m, startPlayback(v.URL, m.audioOnly, resumePos)
+	return m, startPlayback(v.URL, m.audioOnly, resumePos, m.subtitleLanguage)
 }
 
 // clearNowPlaying resets all Now Playing state — used both when we stop
