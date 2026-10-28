@@ -39,6 +39,7 @@ type WatchLaterEntry struct {
 	Channel   string    `json:"channel"`
 	URL       string    `json:"url"`
 	Thumbnail string    `json:"thumbnail"`
+	DurationS float64   `json:"duration_s,omitempty"`
 	AddedAt   time.Time `json:"added_at"`
 }
 
@@ -232,6 +233,8 @@ func (s *Store) SortWatchLater(mode string) error {
 		sort.SliceStable(s.WatchLater, func(i, j int) bool {
 			return strings.ToLower(s.WatchLater[i].Title) < strings.ToLower(s.WatchLater[j].Title)
 		})
+	case "duration":
+		sort.SliceStable(s.WatchLater, func(i, j int) bool { return s.WatchLater[i].DurationS < s.WatchLater[j].DurationS })
 	case "channel":
 		sort.SliceStable(s.WatchLater, func(i, j int) bool {
 			return strings.ToLower(s.WatchLater[i].Channel) < strings.ToLower(s.WatchLater[j].Channel)
@@ -248,5 +251,22 @@ func (s *Store) ClearWatchLater() error {
 		return nil
 	}
 	s.WatchLater = nil
+	return s.Save()
+}
+
+
+// RemoveWatchLaterMany removes a set of queue entries and persists once.
+// Empty IDs are ignored; entries not present in the queue are harmless.
+func (s *Store) RemoveWatchLaterMany(videoIDs []string) error {
+	if len(videoIDs) == 0 { return nil }
+	remove := make(map[string]struct{}, len(videoIDs))
+	for _, id := range videoIDs { if id != "" { remove[id] = struct{}{} } }
+	if len(remove) == 0 { return nil }
+	out := s.WatchLater[:0]
+	for _, entry := range s.WatchLater {
+		if _, found := remove[entry.VideoID]; !found { out = append(out, entry) }
+	}
+	if len(out) == len(s.WatchLater) { return nil }
+	s.WatchLater = out
 	return s.Save()
 }
