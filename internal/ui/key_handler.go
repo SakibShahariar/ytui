@@ -25,6 +25,55 @@ import (
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	if m.commandPalette {
+		switch key {
+		case "esc":
+			m.commandPalette = false
+			m.commandPaletteInput.Blur()
+			m.statusMsg = "command palette closed"
+			return m, nil
+		case "ctrl+c":
+			return m, tea.Quit
+		case "up":
+			if m.commandPaletteCursor > 0 { m.commandPaletteCursor-- }
+			return m, nil
+		case "down":
+			commands := m.filteredPaletteCommands()
+			if m.commandPaletteCursor < len(commands)-1 { m.commandPaletteCursor++ }
+			return m, nil
+		case "pgup":
+			m.commandPaletteCursor -= 5
+			if m.commandPaletteCursor < 0 { m.commandPaletteCursor = 0 }
+			return m, nil
+		case "pgdown":
+			commands := m.filteredPaletteCommands()
+			m.commandPaletteCursor += 5
+			if m.commandPaletteCursor >= len(commands) { m.commandPaletteCursor = len(commands)-1 }
+			return m, nil
+		case "home":
+			m.commandPaletteCursor = 0
+			return m, nil
+		case "end":
+			m.commandPaletteCursor = len(m.filteredPaletteCommands())-1
+			if m.commandPaletteCursor < 0 { m.commandPaletteCursor = 0 }
+			return m, nil
+		case "enter":
+			commands := m.filteredPaletteCommands()
+			if len(commands) == 0 { m.statusMsg = "no matching commands"; return m, nil }
+			if m.commandPaletteCursor >= len(commands) { m.commandPaletteCursor = len(commands)-1 }
+			return m.executePaletteCommand(commands[m.commandPaletteCursor].id)
+		case "ctrl+u":
+			m.commandPaletteInput.SetValue("")
+			m.commandPaletteCursor = 0
+			return m, nil
+		default:
+			var cmd tea.Cmd
+			m.commandPaletteInput, cmd = m.commandPaletteInput.Update(msg)
+			m.commandPaletteCursor = 0
+			return m, cmd
+		}
+	}
+
 	if m.watchLaterBulkPending {
 		m.watchLaterBulkPending = false
 		switch key {
@@ -253,6 +302,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.pathInput, cmd = m.pathInput.Update(msg)
 		return m, cmd
+	}
+
+	if key == ":" && !m.inputMode && !m.showLoginHelp && m.credentialStep == 0 {
+		m.commandPalette = true
+		m.commandPaletteCursor = 0
+		m.commandPaletteInput.SetValue("")
+		m.commandPaletteInput.Focus()
+		return m, tea.Batch(tea.ClearScreen, textinput.Blink)
 	}
 
 	if m.activeTab == tabWatchLater && !m.inputMode {
