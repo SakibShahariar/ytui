@@ -53,6 +53,7 @@ type Download struct {
 	VideoID  string
 	Title    string
 	Channel  string
+	AddedAt  time.Time
 	URL      string
 	Opts     Options
 	Status   Status
@@ -148,7 +149,7 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 		m.mu.Unlock()
 		return existing
 	}
-	d := &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusQueued}
+	d := &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusQueued, AddedAt: time.Now()}
 	m.byID[videoID] = d
 	// Retrying a failed/canceled item replaces its entry without adding a
 	// second occurrence to the stable display order.
@@ -635,6 +636,7 @@ type persistedDownload struct {
 	Channel string `json:"channel"`
 	URL string `json:"url"`
 	Opts Options `json:"options"`
+	AddedAt time.Time `json:"added_at,omitempty"`
 	Paused bool `json:"paused,omitempty"`
 }
 
@@ -650,7 +652,7 @@ func (m *Manager) loadQueue() error {
 		seen[item.VideoID] = true
 		status := StatusQueued
 		if item.Paused { status = StatusPaused }
-		d := &Download{VideoID:item.VideoID, Title:item.Title, Channel:item.Channel, URL:item.URL, Opts:item.Opts, Status:status}
+		d := &Download{VideoID:item.VideoID, Title:item.Title, Channel:item.Channel, URL:item.URL, Opts:item.Opts, AddedAt:item.AddedAt, Status:status}
 		m.byID[item.VideoID] = d
 		m.order = append(m.order, item.VideoID)
 		if status == StatusQueued { m.pending = append(m.pending, item.VideoID) }
@@ -666,7 +668,7 @@ func (m *Manager) persistQueueLocked() error {
 	for _, id := range m.order {
 		d := m.byID[id]
 		if d == nil || (d.Status != StatusQueued && d.Status != StatusPaused) { continue }
-		saved = append(saved, persistedDownload{VideoID:d.VideoID, Title:d.Title, Channel:d.Channel, URL:d.URL, Opts:d.Opts, Paused:d.Status == StatusPaused})
+		saved = append(saved, persistedDownload{VideoID:d.VideoID, Title:d.Title, Channel:d.Channel, URL:d.URL, Opts:d.Opts, AddedAt:d.AddedAt, Paused:d.Status == StatusPaused})
 	}
 	if len(saved) == 0 {
 		err := os.Remove(m.queueFile)
