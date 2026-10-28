@@ -372,6 +372,8 @@ type Model struct {
 	downloadStatusFilter int
 	watchLaterSortMode int
 	watchLaterClearPending bool
+	watchLaterBulkPending bool
+	watchLaterSelected map[string]bool
 	list        list.Model
 	listPositions map[tab]int
 	listTab tab
