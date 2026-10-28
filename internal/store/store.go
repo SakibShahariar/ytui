@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -214,5 +216,37 @@ func (s *Store) RemoveWatchLater(videoID string) error {
 		}
 	}
 	s.WatchLater = out
+	return s.Save()
+}
+
+
+// SortWatchLater sorts the queue and persists the resulting order.
+// Supported modes are "added" (oldest first), "title", and "channel".
+func (s *Store) SortWatchLater(mode string) error {
+	switch mode {
+	case "added":
+		sort.SliceStable(s.WatchLater, func(i, j int) bool {
+			return s.WatchLater[i].AddedAt.Before(s.WatchLater[j].AddedAt)
+		})
+	case "title":
+		sort.SliceStable(s.WatchLater, func(i, j int) bool {
+			return strings.ToLower(s.WatchLater[i].Title) < strings.ToLower(s.WatchLater[j].Title)
+		})
+	case "channel":
+		sort.SliceStable(s.WatchLater, func(i, j int) bool {
+			return strings.ToLower(s.WatchLater[i].Channel) < strings.ToLower(s.WatchLater[j].Channel)
+		})
+	default:
+		return fmt.Errorf("unsupported Watch Later sort mode %q", mode)
+	}
+	return s.Save()
+}
+
+// ClearWatchLater removes all queued videos in one persisted operation.
+func (s *Store) ClearWatchLater() error {
+	if len(s.WatchLater) == 0 {
+		return nil
+	}
+	s.WatchLater = nil
 	return s.Save()
 }
