@@ -45,3 +45,27 @@ func TestAppendRejectsUnsafeSharedQueueItems(t *testing.T) {
 		if err := Append(item); err == nil { t.Errorf("Append(%#v) unexpectedly succeeded", item) }
 	}
 }
+
+func TestReadAcceptsYtrawlVersionOneFixture(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shared-queue.json")
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", path)
+	fixture := []byte(`{
+		"version": 1,
+		"items": [{
+			"id": "event-from-ytrawl",
+			"url": "https://www.youtube.com/watch?v=abc",
+			"title": "Panel item",
+			"mode": "audio",
+			"quality": "best",
+			"audio_format": "opus",
+			"created_at": "2026-10-28T01:23:45.000Z"
+		}]
+	}`)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil { t.Fatal(err) }
+	if err := os.WriteFile(path, fixture, 0o600); err != nil { t.Fatal(err) }
+	items, err := Read()
+	if err != nil { t.Fatal(err) }
+	if len(items) != 1 || items[0].ID != "event-from-ytrawl" || items[0].Mode != "audio" || items[0].AudioFormat != "opus" {
+		t.Fatalf("parsed Ytrawl fixture = %#v", items)
+	}
+}
