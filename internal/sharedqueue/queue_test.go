@@ -41,6 +41,9 @@ func TestAppendRejectsUnsafeSharedQueueItems(t *testing.T) {
 		{ID: "bad", URL: "https://user:pass@example.com/video"},
 		{ID: "../bad", URL: "https://example.com/video"},
 		{ID: "bad", URL: "https://example.com/video", Mode: "shell"},
+		{ID: "bad", URL: "http://127.0.0.1/admin"},
+		{ID: "bad", URL: "http://localhost:8080/"},
+		{ID: "bad", URL: "https://example.com/video", Title: "unsafe\nname"},
 	} {
 		if err := Append(item); err == nil { t.Errorf("Append(%#v) unexpectedly succeeded", item) }
 	}
