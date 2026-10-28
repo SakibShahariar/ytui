@@ -53,7 +53,7 @@ For development, run `go run .` from the cloned repository.
 
 ## Releases
 
-Tagged versions publish Linux (`amd64`, `arm64`) and macOS (`amd64`, `arm64`) archives with SHA-256 checksums. Download the archive matching your operating system and CPU architecture, extract it, and place `ytui` somewhere on your `PATH`. These binaries do not bundle `mpv` or `yt-dlp`; install both separately. Verify an installed version with `ytui --version` or `ytui -v`.
+Tagged versions publish Linux (`amd64`, `arm64`) and macOS (`amd64`, `arm64`) archives with SHA-256 checksums. Download the archive matching your operating system and CPU architecture plus `SHA256SUMS` from the same release. In the directory containing both downloads, verify the archive with `sha256sum --check SHA256SUMS`, extract it with `tar -xzf ytui-VERSION-OS-ARCH.tar.gz`, and place the `ytui` binary somewhere on your `PATH`. These binaries do not bundle `mpv` or `yt-dlp`; install both separately. Verify an installed version with `ytui --version` or `ytui -v`.
 
 ## Playback autoplay
 
