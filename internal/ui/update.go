@@ -128,6 +128,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
+	case sharedQueueMsg:
+		if msg.err != nil {
+			logging.Error("shared queue read failed", msg.err)
+			if msg.manual || m.statusMsg == "" { m.statusMsg = "shared queue unavailable; local downloads still work" }
+			return m, nil
+		}
+		if len(msg.items) == 0 {
+			if msg.manual { m.statusMsg = "shared queue is empty" }
+			return m, nil
+		}
+		return m.importSharedQueueItems(msg.items)
+
+	case sharedQueueAckMsg:
+		if msg.err != nil {
+			logging.Error("shared queue acknowledgement failed", msg.err)
+			m.statusMsg = fmt.Sprintf("imported %d item(s), but inbox acknowledgement failed; repeats are deduplicated", msg.count)
+			return m, nil
+		}
+		m.statusMsg = fmt.Sprintf("imported %d item(s) from Ytrawl into Downloads", msg.count)
+		if m.activeTab == tabDownloads { m.refreshList() }
+		return m, nil
+
 	case sponsorSegmentsMsg:
 		if !m.cfg.SponsorBlockEnabled || m.playingVid == nil || m.playingVid.ID != msg.videoID {
 			return m, nil
