@@ -40,7 +40,7 @@ type mpvCommand struct {
 
 // Play launches mpv pointed at videoURL. audioOnly strips video for a
 // lighter, music-mode playback (handy over SSH/low bandwidth).
-func Play(videoURL string, audioOnly bool) (*Player, error) {
+func Play(videoURL string, audioOnly bool, subtitleLanguage ...string) (*Player, error) {
 	if _, err := exec.LookPath("mpv"); err != nil {
 		return nil, fmt.Errorf("mpv not found on PATH — install it with: sudo dnf install mpv")
 	}
@@ -60,6 +60,9 @@ func Play(videoURL string, audioOnly bool) (*Player, error) {
 	}
 	if audioOnly {
 		args = append(args, "--no-video")
+	}
+	if len(subtitleLanguage) > 0 && strings.TrimSpace(subtitleLanguage[0]) != "" {
+		args = append(args, "--slang="+strings.TrimSpace(subtitleLanguage[0]))
 	}
 	args = append(args, videoURL)
 
