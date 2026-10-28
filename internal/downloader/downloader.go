@@ -227,10 +227,11 @@ func (m *Manager) Shutdown() {
 	m.pending = nil
 	processes := make([]*os.Process, 0)
 	for _, d := range m.byID {
-		if d.Status == StatusDownloading {
+		activeProcess := d.cmd != nil && d.cmd.Process != nil && d.cmd.ProcessState == nil
+		if d.Status == StatusDownloading || (d.Status == StatusPaused && activeProcess) {
 			// Preserve interrupted work as queued so yt-dlp can continue partial files.
 			d.Status = StatusQueued
-			if d.cmd != nil && d.cmd.Process != nil { processes = append(processes, d.cmd.Process) }
+			if activeProcess { processes = append(processes, d.cmd.Process) }
 		}
 	}
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue during shutdown", "error", err) }
