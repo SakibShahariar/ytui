@@ -68,9 +68,9 @@ func waitForPlaybackExitCmd(p playbackSession) tea.Cmd {
 	}
 }
 
-func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
+func startPlayback(url string, audioOnly bool, resumePos float64, subtitleLanguage ...string) tea.Cmd {
 	return startPlaybackWith(url, audioOnly, resumePos, func(url string, audioOnly bool) (playbackSession, error) {
-		p, err := player.Play(url, audioOnly)
+		p, err := player.Play(url, audioOnly, subtitleLanguage...)
 		if p == nil {
 			return nil, err
 		}
