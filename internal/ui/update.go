@@ -229,7 +229,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.statusMsg = "verifying login…"
-		return m, authClientCmd()
+		return m, authClientCmd(m.activeProfile)
 
 	case clientSecretsImportedMsg:
 		m.credentialStep = 0
@@ -242,7 +242,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 		m.showLoginHelp = false
 		m.statusMsg = "client_secret.json imported ✓ — opening browser to log in…"
-		return m, loginCmd()
+		return m, loginCmd(m.activeProfile)
 
 	case authClientReadyMsg:
 		if msg.err != nil {
