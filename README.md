@@ -67,6 +67,7 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 | `↑` / `↓` | Move through lists |
 | `Tab` / `Shift+Tab` | Switch tabs |
 | `/` | Jump to Search |
+| `:` | Open the searchable command palette |
 | `?` | Open in-app keyboard help |
 | `Ctrl+D` | Download options |
 | `Ctrl+P` | Pause or resume |
