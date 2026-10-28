@@ -123,3 +123,27 @@ func TestParseTranscriptVTTStripsHeadersTimestampsAndMarkup(t *testing.T) {
 func TestParseTranscriptVTTEmptyInput(t *testing.T) {
 	if got := parseTranscriptVTT([]byte("WEBVTT\n\n")); got != "" { t.Fatalf("empty transcript = %q, want empty", got) }
 }
+
+
+func TestGetTranscriptUsesSelectedLanguageAndReadsVTT(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "yt-dlp")
+	script := "#!/bin/sh\nout=''\nlang=''\nprevious=''\nfor arg in \"$@\"; do\n  if [ \"$previous\" = '-o' ]; then out=\"$arg\"; fi\n  if [ \"$previous\" = '--sub-langs' ]; then lang=\"$arg\"; fi\n  previous=\"$arg\"\ndone\n[ \"$lang\" = 'fr' ] || exit 8\ndir=$(dirname \"$out\")\nprintf 'WEBVTT\\n\\n00:00:00.000 --> 00:00:01.000\\nBonjour le monde\\n' > \"$dir/video.fr.vtt\"\n"
+	if err := os.WriteFile(bin, []byte(script), 0o700); err != nil { t.Fatal(err) }
+	old := binaryName
+	binaryName = bin
+	defer func() { binaryName = old }()
+	got, err := GetTranscript("https://www.youtube.com/watch?v=example", "fr")
+	if err != nil { t.Fatalf("GetTranscript() error = %v", err) }
+	if got != "Bonjour le monde" { t.Fatalf("transcript = %q, want Bonjour le monde", got) }
+}
+
+func TestGetTranscriptReportsMissingCaptionFile(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "yt-dlp")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil { t.Fatal(err) }
+	old := binaryName
+	binaryName = bin
+	defer func() { binaryName = old }()
+	if _, err := GetTranscript("https://www.youtube.com/watch?v=example", "en"); err == nil {
+		t.Fatal("GetTranscript() succeeded without producing a caption file")
+	}
+}
