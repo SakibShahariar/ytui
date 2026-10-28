@@ -32,7 +32,7 @@ func TestFilterLibraryItemsFiltersDownloadsByStatusAndText(t *testing.T) {
 	items := []list.Item{
 		downloadItem{d: downloader.Download{Title: "Lecture 1", Channel: "Course", Status: downloader.StatusDownloading}},
 		downloadItem{d: downloader.Download{Title: "Lecture 2", Channel: "Course", Status: downloader.StatusDone}},
-		downloadItem{d: downloader.Download{Title: "Music", Channel: "Lecture Notes", Status: downloader.StatusQueued}},
+		downloadItem{d: downloader.Download{Title: "Music", Channel: "Jazz Course", Status: downloader.StatusQueued}},
 	}
 	got := m.filterLibraryItems(items)
 	if len(got) != 1 {
