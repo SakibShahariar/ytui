@@ -51,6 +51,19 @@ func TestAppendRejectsUnsafeSharedQueueItems(t *testing.T) {
 	}
 }
 
+func TestAppendRejectsAlternateNumericIPHosts(t *testing.T) {
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", filepath.Join(t.TempDir(), "queue.json"))
+	for _, host := range []string{"127.1", "0177.0.0.1", "2130706433", "0x7f000001", "0x7f.0.0.1"} {
+		item := Item{ID: "numeric-host", URL: "http://" + host + "/"}
+		if err := Append(item); err == nil {
+			t.Errorf("Append accepted alternate numeric host %q", host)
+		}
+	}
+	if err := Append(Item{ID: "ordinary-dns", URL: "https://dead.beef/video"}); err != nil {
+		t.Fatalf("ordinary DNS hostname rejected: %v", err)
+	}
+}
+
 func TestReadAcceptsYtrawlVersionOneFixture(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "shared-queue.json")
 	t.Setenv("YTUI_SHARED_QUEUE_PATH", path)
