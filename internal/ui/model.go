@@ -298,6 +298,11 @@ type searchResultsMsg struct {
 	err error
 	playlistTitle string
 }
+type subtitleTracksMsg struct {
+	video ytdlp.Video
+	tracks []ytdlp.SubtitleTrack
+	err error
+}
 type directURLMsg struct {
 	video ytdlp.Video
 	err error
@@ -370,6 +375,11 @@ type Model struct {
 	commandPalette bool
 	commandPaletteInput textinput.Model
 	commandPaletteCursor int
+	subtitlePicker bool
+	subtitlePickerVideo *ytdlp.Video
+	subtitleTracks []ytdlp.SubtitleTrack
+	subtitlePickerCursor int
+	subtitleLanguage string
 	libraryFilterInput textinput.Model
 	libraryFilter string
 	libraryFilterMode bool
