@@ -10,8 +10,14 @@ import (
 )
 
 func loadDirectURLCmd(videoURL string) tea.Cmd {
+	return loadDirectURLWith(videoURL, ytdlp.GetVideo)
+}
+
+// loadDirectURLWith isolates metadata lookup from the Bubble Tea command so
+// tests can exercise direct-URL message handling without invoking yt-dlp.
+func loadDirectURLWith(videoURL string, getVideo func(string) (ytdlp.Video, error)) tea.Cmd {
 	return func() tea.Msg {
-		video, err := ytdlp.GetVideo(videoURL)
+		video, err := getVideo(videoURL)
 		return directURLMsg{video: video, err: err}
 	}
 }
@@ -84,8 +90,13 @@ func nowPlayingTickCmd() tea.Cmd {
 }
 
 func fetchDescriptionCmd(videoID, videoURL string) tea.Cmd {
+	return fetchDescriptionWith(videoID, videoURL, ytdlp.GetDescription)
+}
+
+// fetchDescriptionWith makes the description command deterministic in tests.
+func fetchDescriptionWith(videoID, videoURL string, getDescription func(string) (string, error)) tea.Cmd {
 	return func() tea.Msg {
-		desc, err := ytdlp.GetDescription(videoURL)
+		desc, err := getDescription(videoURL)
 		return videoDescriptionMsg{videoID: videoID, desc: desc, err: err}
 	}
 }
