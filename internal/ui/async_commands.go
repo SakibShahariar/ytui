@@ -46,8 +46,20 @@ func waitForPlaybackExitCmd(p playbackSession) tea.Cmd {
 }
 
 func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
-	return func() tea.Msg {
+	return startPlaybackWith(url, audioOnly, resumePos, func(url string, audioOnly bool) (playbackSession, error) {
 		p, err := player.Play(url, audioOnly)
+		if p == nil {
+			return nil, err
+		}
+		return p, err
+	})
+}
+
+// startPlaybackWith keeps process creation injectable, allowing the playback
+// startup and resume-seek flow to be tested without launching mpv.
+func startPlaybackWith(url string, audioOnly bool, resumePos float64, play func(string, bool) (playbackSession, error)) tea.Cmd {
+	return func() tea.Msg {
+		p, err := play(url, audioOnly)
 		if err == nil && p != nil && resumePos > 0 {
 			// The IPC socket can become available before the media is loaded.
 			// Wait for duration to become queryable before attempting the seek,
@@ -65,13 +77,7 @@ func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
-		// Avoid storing a typed nil *player.Player in the interface: a typed
-		// nil inside an interface compares non-nil and would look like playback.
-		var session playbackSession
-		if p != nil {
-			session = p
-		}
-		return playbackStartedMsg{p: session, err: err}
+		return playbackStartedMsg{p: p, err: err}
 	}
 }
 
