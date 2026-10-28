@@ -6,6 +6,7 @@ package downloader
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -352,31 +353,39 @@ func (m *Manager) run(d *Download) {
 	}
 
 	var lastLine string
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		line := scanner.Text()
-		lastLine = line
-
-		if match := progressRe.FindStringSubmatch(line); match != nil {
-			pct, _ := strconv.ParseFloat(match[1], 64)
-			m.mu.Lock()
-			d.Progress = pct
-			d.Speed = match[2]
-			d.ETA = match[3]
-			m.mu.Unlock()
+	reader := bufio.NewReader(stdout)
+	for {
+		line, oversized, readErr := readOutputLine(reader, 1024*1024)
+		if !oversized && line != "" {
+			lastLine = line
+			if match := progressRe.FindStringSubmatch(line); match != nil {
+				pct, _ := strconv.ParseFloat(match[1], 64)
+				m.mu.Lock()
+				d.Progress = pct
+				d.Speed = match[2]
+				d.ETA = match[3]
+				m.mu.Unlock()
+			}
+			if match := destRe.FindStringSubmatch(line); match != nil {
+				m.mu.Lock()
+				d.FilePath = strings.TrimSpace(match[1])
+				m.mu.Unlock()
+			}
+			if alreadyDoneRe.MatchString(line) {
+				m.mu.Lock()
+				d.Progress = 100
+				m.mu.Unlock()
+			}
 		}
-		if match := destRe.FindStringSubmatch(line); match != nil {
-			m.mu.Lock()
-			d.FilePath = strings.TrimSpace(match[1])
-			m.mu.Unlock()
-		}
-		if alreadyDoneRe.MatchString(line) {
-			m.mu.Lock()
-			d.Progress = 100
-			m.mu.Unlock()
+		if readErr != nil {
+			if readErr != io.EOF {
+				_ = stdout.Close()
+				lastLine = fmt.Sprintf("couldn't read yt-dlp output: %v", readErr)
+			}
+			break
 		}
 	}
+
 
 	err = cmd.Wait()
 	resumable := err != nil && hasPartialForVideo(m.destDir, d.VideoID)
@@ -402,6 +411,31 @@ func (m *Manager) run(d *Download) {
 	}
 	d.Status = StatusDone
 	d.Progress = 100
+}
+
+
+// readOutputLine drains one complete line from a buffered process stream.
+// It retains at most max bytes per line; oversized lines are discarded while
+// their remaining bytes are still consumed so the child cannot block on a
+// full pipe. The final unterminated line is returned with io.EOF.
+func readOutputLine(reader *bufio.Reader, max int) (string, bool, error) {
+	var line []byte
+	oversized := false
+	for {
+		fragment, err := reader.ReadSlice('\n')
+		if !oversized {
+			if len(line)+len(fragment) > max {
+				line = nil
+				oversized = true
+			} else {
+				line = append(line, fragment...)
+			}
+		}
+		if err == bufio.ErrBufferFull {
+			continue
+		}
+		return strings.TrimRight(string(line), "\r\n"), oversized, err
+	}
 }
 
 func (m *Manager) setStatus(videoID string, status Status, err error) {
