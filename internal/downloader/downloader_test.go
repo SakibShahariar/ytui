@@ -29,11 +29,11 @@ func TestBuildArgs(t *testing.T) {
 			name: "video options",
 			download: Download{URL: videoURL, Opts: Options{
 				Format: "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-				WriteSubs: true, EmbedThumbnail: true, CookiesFromBrowser: "firefox",
+				WriteSubs: true, SubtitleLang: "fr", EmbedThumbnail: true, CookiesFromBrowser: "firefox",
 			}},
 			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate,
 				"-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-				"--write-subs", "--write-auto-subs", "--sub-langs", "en.*,en", "--embed-thumbnail",
+				"--write-subs", "--write-auto-subs", "--sub-langs", "fr", "--embed-thumbnail",
 				"--cookies-from-browser", "firefox", videoURL},
 		},
 		{
@@ -417,4 +417,20 @@ func TestPauseResumeActiveDownload(t *testing.T) {
 	if !resumed { m.Cancel(d.VideoID); t.Fatal("active download status did not return to downloading") }
 	m.Cancel(d.VideoID)
 	select { case <-done: case <-time.After(3*time.Second): t.Fatal("download did not exit after cancellation") }
+}
+
+
+func TestBuildArgsUsesEnglishSubtitleFallback(t *testing.T) {
+	args := buildArgs(t.TempDir(), &Download{URL:"https://example.invalid/video", Opts:Options{WriteSubs:true}})
+	want := []string{"--write-subs", "--write-auto-subs", "--sub-langs", "en.*,en"}
+	for i := 0; i < len(want); i++ {
+		found := false
+		for j := 0; j+len(want) <= len(args); j++ {
+			match := true
+			for k := range want { if args[j+k] != want[k] { match = false; break } }
+			if match { found = true; break }
+		}
+		if found { return }
+		t.Fatalf("buildArgs() = %#v, want subtitle flags %#v", args, want)
+	}
 }
