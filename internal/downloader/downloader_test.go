@@ -183,7 +183,7 @@ func TestRunDrainsOversizedOutputLine(t *testing.T) {
 
 	binDir := t.TempDir()
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
-	script := "#!/bin/sh\nawk 'BEGIN { for (i=0; i<1100000; i++) printf \"x\"; print \"\" }'\nprintf '%s\\n' 'diagnostic after oversized line' >&2\nexit 1\n"
+	script := "#!/bin/sh\nprintf '%1100000s\\n' x\nprintf '%s\\n' 'diagnostic after oversized line' >&2\nexit 1\n"
 	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
