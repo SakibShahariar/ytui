@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
+	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 )
 
 func TestDoSearchWithUsesInjectedSearch(t *testing.T) {
@@ -178,5 +180,31 @@ func TestLoadTranscriptWithPreservesError(t *testing.T) {
 	})()
 	got, ok := msg.(transcriptMsg)
 	if !ok { t.Fatalf("message type = %T, want transcriptMsg", msg) }
+	if !errors.Is(got.err, wantErr) { t.Fatalf("error = %v, want %v", got.err, wantErr) }
+}
+
+func TestLoadSponsorSegmentsWithUsesInjectedFetcher(t *testing.T) {
+	want := []sponsorblock.Segment{{Start: 10, End: 20, Category: "sponsor", ActionType: "skip"}}
+	called := false
+	msg := loadSponsorSegmentsWith("video-id", []string{"sponsor"}, func(ctx context.Context, videoID string, categories []string) ([]sponsorblock.Segment, error) {
+		called = true
+		if videoID != "video-id" { t.Fatalf("video ID = %q", videoID) }
+		if len(categories) != 1 || categories[0] != "sponsor" { t.Fatalf("categories = %#v", categories) }
+		return want, nil
+	})()
+	got, ok := msg.(sponsorSegmentsMsg)
+	if !ok { t.Fatalf("message type = %T, want sponsorSegmentsMsg", msg) }
+	if !called || got.err != nil || len(got.segments) != 1 || got.segments[0] != want[0] {
+		t.Fatalf("SponsorBlock result = %#v, called = %v", got, called)
+	}
+}
+
+func TestLoadSponsorSegmentsWithPreservesErrors(t *testing.T) {
+	wantErr := errors.New("API unavailable")
+	msg := loadSponsorSegmentsWith("video-id", []string{"sponsor"}, func(context.Context, string, []string) ([]sponsorblock.Segment, error) {
+		return nil, wantErr
+	})()
+	got, ok := msg.(sponsorSegmentsMsg)
+	if !ok { t.Fatalf("message type = %T, want sponsorSegmentsMsg", msg) }
 	if !errors.Is(got.err, wantErr) { t.Fatalf("error = %v, want %v", got.err, wantErr) }
 }
