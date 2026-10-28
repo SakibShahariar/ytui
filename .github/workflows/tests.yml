@@ -26,3 +26,15 @@ jobs:
         run: go vet ./...
       - name: Build application
         run: go build -o /dev/null .
+      - name: Smoke-test release archive layout
+        run: |
+          set -eu
+          version=v0.0.0-test
+          output="ytui-${version}-linux-amd64"
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.version=${version}" -o "dist/${output}" .
+          tar -czf "dist/${output}.tar.gz" -C dist "${output}"
+          test -s "dist/${output}.tar.gz"
+          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}"
+          test "$(dist/${output} --version)" = "ytui ${version}"
+          (cd dist && sha256sum "${output}.tar.gz" > SHA256SUMS && sha256sum --check SHA256SUMS)
