@@ -372,6 +372,7 @@ type likedLoadedMsg struct {
 type Model struct {
 	store *store.Store
 	cfg   config.Config
+	activeProfile string
 	directURL string
 
 	activeTab   tab
