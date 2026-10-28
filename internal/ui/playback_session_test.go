@@ -99,3 +99,20 @@ func TestStartPlaybackWithPreservesStartupFailure(t *testing.T) {
 		t.Fatalf("startup result = %#v, want nil session and %v", got, wantErr)
 	}
 }
+
+func TestPlaybackStartedWithUnavailableIPCRemainsTracked(t *testing.T) {
+	session := &fakePlaybackSession{}
+	startErr := errors.New("mpv started without IPC control")
+
+	updated, cmd := (Model{}).Update(playbackStartedMsg{p: session, err: startErr})
+	got := updated.(Model)
+	if got.nowPlaying != session {
+		t.Fatal("degraded playback session was not retained as Now Playing")
+	}
+	if got.errMsg != "mpv is playing (no IPC control: pause/seek/volume unavailable)" {
+		t.Fatalf("error message = %q, want degraded-IPC explanation", got.errMsg)
+	}
+	if cmd == nil {
+		t.Fatal("expected exit watcher for degraded playback session")
+	}
+}
