@@ -32,7 +32,7 @@ func (m Model) addSelectedToWatchLater() (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
-	_ = m.store.AddWatchLater(store.WatchLaterEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail})
+	_ = m.store.AddWatchLater(store.WatchLaterEntry{VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL, Thumbnail: v.Thumbnail, DurationS: v.Duration})
 	m.statusMsg = "added to watch later: " + v.Title
 	return m, nil
 }
