@@ -49,7 +49,7 @@ func (m Model) View() string {
 	panelH := m.panelHeight()
 
 	var listContent strings.Builder
-	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker && !m.transcriptViewer {
+	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker && !m.transcriptViewer && !m.sponsorBlockSettings {
 		listContent.WriteString(m.searchInput.View())
 		if m.loading {
 			listContent.WriteString("  " + m.spin.View())
@@ -69,6 +69,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.sponsorBlockSettings:
+		listContent.WriteString(m.sponsorBlockSettingsContent(listWidth-4))
 	case m.transcriptViewer:
 		listContent.WriteString(m.transcriptViewerContent(listWidth-4, panelH-4))
 	case m.subtitlePicker:
@@ -150,6 +152,9 @@ func (m Model) View() string {
 	if m.subtitlePicker {
 		modeBar = footerModeInput.Render("SUBTITLES")
 		help = "↑↓: select track · enter: apply · esc: cancel"
+	} else if m.sponsorBlockSettings {
+		modeBar = footerModeInput.Render("SPONSORBLOCK")
+		help = "↑↓: select · space: toggle · enter: save · esc: cancel"
 	} else if m.transcriptViewer {
 		modeBar = footerModeInput.Render("TRANSCRIPT")
 		help = "↑↓: scroll · pgup/pgdn: page · home/end: jump · esc: close"
