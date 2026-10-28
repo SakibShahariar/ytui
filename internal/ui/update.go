@@ -61,6 +61,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.errMsg = ""
+		m.searchPlaylistTitle = msg.playlistTitle
 		items := make([]list.Item, 0, len(msg.results))
 		for _, v := range msg.results {
 			items = append(items, videoItem{v})
@@ -77,7 +78,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.listTab = tabSearch
 		m.listTabReady = true
 		m.applyListSize()
-		m.statusMsg = fmt.Sprintf("%d results", len(items))
+		if msg.playlistTitle != "" {
+			m.statusMsg = fmt.Sprintf("loaded playlist %q · %d videos", msg.playlistTitle, len(items))
+			m.list.Title = msg.playlistTitle
+		} else {
+			m.statusMsg = fmt.Sprintf("%d results", len(items))
+			m.list.Title = "Search"
+		}
 		var cmd tea.Cmd
 		if len(items) > 0 {
 			if vi, ok := items[0].(videoItem); ok {
