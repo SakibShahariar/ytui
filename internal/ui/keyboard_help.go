@@ -45,6 +45,8 @@ func keyboardHelpLines() []string {
 		"[ / ]               Seek backward / forward 10 seconds",
 		"- / =               Decrease / increase volume",
 		"Ctrl+T              Toggle thumbnail previews",
+		"Ctrl+B              SponsorBlock settings and category toggles",
+		"Ctrl+J              Manually skip the active SponsorBlock segment",
 		"Ctrl+V              Select subtitle language for playback/downloads",
 		"Ctrl+E              View selected video transcript",
 		"",
