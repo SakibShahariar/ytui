@@ -45,6 +45,8 @@ func keyboardHelpLines() []string {
 		"[ / ]               Seek backward / forward 10 seconds",
 		"- / =               Decrease / increase volume",
 		"Ctrl+T              Toggle thumbnail previews",
+		"Ctrl+V              Select subtitle language for playback/downloads",
+		"Ctrl+E              View selected video transcript",
 		"",
 		"Account and exit",
 		"Ctrl+L              Log in or out",
