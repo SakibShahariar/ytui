@@ -70,7 +70,7 @@ Legacy flags remain supported:
 	}
 }
 
-func runProfileSubcommand(args []string, stdin io.Reader, stdout, stderr io.Writer, assumeYes bool) error {
+func runProfileSubcommand(args []string, stdin io.Reader, stdout io.Writer, assumeYes bool) error {
 	if len(args) == 0 || args[0] == "help" {
 		_, err := fmt.Fprintln(stdout, "Usage:\n  ytui profile list\n  ytui profile create NAME\n  ytui profile use NAME\n  ytui profile remove NAME [--yes]")
 		return err
