@@ -1,6 +1,9 @@
 package ui
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 type fakePlaybackSession struct {
 	waitCalled bool
