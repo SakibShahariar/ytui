@@ -40,8 +40,14 @@ func sharedQueueOptions(item sharedqueue.Item) downloader.Options {
 	}
 	if item.Mode == "audio" {
 		opts.ExtractAudio = true
-		opts.AudioFormat = strings.TrimSpace(item.AudioFormat)
-		if opts.AudioFormat == "" { opts.AudioFormat = "mp3" }
+		format := strings.ToLower(strings.TrimSpace(item.AudioFormat))
+		switch format {
+		case "", "best", "mp3", "m4a", "opus", "wav", "flac", "alac", "aac", "vorbis":
+			opts.AudioFormat = format
+		default:
+			opts.AudioFormat = "mp3"
+		}
+		if opts.AudioFormat == "" { opts.AudioFormat = "best" }
 		opts.QualityLabel = "Audio only (" + opts.AudioFormat + ")"
 	}
 	return opts
