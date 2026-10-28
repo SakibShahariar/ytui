@@ -67,6 +67,9 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 		}
 		m.applyListSize()
 		return m, m.refreshPreview()
+	case "sponsorblock_settings":
+		m = m.openSponsorBlockSettings()
+		return m, nil
 	case "toggle_autoplay":
 		m.cfg.AutoplayNext = !m.cfg.AutoplayNext
 		if err := config.Save(m.cfg); err != nil {
