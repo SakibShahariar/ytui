@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"github.com/SakibShahariar/ytui/internal/notifier"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -69,6 +70,7 @@ type Manager struct {
 	order   []string // VideoIDs in the order they were enqueued, for stable listing
 	destDir string
 	closed  bool
+	notificationsEnabled bool
 	wg      sync.WaitGroup
 
 	stalePartialsRemoved int
@@ -99,6 +101,14 @@ func New(destDir string) (*Manager, error) {
 
 // DestDir returns where downloads are being saved.
 func (m *Manager) DestDir() string { return m.destDir }
+
+// SetNotificationsEnabled controls best-effort desktop notifications.
+func (m *Manager) SetNotificationsEnabled(enabled bool) {
+	if m == nil { return }
+	m.mu.Lock()
+	m.notificationsEnabled = enabled
+	m.mu.Unlock()
+}
 
 // StaleCleanupResult reports how many old partial artifacts were removed at
 // startup and whether any cleanup operation failed. Cleanup errors do not
@@ -398,10 +408,12 @@ func (m *Manager) run(d *Download) {
 	resumable := err != nil && hasPartialForVideo(m.destDir, d.VideoID)
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if d.Status == StatusCanceled {
+		m.mu.Unlock()
 		return // Cancel() already set the final status — don't overwrite it
 	}
+	notifyEnabled := m.notificationsEnabled
+	title := d.Title
 	if err != nil {
 		msg := strings.TrimSpace(lastLine)
 		if msg == "" {
@@ -415,10 +427,18 @@ func (m *Manager) run(d *Download) {
 			d.Status = StatusError
 			d.Err = fmt.Errorf("%s (press Ctrl+R to retry)", msg)
 		}
+		m.mu.Unlock()
+		if notifyEnabled {
+			notifier.Send("Download failed", title)
+		}
 		return
 	}
 	d.Status = StatusDone
 	d.Progress = 100
+	m.mu.Unlock()
+	if notifyEnabled {
+		notifier.Send("Download complete", title)
+	}
 }
 
 
