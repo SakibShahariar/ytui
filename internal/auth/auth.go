@@ -98,11 +98,9 @@ func clientSecretsPath() (string, error) {
 }
 
 func tokenPath() (string, error) {
-	dir, err := configDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "token.json"), nil
+	profile, err := ActiveProfile()
+	if err != nil { return "", err }
+	return tokenPathForProfile(profile)
 }
 
 // HaveClientSecrets reports whether the user has completed the one-time
