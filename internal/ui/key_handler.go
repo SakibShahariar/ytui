@@ -446,6 +446,24 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case "ctrl+space":
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			return m.toggleSelectedDownloadPause()
+		}
+		return m, nil
+
+	case "ctrl+up":
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			return m.moveSelectedDownload(-1)
+		}
+		return m, nil
+
+	case "ctrl+down":
+		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			return m.moveSelectedDownload(1)
+		}
+		return m, nil
+
 	case "ctrl+g":
 		if m.activeTab == tabDownloads && !m.offlineDownloads {
 			m.downloadStatusFilter = (m.downloadStatusFilter + 1) % 4
