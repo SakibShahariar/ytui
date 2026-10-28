@@ -1,0 +1,47 @@
+package sharedqueue
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestAppendReadAndAckSharedQueueItems(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state", "shared-queue.json")
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", path)
+	first := Item{ID: "event-1", URL: "https://www.youtube.com/watch?v=abc", Title: "First", Mode: "video"}
+	if err := Append(first); err != nil { t.Fatal(err) }
+	if err := Append(first); err != nil { t.Fatalf("duplicate append: %v", err) }
+	items, err := Read()
+	if err != nil { t.Fatal(err) }
+	if len(items) != 1 || items[0].ID != "event-1" { t.Fatalf("items = %#v", items) }
+	if err := Append(Item{ID: "event-2", URL: "https://example.com/audio", Mode: "audio", AudioFormat: "mp3"}); err != nil { t.Fatal(err) }
+	if err := Ack([]string{"event-1"}); err != nil { t.Fatal(err) }
+	items, err = Read()
+	if err != nil { t.Fatal(err) }
+	if len(items) != 1 || items[0].ID != "event-2" { t.Fatalf("after ack items = %#v; expected event-2 preserved", items) }
+	info, err := os.Stat(path)
+	if err != nil { t.Fatal(err) }
+	if got := info.Mode().Perm(); got != 0o600 { t.Fatalf("queue file permissions = %04o, want 0600", got) }
+	info, err = os.Stat(filepath.Dir(path))
+	if err != nil { t.Fatal(err) }
+	if got := info.Mode().Perm(); got != 0o700 { t.Fatalf("queue directory permissions = %04o, want 0700", got) }
+}
+
+func TestReadMissingSharedQueueIsEmpty(t *testing.T) {
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", filepath.Join(t.TempDir(), "missing", "queue.json"))
+	items, err := Read()
+	if err != nil || len(items) != 0 { t.Fatalf("Read() = %#v, %v; want empty", items, err) }
+}
+
+func TestAppendRejectsUnsafeSharedQueueItems(t *testing.T) {
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", filepath.Join(t.TempDir(), "queue.json"))
+	for _, item := range []Item{
+		{ID: "bad", URL: "file:///etc/passwd"},
+		{ID: "bad", URL: "https://user:pass@example.com/video"},
+		{ID: "../bad", URL: "https://example.com/video"},
+		{ID: "bad", URL: "https://example.com/video", Mode: "shell"},
+	} {
+		if err := Append(item); err == nil { t.Errorf("Append(%#v) unexpectedly succeeded", item) }
+	}
+}
