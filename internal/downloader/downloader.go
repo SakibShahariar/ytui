@@ -5,6 +5,7 @@ package downloader
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -74,6 +75,7 @@ type Manager struct {
 	notificationsEnabled bool
 	pending []string
 	wake chan struct{}
+	queueFile string
 	wg      sync.WaitGroup
 
 	stalePartialsRemoved int
@@ -98,8 +100,12 @@ func New(destDir string) (*Manager, error) {
 		byID:                 make(map[string]*Download),
 		destDir:              destDir,
 		wake:                 make(chan struct{}, 1),
+		queueFile:            filepath.Join(destDir, ".ytui-queue.json"),
 		stalePartialsRemoved: removed,
 		staleCleanupErr:      cleanupErr,
+	}
+	if err := m.loadQueue(); err != nil {
+		slog.Warn("could not restore download queue", "error", err)
 	}
 	m.wg.Add(1)
 	go m.schedule()
@@ -582,4 +588,62 @@ func (m *Manager) Resume(videoID string) error {
 	m.mu.Unlock()
 	m.signalScheduler()
 	return nil
+}
+
+
+type persistedDownload struct {
+	VideoID string `json:"video_id"`
+	Title string `json:"title"`
+	Channel string `json:"channel"`
+	URL string `json:"url"`
+	Opts Options `json:"options"`
+	Paused bool `json:"paused,omitempty"`
+}
+
+func (m *Manager) loadQueue() error {
+	data, err := os.ReadFile(m.queueFile)
+	if os.IsNotExist(err) { return nil }
+	if err != nil { return err }
+	var saved []persistedDownload
+	if err := json.Unmarshal(data, &saved); err != nil { return err }
+	seen := make(map[string]bool, len(saved))
+	for _, item := range saved {
+		if item.VideoID == "" || item.URL == "" || seen[item.VideoID] { continue }
+		seen[item.VideoID] = true
+		status := StatusQueued
+		if item.Paused { status = StatusPaused }
+		d := &Download{VideoID:item.VideoID, Title:item.Title, Channel:item.Channel, URL:item.URL, Opts:item.Opts, Status:status}
+		m.byID[item.VideoID] = d
+		m.order = append(m.order, item.VideoID)
+		if status == StatusQueued { m.pending = append(m.pending, item.VideoID) }
+	}
+	return nil
+}
+
+// persistQueueLocked atomically stores queued and paused entries with private
+// file permissions. Callers must hold m.mu.
+func (m *Manager) persistQueueLocked() error {
+	if m.queueFile == "" { return nil }
+	saved := make([]persistedDownload, 0, len(m.pending))
+	for _, id := range m.order {
+		d := m.byID[id]
+		if d == nil || (d.Status != StatusQueued && d.Status != StatusPaused) { continue }
+		saved = append(saved, persistedDownload{VideoID:d.VideoID, Title:d.Title, Channel:d.Channel, URL:d.URL, Opts:d.Opts, Paused:d.Status == StatusPaused})
+	}
+	if len(saved) == 0 {
+		err := os.Remove(m.queueFile)
+		if os.IsNotExist(err) { return nil }
+		return err
+	}
+	data, err := json.MarshalIndent(saved, "", "  ")
+	if err != nil { return err }
+	tmp, err := os.CreateTemp(filepath.Dir(m.queueFile), ".ytui-queue-*.tmp")
+	if err != nil { return err }
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if err := tmp.Chmod(0o600); err != nil { _ = tmp.Close(); return err }
+	if _, err := tmp.Write(data); err != nil { _ = tmp.Close(); return err }
+	if err := tmp.Sync(); err != nil { _ = tmp.Close(); return err }
+	if err := tmp.Close(); err != nil { return err }
+	return os.Rename(tmpName, m.queueFile)
 }
