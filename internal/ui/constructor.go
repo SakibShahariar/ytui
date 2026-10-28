@@ -97,6 +97,7 @@ func New(s *store.Store) Model {
 		m.errMsg += "downloads: " + downloadErr.Error()
 	}
 	if dl != nil {
+		dl.SetNotificationsEnabled(cfg.DesktopNotifications)
 		if removed, cleanupErr := dl.StaleCleanupResult(); cleanupErr != nil {
 			m.statusMsg = "partial-file cleanup warning: " + cleanupErr.Error()
 		} else if removed > 0 {
