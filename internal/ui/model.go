@@ -23,6 +23,7 @@ import (
 	"github.com/SakibShahariar/ytui/internal/downloader"
 	"github.com/SakibShahariar/ytui/internal/library"
 	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 	"github.com/SakibShahariar/ytui/internal/ytapi"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
@@ -298,6 +299,11 @@ type searchResultsMsg struct {
 	err error
 	playlistTitle string
 }
+type sponsorSegmentsMsg struct {
+	videoID string
+	segments []sponsorblock.Segment
+	err error
+}
 type subtitleTracksMsg struct {
 	video ytdlp.Video
 	tracks []ytdlp.SubtitleTrack
@@ -390,6 +396,13 @@ type Model struct {
 	transcriptTitle string
 	transcriptText string
 	transcriptOffset int
+	sponsorBlockSettings bool
+	sponsorBlockCursor int
+	sponsorBlockDraftEnabled bool
+	sponsorBlockDraftCategories []string
+	sponsorSegments []sponsorblock.Segment
+	sponsorSegmentVideoID string
+	sponsorLastSkipped string
 	libraryFilterInput textinput.Model
 	libraryFilter string
 	libraryFilterMode bool
