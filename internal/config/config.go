@@ -35,6 +35,9 @@ type Config struct {
 	// DesktopNotifications enables best-effort desktop notifications for download completion/failure.
 	DesktopNotifications bool `json:"desktop_notifications,omitempty"`
 
+	// AutoplayNext starts the next Watch Later item when playback ends.
+	AutoplayNext bool `json:"autoplay_next,omitempty"`
+
 	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
 	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
 
