@@ -51,8 +51,12 @@ func Path() (string, error) {
 }
 
 func validateItem(item Item) error {
-	if strings.TrimSpace(item.ID) == "" || len(item.ID) > 128 { return fmt.Errorf("shared queue item has an invalid ID") }
-	if strings.ContainsAny(item.ID, "/\\\x00\r\n\x1b") { return fmt.Errorf("shared queue item ID contains invalid characters") }
+	if item.ID == "" || len(item.ID) > 128 { return fmt.Errorf("shared queue item has an invalid ID") }
+	for _, r := range item.ID {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
+			return fmt.Errorf("shared queue item ID contains invalid characters")
+		}
+	}
 	if len(item.URL) == 0 || len(item.URL) > 4096 { return fmt.Errorf("shared queue item has an invalid URL length") }
 	u, err := url.ParseRequestURI(strings.TrimSpace(item.URL))
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
@@ -127,8 +131,11 @@ func readUnlocked(path string) (queueFile, error) {
 	if err := decoder.Decode(&trailing); err != io.EOF { return queueFile{}, fmt.Errorf("shared queue file contains trailing JSON data") }
 	if q.Version != 1 { return queueFile{}, fmt.Errorf("unsupported shared queue version %d", q.Version) }
 	if q.Items == nil { q.Items = []Item{} }
+	seenIDs := make(map[string]struct{}, len(q.Items))
 	for i, item := range q.Items {
 		if err := validateItem(item); err != nil { return queueFile{}, fmt.Errorf("shared queue item %d: %w", i+1, err) }
+		if _, exists := seenIDs[item.ID]; exists { return queueFile{}, fmt.Errorf("shared queue contains duplicate item ID %q", item.ID) }
+		seenIDs[item.ID] = struct{}{}
 	}
 	return q, nil
 }
