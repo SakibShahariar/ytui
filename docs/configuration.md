@@ -42,6 +42,16 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `thumbnail_cache_max_entries` | Maximum cached thumbnail images; oldest unused entries are removed first. | `250` |
 | `thumbnail_cache_max_age_days` | Maximum age of cached thumbnails before cleanup. | `30` |
 
+## SponsorBlock
+
+SponsorBlock is optional and disabled by default. Enable it from the TUI with `Ctrl+B`; changes are saved in `config.json`.
+
+- `sponsorblock_enabled`: whether to look up segments during playback.
+- `sponsorblock_categories`: categories to skip automatically. If omitted, `sponsor` and `selfpromo` are the initial defaults. An explicitly empty list disables automatic skipping while keeping segment highlighting and manual skip available.
+- `sponsorblock_categories_configured`: internal marker that distinguishes the first-run defaults from an intentionally empty category selection; normally leave it to ytui.
+
+The API lookup uses SponsorBlock's hash-prefix endpoint, sending only four SHA-256 hash characters instead of the raw video ID.
+
 ## Quality values
 
 Use a stable identifier for `default_quality`; display labels remain supported for existing configurations:
