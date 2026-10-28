@@ -231,3 +231,51 @@ func StreamURL(videoURL string) (string, error) {
 	}
 	return videoURL, nil
 }
+
+
+type playlistJSON struct {
+	Title string `json:"title"`
+	Entries []videoJSON `json:"entries"`
+}
+
+func IsPlaylistURL(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") { return false }
+	host := strings.ToLower(u.Hostname())
+	if host != "youtube.com" && !strings.HasSuffix(host, ".youtube.com") && host != "youtu.be" { return false }
+	return strings.TrimSpace(u.Query().Get("list")) != ""
+}
+
+func GetPlaylist(playlistURL string) (string, []Video, error) {
+	if !IsPlaylistURL(playlistURL) { return "", nil, fmt.Errorf("not a YouTube playlist URL") }
+	if err := checkInstalled(); err != nil { return "", nil, err }
+	cmd := exec.Command(binaryName, "--dump-single-json", "--flat-playlist", "--yes-playlist", "--no-warnings", "--skip-download", playlistURL)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" { message = err.Error() }
+		return "", nil, fmt.Errorf("yt-dlp could not load playlist: %s", message)
+	}
+	return parsePlaylistJSON(stdout.Bytes())
+}
+
+func parsePlaylistJSON(data []byte) (string, []Video, error) {
+	var raw playlistJSON
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return "", nil, fmt.Errorf("parse playlist metadata: %w", err)
+	}
+	title := strings.TrimSpace(raw.Title)
+	if title == "" { title = "YouTube playlist" }
+	videos := make([]Video, 0, len(raw.Entries))
+	for _, entry := range raw.Entries {
+		if strings.TrimSpace(entry.ID) == "" { continue }
+		video := entry.toVideo()
+		if video.URL == "" { video.URL = "https://www.youtube.com/watch?v=" + video.ID }
+		video.PlaylistIndex = len(videos) + 1
+		videos = append(videos, video)
+	}
+	if len(videos) == 0 { return title, nil, fmt.Errorf("playlist contains no accessible videos") }
+	return title, videos, nil
+}
