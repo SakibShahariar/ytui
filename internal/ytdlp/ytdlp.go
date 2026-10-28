@@ -383,7 +383,7 @@ func parseTranscriptVTT(data []byte) string {
 	previous := ""
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.EqualFold(line, "WEBVTT") || strings.HasPrefix(line, "NOTE") || strings.EqualFold(line, "STYLE") || strings.EqualFold(line, "REGION") || transcriptTimestampRE.MatchString(line) || regexp.MustCompile(\`^\d+$\`).MatchString(line) {
+		if line == "" || strings.EqualFold(line, "WEBVTT") || strings.HasPrefix(line, "NOTE") || strings.EqualFold(line, "STYLE") || strings.EqualFold(line, "REGION") || transcriptTimestampRE.MatchString(line) || regexp.MustCompile("^[0-9]+$").MatchString(line) {
 			continue
 		}
 		line = transcriptTagRE.ReplaceAllString(line, "")
