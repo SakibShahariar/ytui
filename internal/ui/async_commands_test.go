@@ -55,3 +55,43 @@ func TestDoSearchWithPreservesSearchError(t *testing.T) {
 		t.Fatalf("results = %#v, want no results", got.results)
 	}
 }
+
+func TestLoadDirectURLWithUsesInjectedLookup(t *testing.T) {
+	want := ytdlp.Video{ID: "xyz789", Title: "Direct video"}
+	called := false
+
+	msg := loadDirectURLWith("https://example.com/watch", func(videoURL string) (ytdlp.Video, error) {
+		called = true
+		if videoURL != "https://example.com/watch" {
+			t.Fatalf("URL = %q, want original URL", videoURL)
+		}
+		return want, nil
+	})()
+
+	got, ok := msg.(directURLMsg)
+	if !ok {
+		t.Fatalf("message type = %T, want directURLMsg", msg)
+	}
+	if !called || got.video != want || got.err != nil {
+		t.Fatalf("lookup result = %#v, called = %v; want video %#v and no error", got, called, want)
+	}
+}
+
+func TestFetchDescriptionWithUsesInjectedLookup(t *testing.T) {
+	called := false
+	msg := fetchDescriptionWith("video-id", "https://example.com/watch", func(videoURL string) (string, error) {
+		called = true
+		if videoURL != "https://example.com/watch" {
+			t.Fatalf("URL = %q, want original URL", videoURL)
+		}
+		return "sample description", nil
+	})()
+
+	got, ok := msg.(videoDescriptionMsg)
+	if !ok {
+		t.Fatalf("message type = %T, want videoDescriptionMsg", msg)
+	}
+	if !called || got.videoID != "video-id" || got.desc != "sample description" || got.err != nil {
+		t.Fatalf("description result = %#v, called = %v", got, called)
+	}
+}
