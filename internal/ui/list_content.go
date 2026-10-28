@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -32,6 +33,19 @@ func (m Model) filterLibraryItems(items []list.Item) []list.Item {
 		if m.activeTab == tabDownloads && !m.offlineDownloads && !downloadMatchesStatus(item, m.downloadStatusFilter) {
 			continue
 		}
+		if m.libraryDateFilter > 0 {
+			cutoff := time.Now().Add(-time.Duration(libraryDateFilterDays(m.libraryDateFilter)) * 24 * time.Hour)
+			var timestamp time.Time
+			switch v := item.(type) {
+			case historyItem:
+				timestamp = v.e.WatchedAt
+			case downloadItem:
+				timestamp = v.d.AddedAt
+			case localDownloadItem:
+				timestamp = v.file.ModTime
+			}
+			if timestamp.IsZero() || timestamp.Before(cutoff) { continue }
+		}
 		filtered = append(filtered, item)
 	}
 	return filtered
@@ -43,7 +57,7 @@ func downloadMatchesStatus(item list.Item, filter int) bool {
 	if !ok { return false }
 	switch filter {
 	case 1:
-		return d.d.Status == downloader.StatusQueued || d.d.Status == downloader.StatusDownloading
+		return d.d.Status == downloader.StatusQueued || d.d.Status == downloader.StatusDownloading || d.d.Status == downloader.StatusPaused
 	case 2:
 		return d.d.Status == downloader.StatusDone
 	case 3:
@@ -259,3 +273,22 @@ func progressBar(pct float64, width int) string {
 	return strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
 }
 
+
+
+func libraryDateFilterDays(filter int) int {
+	switch filter {
+	case 1: return 7
+	case 2: return 30
+	case 3: return 90
+	default: return 0
+	}
+}
+
+func (m Model) libraryDateFilterLabel() string {
+	switch m.libraryDateFilter {
+	case 1: return "last 7 days"
+	case 2: return "last 30 days"
+	case 3: return "last 90 days"
+	default: return "all dates"
+	}
+}
