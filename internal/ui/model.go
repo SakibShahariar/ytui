@@ -370,6 +370,8 @@ type Model struct {
 	libraryFilter string
 	libraryFilterMode bool
 	downloadStatusFilter int
+	watchLaterSortMode int
+	watchLaterClearPending bool
 	list        list.Model
 	listPositions map[tab]int
 	listTab tab
