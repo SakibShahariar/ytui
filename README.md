@@ -61,7 +61,7 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 
 ## SponsorBlock
 
-SponsorBlock is optional and off by default. Press `Ctrl+B` to enable it and choose which categories are automatically skipped. Other available segments are highlighted in the Now Playing bar; press `Ctrl+J` while inside a segment to skip it manually. ytui uses SponsorBlock’s privacy-preserving hash-prefix endpoint, sending only four SHA-256 hash characters rather than the raw video ID. Network errors or missing segment data never stop playback.
+SponsorBlock is optional and off by default. Press `Ctrl+B` to enable it and choose which categories are automatically skipped. Other available segments are highlighted in the Now Playing bar; press `Ctrl+J` while inside a segment to skip it manually. ytui uses SponsorBlock’s privacy-preserving hash-prefix endpoint, sending only four SHA-256 hash characters rather than the raw video ID. Network errors or missing segment data never stop playback. See the [SponsorBlock API documentation](https://wiki.sponsor.ajay.app/w/API_Docs).
 
 ## Essential keys
 
