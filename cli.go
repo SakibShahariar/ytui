@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"net/url"
 	"strings"
 
+	"github.com/SakibShahariar/ytui/internal/auth"
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/store"
 )
@@ -24,6 +26,10 @@ Commands:
   version                      Print the installed version
   paths                        Print the effective config and data paths
   doctor                       Check dependencies and local state
+  profile list                 List Google login profiles
+  profile create NAME          Create an isolated login profile
+  profile use NAME             Select the active login profile
+  profile remove NAME          Remove a named profile (asks for confirmation)
   config export PATH           Export effective settings
   config import PATH [--yes]   Import settings with confirmation
 
@@ -55,10 +61,65 @@ Legacy flags remain supported:
 			return true, fmt.Errorf("usage: ytui doctor")
 		}
 		return true, runDoctor(stdout)
+	case "profile":
+		return true, runProfileSubcommand(args[1:], stdin, stdout, assumeYes)
 	case "config":
 		return true, runConfigSubcommand(args[1:], stdin, stdout, assumeYes)
 	default:
 		return false, nil
+	}
+}
+
+func runProfileSubcommand(args []string, stdin io.Reader, stdout, stderr io.Writer, assumeYes bool) error {
+	if len(args) == 0 || args[0] == "help" {
+		_, err := fmt.Fprintln(stdout, "Usage:\n  ytui profile list\n  ytui profile create NAME\n  ytui profile use NAME\n  ytui profile remove NAME [--yes]")
+		return err
+	}
+	switch args[0] {
+	case "list":
+		if len(args) != 1 { return fmt.Errorf("usage: ytui profile list") }
+		profiles, err := auth.ListProfiles()
+		if err != nil { return fmt.Errorf("list profiles: %w", err) }
+		for _, profile := range profiles {
+			marker := " "
+			if profile.Active { marker = "*" }
+			state := "no token"
+			if profile.HasToken { state = "token saved" }
+			if _, err := fmt.Fprintf(stdout, "%s %s (%s)\n", marker, profile.Name, state); err != nil { return err }
+		}
+		return nil
+	case "create":
+		if len(args) != 2 { return fmt.Errorf("usage: ytui profile create NAME") }
+		if err := auth.CreateProfile(args[1]); err != nil { return err }
+		_, err := fmt.Fprintf(stdout, "Created profile %q. Use 'ytui profile use %s' then Ctrl+L to sign in.\n", args[1], args[1])
+		return err
+	case "use":
+		if len(args) != 2 { return fmt.Errorf("usage: ytui profile use NAME") }
+		if err := auth.SelectProfile(args[1]); err != nil { return err }
+		_, err := fmt.Fprintf(stdout, "Active Google profile: %s\n", args[1])
+		return err
+	case "remove":
+		if len(args) < 2 || len(args) > 3 { return fmt.Errorf("usage: ytui profile remove NAME [--yes]") }
+		yes := assumeYes
+		if len(args) == 3 {
+			if args[2] != "--yes" { return fmt.Errorf("unexpected argument %q; use --yes to skip confirmation", args[2]) }
+			yes = true
+		}
+		if !yes {
+			if _, err := fmt.Fprintf(stdout, "Remove profile %q and its saved login token? [y/N] ", args[1]); err != nil { return err }
+			line, err := bufio.NewReader(stdin).ReadString('\n')
+			if err != nil && len(line) == 0 { return fmt.Errorf("read removal confirmation: %w", err) }
+			answer := strings.ToLower(strings.TrimSpace(line))
+			if answer != "y" && answer != "yes" {
+				_, err := fmt.Fprintln(stdout, "Removal canceled.")
+				return err
+			}
+		}
+		if err := auth.RemoveProfile(args[1]); err != nil { return err }
+		_, err := fmt.Fprintf(stdout, "Removed profile %q.\n", args[1])
+		return err
+	default:
+		return fmt.Errorf("unknown profile command %q; use ytui profile help", args[0])
 	}
 }
 
