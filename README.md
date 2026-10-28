@@ -6,6 +6,7 @@ A terminal YouTube client: search, play with mpv, manage subscriptions, Watch La
 
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
+- [Releases](#releases)
 - [Essential keys](#essential-keys)
 - [Google login](#google-login)
 - [Configuration](#configuration)
@@ -31,13 +32,13 @@ sudo dnf install golang mpv yt-dlp
 
 ## Quick start
 
-Install the latest release directly with Go (requires Go 1.24 or newer):
+Install the latest tagged release directly with Go (requires Go 1.24 or newer):
 
 ```bash
 go install github.com/SakibShahariar/ytui@latest
 ```
 
-Make sure your Go bin directory is on `PATH`, then run `ytui`. To open a video directly, pass its URL, for example `ytui https://www.youtube.com/watch?v=VIDEO_ID`. Use `ytui --dir /path/to/downloads` to override the download/offline-library directory for this run; the configured `download_dir` remains the default when `--dir` is omitted. Check the installed build with `ytui --version`, locate its settings with `ytui --show-paths`, or run `ytui doctor` to collect dependency, configuration, authentication-state, and storage diagnostics without printing credentials. You still need `mpv` and `yt-dlp` installed separately.
+Make sure your Go bin directory is on `PATH`, then run `ytui`. See [GitHub Releases](https://github.com/SakibShahariar/ytui/releases) for versioned binaries and checksums. Release binaries require `mpv` and `yt-dlp` to be installed separately. To open a video directly, pass its URL, for example `ytui https://www.youtube.com/watch?v=VIDEO_ID`. Use `ytui --dir /path/to/downloads` to override the download/offline-library directory for this run; the configured `download_dir` remains the default when `--dir` is omitted. Check the installed build with `ytui --version`, locate its settings with `ytui --show-paths`, or run `ytui doctor` to collect dependency, configuration, authentication-state, and storage diagnostics without printing credentials. You still need `mpv` and `yt-dlp` installed separately.
 
 To build from source instead:
 
@@ -49,6 +50,10 @@ go build -o ytui .
 ```
 
 For development, run `go run .` from the cloned repository.
+
+## Releases
+
+Tagged versions publish Linux (`amd64`, `arm64`) and macOS (`amd64`, `arm64`) archives with SHA-256 checksums. Download the archive matching your operating system and CPU architecture, extract it, and place `ytui` somewhere on your `PATH`. These binaries do not bundle `mpv` or `yt-dlp`; install both separately. Verify an installed version with `ytui --version` or `ytui -v`.
 
 ## Essential keys
 
