@@ -31,6 +31,7 @@ func keyboardHelpLines() []string {
 		"Playback",
 		"Ctrl+A              Toggle audio-only mode",
 		"Ctrl+P              Pause or resume playback",
+		"Ctrl+N              Toggle autoplay next (saved preference)",
 		"Ctrl+X              Stop playback",
 		"[ / ]               Seek backward / forward 10 seconds",
 		"- / =               Decrease / increase volume",
