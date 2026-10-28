@@ -31,6 +31,16 @@ func New(s *store.Store) Model {
 	ti.CharLimit = 200
 	ti.Width = 60
 
+	ci := textinput.New()
+	ci.Placeholder = "Type to filter commands…"
+	ci.Prompt = ": "
+	ci.CharLimit = 100
+	ci.Width = 60
+	ci.PromptStyle = lipgloss.NewStyle().Foreground(ctpMauve)
+	ci.TextStyle = lipgloss.NewStyle().Foreground(ctpText)
+	ci.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
+	ci.Cursor.Style = lipgloss.NewStyle().Foreground(ctpMauve)
+
 	fi := textinput.New()
 	fi.Placeholder = "filter by title or channel…"
 	fi.Prompt = "Filter: "
@@ -74,6 +84,7 @@ func New(s *store.Store) Model {
 		activeTab:      tabSearch,
 		inputMode:      true,
 		searchInput:    ti,
+		commandPaletteInput: ci,
 		libraryFilterInput: fi,
 		pathInput:      pi,
 		list:           l,
