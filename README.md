@@ -77,6 +77,8 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 
 Paste a YouTube playlist URL into Search and press `Enter` to list its videos in order. Select an entry to play it, use `Ctrl+W` to add it to Watch Later, or `Ctrl+D` to download it.
 
+Use `Ctrl+V` to choose a subtitle language for playback/downloads, and `Ctrl+E` to open a video transcript when captions are available.
+
 See the [full keybinding reference](docs/keybindings.md).
 
 ## Google login
