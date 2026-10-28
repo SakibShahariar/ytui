@@ -23,6 +23,8 @@ func keyboardHelpLines() []string {
 		"Plain letters       Start or edit a Search query",
 		"Ctrl+S              Subscribe to selected channel",
 		"Ctrl+W              Add selected video to Watch Later",
+		"Watch Later: s       Cycle sort: added, title, channel",
+		"Watch Later: x       Clear all items (confirmation required)",
 		"Ctrl+D              Open download options; cancel selected download",
 		"Ctrl+R              Retry/resume selected failed download",
 		"Ctrl+O              Toggle download queue / offline files",
