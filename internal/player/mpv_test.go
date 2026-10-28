@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"testing"
 )
@@ -125,5 +127,31 @@ func TestWaitCanBeCalledConcurrently(t *testing.T) {
 		if err != nil {
 			t.Errorf("concurrent Wait() error = %v", err)
 		}
+	}
+}
+
+func TestWaitRemovesSocketPath(t *testing.T) {
+	// Re-execute only this test as a short-lived child process. This exercises
+	// Wait's real process lifecycle without requiring mpv to be installed.
+	if os.Getenv("YTUI_WAIT_HELPER") == "1" {
+		return
+	}
+
+	socketPath := filepath.Join(t.TempDir(), "mpv.sock")
+	if err := os.WriteFile(socketPath, []byte("test socket placeholder"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=^TestWaitRemovesSocketPath$")
+	cmd.Env = append(os.Environ(), "YTUI_WAIT_HELPER=1")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	p := &Player{cmd: cmd, socketPath: socketPath}
+	if err := p.Wait(); err != nil {
+		t.Fatalf("Wait() error = %v", err)
+	}
+	if _, err := os.Stat(socketPath); !os.IsNotExist(err) {
+		t.Fatalf("socket path still exists or could not be checked after Wait(): %v", err)
 	}
 }
