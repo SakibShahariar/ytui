@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -13,6 +14,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/SakibShahariar/ytui/internal/config"
+	"github.com/SakibShahariar/ytui/internal/logging"
 	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/ui"
 )
@@ -54,11 +56,22 @@ func main() {
 	configOverride := flag.String("config", "", "use config file PATH instead of the XDG default")
 	dataOverride := flag.String("data", "", "use data store file PATH instead of the XDG default")
 	downloadDir := flag.String("dir", "", "save downloads and browse offline files in DIR")
+	logLevel := flag.String("log-level", "off", "write diagnostic log to XDG cache (off, error, info, debug)")
 	flag.Parse()
 
 	if showVersion {
 		fmt.Printf("ytui %s\n", currentVersion())
 		return
+	}
+
+	closeLog, logPath, logErr := logging.Setup(*logLevel)
+	if logErr != nil {
+		fmt.Fprintln(os.Stderr, "failed to configure logging:", logErr)
+		os.Exit(2)
+	}
+	defer closeLog()
+	if logPath != "" {
+		slog.Info("ytui starting", "version", currentVersion(), "log_file", logPath)
 	}
 
 	if *downloadDir != "" {
@@ -174,6 +187,7 @@ func main() {
 		}
 	}
 	if runErr != nil {
+		logging.Error("application exited with error", runErr)
 		fmt.Fprintln(os.Stderr, "error running ytui:", runErr)
 		os.Exit(1)
 	}
