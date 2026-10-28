@@ -32,6 +32,9 @@ Press `:` from a main tab to open the command palette. Type to filter actions, u
 
 ## Search tab
 
+Paste a YouTube playlist URL into the Search field and press `Enter` to load its videos in playlist order. The list title shows the playlist name and each entry shows its position. You can play an entry, add it to Watch Later with `Ctrl+W`, or download it with `Ctrl+D`. Private, unavailable, or empty playlists show an error instead of silently appearing as an empty search.
+
+
 | Key | Action |
 |---|---|
 | Any letter or digit | Start or continue typing a search query |
