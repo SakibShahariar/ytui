@@ -345,7 +345,7 @@ func buildArgs(destDir string, d *Download) []string {
 
 func (m *Manager) run(d *Download) {
 	m.mu.Lock()
-	if d.Status != StatusQueued {
+	if d.Status != StatusQueued || m.closed {
 		m.mu.Unlock()
 		return
 	}
@@ -370,7 +370,7 @@ func (m *Manager) run(d *Download) {
 	// assigning d.cmd and cmd.Start (or before d.cmd is assigned) can leave
 	// a canceled queue item running in the background.
 	m.mu.Lock()
-	if d.Status == StatusCanceled {
+	if d.Status != StatusDownloading || m.closed {
 		m.mu.Unlock()
 		_ = stdout.Close()
 		_ = stderrWriter.Close()
