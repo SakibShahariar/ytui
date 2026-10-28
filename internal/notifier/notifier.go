@@ -14,5 +14,7 @@ func Send(title, body string) {
 		title = "ytui"
 	}
 	cmd := exec.Command("notify-send", "--app-name=ytui", title, body)
-	_ = cmd.Start()
+	if err := cmd.Start(); err == nil {
+		_ = cmd.Process.Release()
+	}
 }
