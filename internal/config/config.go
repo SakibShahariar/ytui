@@ -38,6 +38,13 @@ type Config struct {
 	// AutoplayNext starts the next Watch Later item when playback ends.
 	AutoplayNext bool `json:"autoplay_next,omitempty"`
 
+	// SponsorBlockEnabled enables privacy-preserving segment lookup during playback.
+	SponsorBlockEnabled bool `json:"sponsorblock_enabled,omitempty"`
+	// SponsorBlockCategories lists categories to skip automatically. When not configured,
+	// ytui defaults to sponsor and selfpromo; an explicit empty list disables auto-skip.
+	SponsorBlockCategories []string `json:"sponsorblock_categories,omitempty"`
+	SponsorBlockCategoriesConfigured bool `json:"sponsorblock_categories_configured,omitempty"`
+
 	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
 	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
 
