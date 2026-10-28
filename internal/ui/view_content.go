@@ -344,3 +344,25 @@ var (
 	ctpBlue      = lipgloss.Color("#89b4fa")
 	ctpLavender  = lipgloss.Color("#b4befe")
 )
+
+func (m Model) transcriptViewerContent(width, height int) string {
+	if width < 12 { width = 12 }
+	if height < 2 { height = 2 }
+	lines := strings.Split(m.transcriptText, "\n")
+	visibleRows := height - 2
+	if visibleRows < 1 { visibleRows = 1 }
+	maxOffset := len(lines) - visibleRows
+	if maxOffset < 0 { maxOffset = 0 }
+	offset := m.transcriptOffset
+	if offset < 0 { offset = 0 }
+	if offset > maxOffset { offset = maxOffset }
+	end := offset + visibleRows
+	if end > len(lines) { end = len(lines) }
+	heading := lipgloss.NewStyle().Bold(true).Foreground(ctpMauve).Render("Transcript · " + truncate(m.transcriptTitle, width))
+	visible := make([]string, 0, end-offset)
+	for _, line := range lines[offset:end] {
+		visible = append(visible, lipgloss.NewStyle().MaxWidth(width).Render(truncate(line, width)))
+	}
+	footer := lipgloss.NewStyle().Foreground(ctpOverlay1).Render("↑↓ scroll · PgUp/PgDn page · Home/End jump · Esc close")
+	return strings.Join([]string{heading, strings.Join(visible, "\n"), footer}, "\n")
+}
