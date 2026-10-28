@@ -48,7 +48,7 @@ On the Subs, Watch Later, and History tabs, `j` and `k` also move through the li
 
 ## Live download queue
 
-On the live Downloads tab, `Ctrl+Space` pauses a queued item or resumes a paused one. Active transfers cannot yet be suspended mid-transfer. `Ctrl+↑` and `Ctrl+↓` reorder pending entries; the queue runs one download at a time in that order. `Ctrl+G` cycles status filters.
+On the live Downloads tab, `Ctrl+Space` pauses or resumes the selected queued or active transfer on supported Unix systems. `Ctrl+↑` and `Ctrl+↓` reorder pending entries; the queue runs one download at a time in that order. `Ctrl+G` cycles status filters.
 
 ## Offline downloads
 
