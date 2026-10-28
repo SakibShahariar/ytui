@@ -69,6 +69,9 @@ func tokenPathForProfile(name string) (string, error) {
 	}
 	dir, err := profileDir(name)
 	if err != nil { return "", err }
+	info, err := os.Stat(dir)
+	if err != nil { return "", fmt.Errorf("profile %q does not exist", name) }
+	if !info.IsDir() { return "", fmt.Errorf("profile %q is not a directory", name) }
 	return filepath.Join(dir, "token.json"), nil
 }
 
