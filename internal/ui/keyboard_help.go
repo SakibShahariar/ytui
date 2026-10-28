@@ -29,6 +29,8 @@ func keyboardHelpLines() []string {
 		"Watch Later: x       Clear all items (confirmation required)",
 		"Ctrl+D              Open download options; cancel selected download",
 		"Ctrl+R              Retry/resume selected failed download",
+		"Ctrl+Space          Pause/resume selected queued download",
+		"Ctrl+↑ / Ctrl+↓     Move queued download up/down",
 		"Ctrl+O              Toggle download queue / offline files",
 		"Delete              Remove selected offline file (asks for confirmation)",
 		"",
