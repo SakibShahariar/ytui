@@ -27,6 +27,7 @@ func paletteCommands() []paletteCommand {
 		{id: "toggle_thumbnails", label: "Toggle thumbnail previews", description: "Enable or disable terminal previews"},
 		{id: "toggle_autoplay", label: "Toggle autoplay next", description: "Save the autoplay preference"},
 		{id: "sponsorblock_settings", label: "SponsorBlock settings", description: "Choose categories to auto-skip and highlight"},
+		{id: "import_shared_queue", label: "Import shared queue from Ytrawl", description: "Move shared inbox items into Downloads"},
 		{id: "clear_filters", label: "Clear library filters", description: "Clear text, status, and date filters"},
 		{id: "help", label: "Open keyboard help", description: "Show all keybindings"},
 	}
