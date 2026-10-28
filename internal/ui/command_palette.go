@@ -1,6 +1,9 @@
 package ui
 
-import "strings"
+import (
+	"strings"
+	"github.com/charmbracelet/lipgloss"
+)
 
 type paletteCommand struct {
 	id string
@@ -38,4 +41,34 @@ func filterPaletteCommands(commands []paletteCommand, query string) []paletteCom
 		}
 	}
 	return filtered
+}
+
+func (m Model) filteredPaletteCommands() []paletteCommand {
+	return filterPaletteCommands(paletteCommands(), m.commandPaletteInput.Value())
+}
+
+func (m Model) commandPaletteContent(width, height int) string {
+	if width < 12 { width = 12 }
+	lines := []string{m.commandPaletteInput.View(), dividerStyle.MaxWidth(width).Render(strings.Repeat("─", width))}
+	commands := m.filteredPaletteCommands()
+	if len(commands) == 0 {
+		lines = append(lines, lipgloss.NewStyle().Foreground(ctpSubtext0).Render("No matching commands"))
+		return lipgloss.NewStyle().Width(width).Render(strings.Join(lines, "\n"))
+	}
+	cursor := m.commandPaletteCursor
+	if cursor < 0 { cursor = 0 }
+	if cursor >= len(commands) { cursor = len(commands)-1 }
+	visibleRows := height - 2
+	if visibleRows < 1 { visibleRows = 1 }
+	start := 0
+	if cursor >= visibleRows { start = cursor-visibleRows+1 }
+	end := start+visibleRows
+	if end > len(commands) { end = len(commands) }
+	for i := start; i < end; i++ {
+		prefix := "  "
+		style := lipgloss.NewStyle().MaxWidth(width)
+		if i == cursor { prefix = "› "; style = style.Bold(true).Foreground(ctpMauve) }
+		lines = append(lines, style.Render(prefix+commands[i].label+" — "+commands[i].description))
+	}
+	return lipgloss.NewStyle().Width(width).Render(strings.Join(lines, "\n"))
 }
