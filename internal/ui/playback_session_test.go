@@ -7,11 +7,12 @@ import (
 
 type fakePlaybackSession struct {
 	waitCalled bool
+	position float64
 	seekTo     float64
 	seekCalled bool
 }
 
-func (f *fakePlaybackSession) Position() (float64, error) { return 0, nil }
+func (f *fakePlaybackSession) Position() (float64, error) { return f.position, nil }
 func (f *fakePlaybackSession) Duration() (float64, error) { return 0, nil }
 func (f *fakePlaybackSession) Volume() (float64, error) { return 0, nil }
 func (f *fakePlaybackSession) IsPaused() (bool, error) { return false, nil }
