@@ -80,7 +80,13 @@ func validateItem(item Item) error {
 func ensureDir(path string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil { return err }
-	if err := os.Chmod(dir, 0o700); err != nil { return err }
+	// The default ytui state directory is owned by this feature and should
+	// remain private. A custom YTUI_SHARED_QUEUE_PATH may deliberately point
+	// into an existing directory (including a shared temp directory); never
+	// silently change permissions on that user-selected parent directory.
+	if strings.TrimSpace(os.Getenv("YTUI_SHARED_QUEUE_PATH")) == "" {
+		if err := os.Chmod(dir, 0o700); err != nil { return err }
+	}
 	return nil
 }
 
