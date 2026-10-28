@@ -117,6 +117,8 @@ func readUnlocked(path string) (queueFile, error) {
 	var q queueFile
 	decoder := json.NewDecoder(io.LimitReader(bytes.NewReader(data), maxQueueBytes))
 	if err := decoder.Decode(&q); err != nil { return queueFile{}, fmt.Errorf("parse shared queue file: %w", err) }
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF { return queueFile{}, fmt.Errorf("shared queue file contains trailing JSON data") }
 	if q.Version != 1 { return queueFile{}, fmt.Errorf("unsupported shared queue version %d", q.Version) }
 	if q.Items == nil { q.Items = []Item{} }
 	for i, item := range q.Items {
