@@ -128,3 +128,29 @@ func TestFetchDescriptionWithPreservesLookupError(t *testing.T) {
 		t.Fatalf("error = %v, want %v", got.err, wantErr)
 	}
 }
+
+
+func TestLoadPlaylistWithUsesInjectedLoader(t *testing.T) {
+	want := []ytdlp.Video{{ID: "first", Title: "First", PlaylistIndex: 1}}
+	called := false
+	msg := loadPlaylistWith("https://www.youtube.com/playlist?list=PLexample", func(rawURL string) (string, []ytdlp.Video, error) {
+		called = true
+		if rawURL != "https://www.youtube.com/playlist?list=PLexample" { t.Fatalf("URL = %q, want original playlist URL", rawURL) }
+		return "Road Trip Mix", want, nil
+	})()
+	got, ok := msg.(searchResultsMsg)
+	if !ok { t.Fatalf("message type = %T, want searchResultsMsg", msg) }
+	if !called || got.err != nil || got.playlistTitle != "Road Trip Mix" || len(got.results) != 1 || got.results[0] != want[0] {
+		t.Fatalf("playlist result = %#v, called = %v", got, called)
+	}
+}
+
+func TestLoadPlaylistWithPreservesError(t *testing.T) {
+	wantErr := errors.New("playlist unavailable")
+	msg := loadPlaylistWith("https://www.youtube.com/playlist?list=PLexample", func(string) (string, []ytdlp.Video, error) {
+		return "", nil, wantErr
+	})()
+	got, ok := msg.(searchResultsMsg)
+	if !ok { t.Fatalf("message type = %T, want searchResultsMsg", msg) }
+	if !errors.Is(got.err, wantErr) { t.Fatalf("error = %v, want %v", got.err, wantErr) }
+}
