@@ -659,8 +659,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+s":
 		return m.subscribeToSelected()
-	case "ctrl+i":
-		return m, loadSharedQueueCmd(true)
 	case "ctrl+b":
 		m = m.openSponsorBlockSettings()
 		return m, nil
