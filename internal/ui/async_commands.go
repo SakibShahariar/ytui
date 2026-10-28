@@ -23,7 +23,19 @@ func loadDirectURLWith(videoURL string, getVideo func(string) (ytdlp.Video, erro
 }
 
 func doSearch(query string) tea.Cmd {
+	if ytdlp.IsPlaylistURL(query) { return loadPlaylistCmd(query) }
 	return doSearchWith(query, ytdlp.Search)
+}
+
+func loadPlaylistCmd(playlistURL string) tea.Cmd {
+	return loadPlaylistWith(playlistURL, ytdlp.GetPlaylist)
+}
+
+func loadPlaylistWith(playlistURL string, load func(string) (string, []ytdlp.Video, error)) tea.Cmd {
+	return func() tea.Msg {
+		title, videos, err := load(playlistURL)
+		return searchResultsMsg{results: videos, err: err, playlistTitle: title}
+	}
 }
 
 // doSearchWith keeps the asynchronous search command testable without
