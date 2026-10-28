@@ -353,6 +353,7 @@ func (m *Manager) run(d *Download) {
 
 	args := buildArgs(m.destDir, d)
 	cmd := exec.Command("yt-dlp", args...)
+	configureProcessGroup(cmd)
 
 	// Use one explicit pipe for both streams. StdoutPipe leaves cmd.Stdout
 	// nil, so assigning cmd.Stderr = cmd.Stdout would silently discard stderr.
@@ -572,23 +573,55 @@ func (m *Manager) MoveQueued(videoID string, delta int) bool {
 // process-stop API.
 func (m *Manager) Pause(videoID string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	d, ok := m.byID[videoID]
-	if !ok { return fmt.Errorf("download not found") }
-	if d.Status != StatusQueued { return fmt.Errorf("only queued downloads can be paused") }
-	m.removePendingLocked(videoID)
+	if !ok { m.mu.Unlock(); return fmt.Errorf("download not found") }
+	if d.Status == StatusQueued {
+		m.removePendingLocked(videoID)
+		d.Status = StatusPaused
+		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+		m.mu.Unlock()
+		return nil
+	}
+	if d.Status != StatusDownloading || d.cmd == nil || d.cmd.Process == nil || d.cmd.ProcessState != nil {
+		m.mu.Unlock()
+		return fmt.Errorf("download is not currently pausable")
+	}
+	cmd := d.cmd
 	d.Status = StatusPaused
+	m.mu.Unlock()
+	if err := pauseProcess(cmd); err != nil {
+		m.mu.Lock()
+		if d.Status == StatusPaused { d.Status = StatusDownloading }
+		m.mu.Unlock()
+		return err
+	}
+	m.mu.Lock()
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+	m.mu.Unlock()
 	return nil
 }
 
-// Resume puts a paused queued download at the end of the pending queue.
+// Resume continues a paused active process or requeues a paused pending item.
 func (m *Manager) Resume(videoID string) error {
 	m.mu.Lock()
 	d, ok := m.byID[videoID]
 	if !ok { m.mu.Unlock(); return fmt.Errorf("download not found") }
 	if d.Status != StatusPaused { m.mu.Unlock(); return fmt.Errorf("download is not paused") }
 	if m.closed { m.mu.Unlock(); return fmt.Errorf("download manager is shut down") }
+	cmd := d.cmd
+	if cmd != nil && cmd.Process != nil && cmd.ProcessState == nil {
+		m.mu.Unlock()
+		if err := resumeProcess(cmd); err != nil { return err }
+		m.mu.Lock()
+		if d.Status == StatusPaused { d.Status = StatusDownloading }
+		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+		m.mu.Unlock()
+		return nil
+	}
+	if cmd != nil && cmd.ProcessState != nil {
+		m.mu.Unlock()
+		return fmt.Errorf("paused process has already exited")
+	}
 	d.Status = StatusQueued
 	m.removePendingLocked(videoID)
 	m.pending = append(m.pending, videoID)
@@ -597,7 +630,6 @@ func (m *Manager) Resume(videoID string) error {
 	m.signalScheduler()
 	return nil
 }
-
 
 type persistedDownload struct {
 	VideoID string `json:"video_id"`
