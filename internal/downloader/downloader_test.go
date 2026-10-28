@@ -113,3 +113,30 @@ func TestHasPartialForVideo(t *testing.T) {
 		t.Fatal("hasPartialForVideo() = true for unrelated video")
 	}
 }
+
+func TestCancelQueuedDownloadMarksItCanceled(t *testing.T) {
+	d := &Download{VideoID: "video", Status: StatusQueued}
+	m := &Manager{
+		byID:    map[string]*Download{"video": d},
+		order:   []string{"video"},
+		destDir: t.TempDir(),
+	}
+
+	m.Cancel("video")
+	if d.Status != StatusCanceled {
+		t.Fatalf("status after Cancel() = %v, want canceled", d.Status)
+	}
+	if d.cmd != nil {
+		t.Fatal("Cancel() unexpectedly created a process")
+	}
+
+	// A worker that has not started yet must observe cancellation and exit
+	// without launching yt-dlp.
+	m.run(d)
+	if d.Status != StatusCanceled {
+		t.Errorf("status after run() = %v, want canceled", d.Status)
+	}
+	if d.cmd != nil {
+		t.Error("canceled queued download unexpectedly created a process")
+	}
+}
