@@ -321,12 +321,15 @@ func (m *Manager) run(d *Download) {
 
 	cmd := exec.Command("yt-dlp", args...)
 
-	stdout, err := cmd.StdoutPipe()
+	// Use one explicit pipe for both streams. StdoutPipe leaves cmd.Stdout
+	// nil, so assigning cmd.Stderr = cmd.Stdout would silently discard stderr.
+	stdout, stderrWriter, err := os.Pipe()
 	if err != nil {
-		m.setError(d.VideoID, err)
+		m.setError(d.VideoID, fmt.Errorf("couldn't capture yt-dlp output: %w", err))
 		return
 	}
-	cmd.Stderr = cmd.Stdout // merge — yt-dlp's progress line format is the same either way
+	cmd.Stdout = stderrWriter
+	cmd.Stderr = stderrWriter
 
 	// Serialize process startup with Cancel. Otherwise a cancel between
 	// assigning d.cmd and cmd.Start (or before d.cmd is assigned) can leave
@@ -335,12 +338,15 @@ func (m *Manager) run(d *Download) {
 	if d.Status == StatusCanceled {
 		m.mu.Unlock()
 		_ = stdout.Close()
+		_ = stderrWriter.Close()
 		return
 	}
 	d.cmd = cmd
 	startErr := cmd.Start()
 	m.mu.Unlock()
+	_ = stderrWriter.Close() // the child owns its inherited writer after Start
 	if startErr != nil {
+		_ = stdout.Close()
 		m.setError(d.VideoID, fmt.Errorf("couldn't start yt-dlp: %w", startErr))
 		return
 	}
