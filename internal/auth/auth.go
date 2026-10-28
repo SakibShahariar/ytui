@@ -116,10 +116,14 @@ func HaveClientSecrets() bool {
 
 // HaveToken reports whether a saved login already exists.
 func HaveToken() bool {
-	path, err := tokenPath()
-	if err != nil {
-		return false
-	}
+	profile, err := ActiveProfile()
+	if err != nil { return false }
+	return HaveTokenForProfile(profile)
+}
+
+func HaveTokenForProfile(profile string) bool {
+	path, err := tokenPathForProfile(profile)
+	if err != nil { return false }
 	_, err = os.Stat(path)
 	return err == nil
 }
@@ -265,14 +269,16 @@ func loadTokenForProfile(profile string) (*oauth2.Token, error) {
 // Logout deletes the saved token. The client_secret.json (your app
 // registration) is left alone — that's not a login, it's the app itself.
 func Logout() error {
-	path, err := tokenPath()
-	if err != nil {
-		return err
-	}
+	profile, err := ActiveProfile()
+	if err != nil { return err }
+	return LogoutProfile(profile)
+}
+
+func LogoutProfile(profile string) error {
+	path, err := tokenPathForProfile(profile)
+	if err != nil { return err }
 	err = os.Remove(path)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
+	if err != nil && !os.IsNotExist(err) { return err }
 	return nil
 }
 
@@ -308,6 +314,11 @@ func openBrowser(url string) error {
 func Login(ctx context.Context) error {
 	profile, err := ActiveProfile()
 	if err != nil { return err }
+	return LoginForProfile(ctx, profile)
+}
+
+func LoginForProfile(ctx context.Context, profile string) error {
+	if _, err := tokenPathForProfile(profile); err != nil { return err }
 	cfg, err := loadOAuthConfig()
 	if err != nil {
 		return err
@@ -403,11 +414,14 @@ func (p *persistingTokenSource) Token() (*oauth2.Token, error) {
 // automatically refreshing (and re-persisting) the access token as needed.
 // Returns an error if there's no saved login.
 func Client(ctx context.Context) (*http.Client, error) {
-	cfg, err := loadOAuthConfig()
-	if err != nil {
-		return nil, err
-	}
 	profile, err := ActiveProfile()
+	if err != nil { return nil, err }
+	return ClientForProfile(ctx, profile)
+}
+
+func ClientForProfile(ctx context.Context, profile string) (*http.Client, error) {
+	if _, err := tokenPathForProfile(profile); err != nil { return nil, err }
+	cfg, err := loadOAuthConfig()
 	if err != nil { return nil, err }
 	tok, err := loadTokenForProfile(profile)
 	if err != nil {
