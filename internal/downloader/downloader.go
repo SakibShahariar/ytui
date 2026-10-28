@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -406,6 +407,7 @@ func (m *Manager) run(d *Download) {
 		if msg == "" {
 			msg = err.Error()
 		}
+		slog.Error("download failed", "video_id", d.VideoID, "error", msg)
 		if resumable {
 			d.Status = StatusResumable
 			d.Err = fmt.Errorf("%s (partial files retained; press Ctrl+R to resume)", msg)
