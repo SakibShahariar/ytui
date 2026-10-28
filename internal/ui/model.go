@@ -24,6 +24,7 @@ import (
 	"github.com/SakibShahariar/ytui/internal/library"
 	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/sponsorblock"
+	"github.com/SakibShahariar/ytui/internal/sharedqueue"
 	"github.com/SakibShahariar/ytui/internal/ytapi"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
@@ -299,6 +300,9 @@ type searchResultsMsg struct {
 	err error
 	playlistTitle string
 }
+type sharedQueueMsg struct { items []sharedqueue.Item; err error }
+type sharedQueueAckMsg struct { count int; err error }
+
 type sponsorSegmentsMsg struct {
 	videoID string
 	segments []sponsorblock.Segment
