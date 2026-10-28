@@ -33,7 +33,7 @@ func TestBuildArgs(t *testing.T) {
 			}},
 			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate,
 				"-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
-				"--write-subs", "--sub-langs", "en.*,en", "--embed-subs", "--embed-thumbnail",
+				"--write-subs", "--write-auto-subs", "--sub-langs", "en.*,en", "--embed-thumbnail",
 				"--cookies-from-browser", "firefox", videoURL},
 		},
 		{
