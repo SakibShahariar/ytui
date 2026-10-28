@@ -277,6 +277,22 @@ var (
 	footerModeInput = lipgloss.NewStyle().Background(ctpGreen).Foreground(ctpBase).Bold(true).Padding(0, 1)
 )
 
+// playbackSession is the subset of player behavior the UI needs. Keeping
+// this contract local lets model/update tests use a fake session instead of
+// spawning mpv.
+type playbackSession interface {
+	Position() (float64, error)
+	Duration() (float64, error)
+	Volume() (float64, error)
+	IsPaused() (bool, error)
+	Quit() error
+	TogglePause() error
+	SeekRelative(int) error
+	SeekAbsolute(float64) error
+	VolumeAdjust(int) error
+	Wait() error
+}
+
 // messages
 type searchResultsMsg struct {
 	results []ytdlp.Video
