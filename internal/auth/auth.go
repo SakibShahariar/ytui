@@ -233,30 +233,32 @@ func loadOAuthConfig() (*oauth2.Config, error) {
 }
 
 func saveToken(tok *oauth2.Token) error {
-	path, err := tokenPath()
-	if err != nil {
-		return err
-	}
+	profile, err := ActiveProfile()
+	if err != nil { return err }
+	return saveTokenForProfile(profile, tok)
+}
+
+func saveTokenForProfile(profile string, tok *oauth2.Token) error {
+	path, err := tokenPathForProfile(profile)
+	if err != nil { return err }
 	data, err := json.MarshalIndent(tok, "", "  ")
-	if err != nil {
-		return err
-	}
+	if err != nil { return err }
 	return writePrivateAtomic(path, data)
 }
 
 func loadToken() (*oauth2.Token, error) {
-	path, err := tokenPath()
-	if err != nil {
-		return nil, err
-	}
+	profile, err := ActiveProfile()
+	if err != nil { return nil, err }
+	return loadTokenForProfile(profile)
+}
+
+func loadTokenForProfile(profile string) (*oauth2.Token, error) {
+	path, err := tokenPathForProfile(profile)
+	if err != nil { return nil, err }
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+	if err != nil { return nil, err }
 	var tok oauth2.Token
-	if err := json.Unmarshal(data, &tok); err != nil {
-		return nil, err
-	}
+	if err := json.Unmarshal(data, &tok); err != nil { return nil, err }
 	return &tok, nil
 }
 
@@ -304,6 +306,8 @@ func openBrowser(url string) error {
 // should run this off the UI goroutine (it's designed to be wrapped in a
 // Bubbletea tea.Cmd).
 func Login(ctx context.Context) error {
+	profile, err := ActiveProfile()
+	if err != nil { return err }
 	cfg, err := loadOAuthConfig()
 	if err != nil {
 		return err
@@ -366,7 +370,7 @@ func Login(ctx context.Context) error {
 		if res.err != nil {
 			return res.err
 		}
-		return saveToken(res.token)
+		return saveTokenForProfile(profile, res.token)
 	case <-time.After(3 * time.Minute):
 		return fmt.Errorf("login timed out waiting for browser approval")
 	case <-ctx.Done():
@@ -380,6 +384,7 @@ func Login(ctx context.Context) error {
 type persistingTokenSource struct {
 	base oauth2.TokenSource
 	last string
+	profile string
 }
 
 func (p *persistingTokenSource) Token() (*oauth2.Token, error) {
@@ -388,7 +393,7 @@ func (p *persistingTokenSource) Token() (*oauth2.Token, error) {
 		return nil, err
 	}
 	if tok.AccessToken != p.last {
-		_ = saveToken(tok) // best-effort; a failed persist just means one extra re-auth later
+		_ = saveTokenForProfile(p.profile, tok) // best-effort; a failed persist just means one extra re-auth later
 		p.last = tok.AccessToken
 	}
 	return tok, nil
@@ -402,10 +407,12 @@ func Client(ctx context.Context) (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	tok, err := loadToken()
+	profile, err := ActiveProfile()
+	if err != nil { return nil, err }
+	tok, err := loadTokenForProfile(profile)
 	if err != nil {
 		return nil, fmt.Errorf("not logged in")
 	}
-	src := &persistingTokenSource{base: cfg.TokenSource(ctx, tok), last: tok.AccessToken}
+	src := &persistingTokenSource{base: cfg.TokenSource(ctx, tok), last: tok.AccessToken, profile: profile}
 	return oauth2.NewClient(ctx, src), nil
 }
