@@ -52,6 +52,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 		return m, startPlayback(msg.video.URL, m.audioOnly, 0)
 
+	case subtitleTracksMsg:
+		if msg.err != nil {
+			m.errMsg = "subtitles: " + msg.err.Error()
+			m.statusMsg = ""
+			return m, nil
+		}
+		m.errMsg = ""
+		m.subtitlePickerVideo = &msg.video
+		m.subtitleTracks = msg.tracks
+		m.subtitlePicker = true
+		m.subtitlePickerCursor = 0
+		m.inputMode = false
+		m.searchInput.Blur()
+		for i, track := range msg.tracks {
+			if track.Language == m.subtitleLanguage { m.subtitlePickerCursor = i + 1; break }
+		}
+		m.statusMsg = fmt.Sprintf("%d subtitle tracks available", len(msg.tracks))
+		return m, tea.ClearScreen
+
 	case searchResultsMsg:
 		m.loading = false
 		m.everSearched = true
