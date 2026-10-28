@@ -106,3 +106,14 @@ func TestTokenRefreshPersistsToOriginalProfileAfterSwitch(t *testing.T) {
 		t.Fatalf("default profile unexpectedly received work token; err = %v", err)
 	}
 }
+
+func TestLogoutProfileRemovesOnlyThatProfilesToken(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := CreateProfile("work"); err != nil { t.Fatal(err) }
+	if err := saveTokenForProfile("default", &oauth2.Token{AccessToken: "default-token"}); err != nil { t.Fatal(err) }
+	if err := saveTokenForProfile("work", &oauth2.Token{AccessToken: "work-token"}); err != nil { t.Fatal(err) }
+	if err := SelectProfile("default"); err != nil { t.Fatal(err) }
+	if err := LogoutProfile("work"); err != nil { t.Fatal(err) }
+	if !HaveTokenForProfile("default") { t.Fatal("logging out of work removed the default token") }
+	if HaveTokenForProfile("work") { t.Fatal("work token still exists after LogoutProfile(work)") }
+}
