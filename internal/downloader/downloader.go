@@ -156,6 +156,7 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 	}
 	m.removePendingLocked(videoID)
 	m.pending = append(m.pending, videoID)
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
 	m.signalScheduler()
 	return d
@@ -197,11 +198,13 @@ func (m *Manager) Cancel(videoID string) {
 	var process *os.Process
 	if ok {
 		d.Status = StatusCanceled
+		m.removePendingLocked(videoID)
 		// d.cmd is assigned while holding m.mu in run. Snapshot the process
 		// under the same lock so cancellation cannot race with process startup.
 		if d.cmd != nil {
 			process = d.cmd.Process
 		}
+		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	}
 	m.mu.Unlock()
 
@@ -223,14 +226,13 @@ func (m *Manager) Shutdown() {
 	m.pending = nil
 	processes := make([]*os.Process, 0)
 	for _, d := range m.byID {
-		if d.Status != StatusQueued && d.Status != StatusDownloading {
-			continue
-		}
-		d.Status = StatusCanceled
-		if d.cmd != nil && d.cmd.Process != nil {
-			processes = append(processes, d.cmd.Process)
+		if d.Status == StatusDownloading {
+			// Preserve interrupted work as queued so yt-dlp can continue partial files.
+			d.Status = StatusQueued
+			if d.cmd != nil && d.cmd.Process != nil { processes = append(processes, d.cmd.Process) }
 		}
 	}
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue during shutdown", "error", err) }
 	m.mu.Unlock()
 	m.signalScheduler()
 
@@ -420,9 +422,9 @@ func (m *Manager) run(d *Download) {
 	resumable := err != nil && hasPartialForVideo(m.destDir, d.VideoID)
 
 	m.mu.Lock()
-	if d.Status == StatusCanceled {
+	if d.Status == StatusCanceled || m.closed {
 		m.mu.Unlock()
-		return // Cancel() already set the final status — don't overwrite it
+		return // cancellation or shutdown owns the final state
 	}
 	notifyEnabled := m.notificationsEnabled
 	title := d.Title
@@ -439,6 +441,7 @@ func (m *Manager) run(d *Download) {
 			d.Status = StatusError
 			d.Err = fmt.Errorf("%s (press Ctrl+R to retry)", msg)
 		}
+		if persistErr := m.persistQueueLocked(); persistErr != nil { slog.Error("could not persist download queue", "error", persistErr) }
 		m.mu.Unlock()
 		if notifyEnabled {
 			notifier.Send("Download failed", title)
@@ -447,6 +450,7 @@ func (m *Manager) run(d *Download) {
 	}
 	d.Status = StatusDone
 	d.Progress = 100
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
 	if notifyEnabled {
 		notifier.Send("Download complete", title)
@@ -558,6 +562,7 @@ func (m *Manager) MoveQueued(videoID string, delta int) bool {
 		if id == m.pending[from] { posB = i }
 	}
 	if posA >= 0 && posB >= 0 { m.order[posA], m.order[posB] = m.order[posB], m.order[posA] }
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	return true
 }
 
@@ -572,6 +577,7 @@ func (m *Manager) Pause(videoID string) error {
 	if d.Status != StatusQueued { return fmt.Errorf("only queued downloads can be paused") }
 	m.removePendingLocked(videoID)
 	d.Status = StatusPaused
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	return nil
 }
 
@@ -585,6 +591,7 @@ func (m *Manager) Resume(videoID string) error {
 	d.Status = StatusQueued
 	m.removePendingLocked(videoID)
 	m.pending = append(m.pending, videoID)
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
 	m.signalScheduler()
 	return nil
