@@ -80,6 +80,7 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 		ExtractAudio:       q.ExtractAudio,
 		AudioFormat:        q.AudioFormat,
 		WriteSubs:          m.downloadPickerSubs,
+		SubtitleLang:       m.subtitleLanguage,
 		EmbedThumbnail:     m.downloadPickerThumb,
 		CookiesFromBrowser: downloadCookieBrowserValues[m.downloadPickerCookies],
 		QualityLabel:       q.Label,
