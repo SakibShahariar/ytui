@@ -156,7 +156,7 @@ func (m Model) View() string {
 		help = "enter: run search · ↑↓: back to browsing · esc: cancel · ctrl+c: quit"
 	}
 	if !m.libraryFilterMode && (m.activeTab == tabHistory || m.activeTab == tabDownloads) {
-		help += " · ctrl+f: filter · ctrl+u: clear"
+		help += " · ctrl+f: filter · ctrl+y: date " + m.libraryDateFilterLabel() + " · ctrl+u: clear"
 		if m.activeTab == tabDownloads && !m.offlineDownloads {
 			help += " · ctrl+g: status " + m.downloadStatusFilterLabel()
 		}
