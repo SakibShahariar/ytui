@@ -384,3 +384,37 @@ func TestPersistedQueueRestoresOrderAndPausedState(t *testing.T) {
 	if got := restored.byID["paused"].Status; got != StatusPaused { t.Fatalf("restored paused status = %v, want paused", got) }
 	if got := restored.byID["queued"].Opts.QualityLabel; got != "1080p" { t.Fatalf("restored quality = %q, want 1080p", got) }
 }
+
+
+func TestPauseResumeActiveDownload(t *testing.T) {
+	if runtime.GOOS == "windows" { t.Skip("process-group pause is not supported on Windows") }
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	if err := os.WriteFile(fakeYTDLP, []byte("#!/bin/sh\nwhile :; do sleep 1; done\n"), 0o700); err != nil { t.Fatal(err) }
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	d := &Download{VideoID:"active-pause-test", URL:"https://example.invalid/video", Status:StatusQueued}
+	m := &Manager{byID:map[string]*Download{d.VideoID:d}, order:[]string{d.VideoID}, destDir:t.TempDir()}
+	done := make(chan struct{})
+	go func(){ m.run(d); close(done) }()
+	deadline := time.Now().Add(3*time.Second)
+	for {
+		m.mu.Lock()
+		started := d.cmd != nil && d.cmd.Process != nil
+		m.mu.Unlock()
+		if started { break }
+		if time.Now().After(deadline) { t.Fatal("fake yt-dlp process did not start") }
+		select { case <-done: t.Fatal("download exited before pause test"); case <-time.After(10*time.Millisecond): }
+	}
+	if err := m.Pause(d.VideoID); err != nil { m.Cancel(d.VideoID); t.Fatalf("Pause() error = %v", err) }
+	m.mu.Lock()
+	paused := d.Status == StatusPaused
+	m.mu.Unlock()
+	if !paused { m.Cancel(d.VideoID); t.Fatal("active download status did not become paused") }
+	if err := m.Resume(d.VideoID); err != nil { m.Cancel(d.VideoID); t.Fatalf("Resume() error = %v", err) }
+	m.mu.Lock()
+	resumed := d.Status == StatusDownloading
+	m.mu.Unlock()
+	if !resumed { m.Cancel(d.VideoID); t.Fatal("active download status did not return to downloading") }
+	m.Cancel(d.VideoID)
+	select { case <-done: case <-time.After(3*time.Second): t.Fatal("download did not exit after cancellation") }
+}
