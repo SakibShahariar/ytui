@@ -143,7 +143,7 @@ func NewWithURL(s *store.Store, videoURL string) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{textinput.Blink}
+	cmds := []tea.Cmd{textinput.Blink, loadSharedQueueCmd(false)}
 	if auth.HaveTokenForProfile(m.activeProfile) {
 		cmds = append(cmds, authClientCmd(m.activeProfile))
 	}
