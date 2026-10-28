@@ -300,7 +300,7 @@ type searchResultsMsg struct {
 	err error
 	playlistTitle string
 }
-type sharedQueueMsg struct { items []sharedqueue.Item; err error }
+type sharedQueueMsg struct { items []sharedqueue.Item; err error; manual bool }
 type sharedQueueAckMsg struct { count int; err error }
 
 type sponsorSegmentsMsg struct {
