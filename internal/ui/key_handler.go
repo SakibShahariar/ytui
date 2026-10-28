@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/SakibShahariar/ytui/internal/auth"
+	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/library"
 	"github.com/SakibShahariar/ytui/internal/thumb"
 )
@@ -442,6 +443,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.downloadPickerSubs = false
 			m.downloadPickerThumb = false
 			m.downloadPickerCookies = m.defaultCookieBrowserIndex()
+		}
+		return m, nil
+
+	case "ctrl+n":
+		m.cfg.AutoplayNext = !m.cfg.AutoplayNext
+		if err := config.Save(m.cfg); err != nil {
+			m.errMsg = "save autoplay setting: " + err.Error()
+		} else {
+			m.errMsg = ""
+			if m.cfg.AutoplayNext { m.statusMsg = "autoplay next enabled" } else { m.statusMsg = "autoplay next disabled" }
 		}
 		return m, nil
 
