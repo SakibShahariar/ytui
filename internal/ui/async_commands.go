@@ -65,7 +65,13 @@ func startPlayback(url string, audioOnly bool, resumePos float64) tea.Cmd {
 				time.Sleep(100 * time.Millisecond)
 			}
 		}
-		return playbackStartedMsg{p: p, err: err}
+		// Avoid storing a typed nil *player.Player in the interface: a typed
+		// nil inside an interface compares non-nil and would look like playback.
+		var session playbackSession
+		if p != nil {
+			session = p
+		}
+		return playbackStartedMsg{p: session, err: err}
 	}
 }
 
