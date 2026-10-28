@@ -195,23 +195,16 @@ func (m *Manager) Active() bool {
 func (m *Manager) Cancel(videoID string) {
 	m.mu.Lock()
 	d, ok := m.byID[videoID]
-	var process *os.Process
+	var cmd *exec.Cmd
 	if ok {
 		d.Status = StatusCanceled
 		m.removePendingLocked(videoID)
-		// d.cmd is assigned while holding m.mu in run. Snapshot the process
-		// under the same lock so cancellation cannot race with process startup.
-		if d.cmd != nil {
-			process = d.cmd.Process
-		}
+		if d.cmd != nil { cmd = d.cmd }
 		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	}
 	m.mu.Unlock()
-
-	// Killing the process can block or trigger worker cleanup; never do it
-	// while holding the manager lock.
-	if process != nil {
-		_ = process.Kill()
+	if cmd != nil {
+		if err := killProcess(cmd); err != nil { slog.Warn("could not stop canceled download", "error", err) }
 	}
 }
 
@@ -225,21 +218,21 @@ func (m *Manager) Shutdown() {
 	m.mu.Lock()
 	m.closed = true
 	m.pending = nil
-	processes := make([]*os.Process, 0)
+	processes := make([]*exec.Cmd, 0)
 	for _, d := range m.byID {
 		activeProcess := d.cmd != nil && d.cmd.Process != nil && d.cmd.ProcessState == nil
 		if d.Status == StatusDownloading || (d.Status == StatusPaused && activeProcess) {
 			// Preserve interrupted work as queued so yt-dlp can continue partial files.
 			d.Status = StatusQueued
-			if activeProcess { processes = append(processes, d.cmd.Process) }
+			if activeProcess { processes = append(processes, d.cmd) }
 		}
 	}
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue during shutdown", "error", err) }
 	m.mu.Unlock()
 	m.signalScheduler()
 
-	for _, process := range processes {
-		_ = process.Kill()
+	for _, cmd := range processes {
+		if err := killProcess(cmd); err != nil { slog.Warn("could not stop download during shutdown", "error", err) }
 	}
 	m.wg.Wait()
 }
