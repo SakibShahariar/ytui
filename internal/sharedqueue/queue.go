@@ -52,10 +52,18 @@ func Path() (string, error) {
 
 func isNumericHost(host string) bool {
 	if host == "" { return false }
-	for _, r := range host {
-		if (r >= '0' && r <= '9') || r == '.' { continue }
-		if r == 'x' || r == 'X' || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F') { continue }
-		return false
+	for _, label := range strings.Split(host, ".") {
+		if label == "" { return false }
+		if strings.HasPrefix(strings.ToLower(label), "0x") {
+			if len(label) <= 2 { return false }
+			for _, r := range label[2:] {
+				if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) { return false }
+			}
+			continue
+		}
+		for _, r := range label {
+			if r < '0' || r > '9' { return false }
+		}
 	}
 	return true
 }
