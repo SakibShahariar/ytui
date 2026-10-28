@@ -370,6 +370,7 @@ type Model struct {
 	libraryFilter string
 	libraryFilterMode bool
 	downloadStatusFilter int
+	libraryDateFilter int
 	watchLaterSortMode int
 	watchLaterClearPending bool
 	watchLaterBulkPending bool
