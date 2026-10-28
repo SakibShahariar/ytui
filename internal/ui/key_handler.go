@@ -25,6 +25,37 @@ import (
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	if m.subtitlePicker {
+		switch key {
+		case "esc":
+			m.subtitlePicker = false
+			m.subtitlePickerVideo = nil
+			return m, nil
+		case "ctrl+c":
+			return m, tea.Quit
+		case "up":
+			if m.subtitlePickerCursor > 0 { m.subtitlePickerCursor-- }
+			return m, nil
+		case "down":
+			if m.subtitlePickerCursor < len(m.subtitleTracks) { m.subtitlePickerCursor++ }
+			return m, nil
+		case "enter":
+			if m.subtitlePickerCursor == 0 {
+				m.subtitleLanguage = ""
+				m.statusMsg = "subtitles disabled"
+			} else {
+				track := m.subtitleTracks[m.subtitlePickerCursor-1]
+				m.subtitleLanguage = track.Language
+				m.statusMsg = "subtitle language selected: " + track.Name + " (" + track.Language + ")"
+			}
+			m.subtitlePicker = false
+			m.subtitlePickerVideo = nil
+			return m, nil
+		default:
+			return m, nil
+		}
+	}
+
 	if m.commandPalette {
 		switch key {
 		case "esc":
@@ -568,6 +599,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+s":
 		return m.subscribeToSelected()
+	case "ctrl+v":
+		if v, ok := m.selectedVideo(); ok {
+			m.errMsg = ""
+			m.statusMsg = "checking available subtitles…"
+			return m, loadSubtitleTracksCmd(v)
+		}
+		m.statusMsg = "select a video to inspect subtitle tracks"
+		return m, nil
+
 	case "ctrl+w":
 		return m.addSelectedToWatchLater()
 	case "ctrl+o":
