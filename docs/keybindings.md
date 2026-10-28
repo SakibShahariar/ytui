@@ -36,6 +36,10 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 
 Autoplay is disabled by default. With it enabled, ytui plays the next Watch Later entry first, then the next playable item after the current selection. `Ctrl+X` is an explicit stop and does not trigger autoplay. Local downloaded files are not followed by online videos. The preference is stored as `autoplay_next` in `config.json`.
 
+## Watch Later queue
+
+On the **Watch Later** tab, press `s` to cycle through oldest-added, title A–Z, and channel A–Z sorting. The chosen order is saved with your local data. Press `x`, then `y` to confirm clearing the entire queue; any other key cancels. Adding duplicate videos remains a no-op.
+
 ## Lists
 
 On the Subs, Watch Later, and History tabs, `j` and `k` also move through the list in addition to the arrow keys.
