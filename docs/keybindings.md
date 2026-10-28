@@ -18,6 +18,8 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+T` | Toggle the thumbnail preview panel |
 | `Ctrl+D` | Open download options, or cancel a download from the Downloads tab |
 | `Ctrl+R` | Retry a failed/canceled download or resume a retained partial download |
+| `Ctrl+Space` | Pause/resume the selected queued download |
+| `Ctrl+↑` / `Ctrl+↓` | Move the selected queued download up/down |
 | `Ctrl+O` | Switch Downloads between the live queue and saved offline files |
 | `Ctrl+L` | Log in with Google, or log out if already signed in |
 | `Ctrl+X` | Stop current playback |
@@ -43,6 +45,10 @@ On the **Watch Later** tab, press `s` to cycle through oldest-added, title A–Z
 ## Lists
 
 On the Subs, Watch Later, and History tabs, `j` and `k` also move through the list in addition to the arrow keys.
+
+## Live download queue
+
+On the live Downloads tab, `Ctrl+Space` pauses a queued item or resumes a paused one. Active transfers cannot yet be suspended mid-transfer. `Ctrl+↑` and `Ctrl+↓` reorder pending entries; the queue runs one download at a time in that order. `Ctrl+G` cycles status filters.
 
 ## Offline downloads
 
