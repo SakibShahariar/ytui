@@ -193,3 +193,17 @@ func TestRemoveWatchLaterManyRemovesSelectedAndPreservesOthers(t *testing.T) {
 		t.Fatalf("persisted queue after bulk removal = %#v, want only two", loaded.WatchLater)
 	}
 }
+
+
+func TestSortWatchLaterDurationPutsUnknownLast(t *testing.T) {
+	s := &Store{dir: t.TempDir(), WatchLater: []WatchLaterEntry{
+		{VideoID: "unknown"},
+		{VideoID: "long", DurationS: 300},
+		{VideoID: "short", DurationS: 60},
+	}}
+	if err := s.SortWatchLater("duration"); err != nil { t.Fatal(err) }
+	want := []string{"short", "long", "unknown"}
+	for i, id := range want {
+		if got := s.WatchLater[i].VideoID; got != id { t.Fatalf("sorted[%d] = %q, want %q", i, got, id) }
+	}
+}
