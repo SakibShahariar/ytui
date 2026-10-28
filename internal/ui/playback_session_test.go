@@ -116,3 +116,18 @@ func TestPlaybackStartedWithUnavailableIPCRemainsTracked(t *testing.T) {
 		t.Fatal("expected exit watcher for degraded playback session")
 	}
 }
+
+func TestStalePlaybackExitDoesNotClearNewSession(t *testing.T) {
+	oldSession := &fakePlaybackSession{}
+	currentSession := &fakePlaybackSession{}
+	model := Model{nowPlaying: currentSession}
+
+	updated, cmd := model.Update(playbackExitedMsg{p: oldSession})
+	got := updated.(Model)
+	if got.nowPlaying != currentSession {
+		t.Fatal("stale exit message cleared the newer playback session")
+	}
+	if cmd != nil {
+		t.Fatal("stale exit message unexpectedly scheduled follow-up work")
+	}
+}
