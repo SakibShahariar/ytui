@@ -41,7 +41,7 @@ func TestRunSubcommandHelpAndUnknownFallback(t *testing.T) {
 	if err != nil || !handled {
 		t.Fatalf("runSubcommand(help) = (%v, %v), want handled without error", handled, err)
 	}
-	for _, want := range []string{"doctor", "config export PATH", "--config PATH", "--data PATH"} {
+	for _, want := range []string{"doctor", "profile list", "config export PATH", "--config PATH", "--data PATH"} {
 		if !strings.Contains(output.String(), want) {
 			t.Errorf("help output missing %q", want)
 		}
