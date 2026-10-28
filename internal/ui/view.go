@@ -47,7 +47,7 @@ func (m Model) View() string {
 	panelH := m.panelHeight()
 
 	var listContent strings.Builder
-	if m.activeTab == tabSearch {
+	if m.activeTab == tabSearch && !m.commandPalette {
 		listContent.WriteString(m.searchInput.View())
 		if m.loading {
 			listContent.WriteString("  " + m.spin.View())
@@ -141,7 +141,10 @@ func (m Model) View() string {
 	// --- Footer: solid status bar, like a statusline, not floating text ---
 	modeBar := footerModeNav.Render("BROWSE")
 	help := m.contextualHelp()
-	if m.downloadPicker {
+	if m.commandPalette {
+		modeBar = footerModeInput.Render("COMMANDS")
+		help = "type to filter · ↑↓: select · enter: run · esc: close"
+	} else if m.downloadPicker {
 		modeBar = footerModeInput.Render("DOWNLOAD")
 		help = "↑↓: move · enter/space: select · esc: cancel"
 	} else if m.libraryFilterMode {
