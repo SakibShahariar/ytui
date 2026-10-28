@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestSendMissingNotifySendDoesNotPanic(t *testing.T) {
@@ -25,6 +26,7 @@ func TestSendUsesNotifySendWhenAvailable(t *testing.T) {
 		if _, err := os.Stat(marker); err == nil {
 			return
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal("notify-send stub was not invoked")
 }
