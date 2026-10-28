@@ -58,6 +58,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				m.errMsg = ""
 				m.statusMsg = "Watch Later queue cleared"
+				m.watchLaterSelected = make(map[string]bool)
 				m.refreshList()
 			}
 			return m, nil
