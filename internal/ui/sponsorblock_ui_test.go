@@ -81,3 +81,12 @@ func TestSponsorBlockHighlightAndManualSkip(t *testing.T) {
 	if !session.seekCalled || session.seekTo != 20 { t.Fatalf("manual skip seek called=%v target=%v", session.seekCalled, session.seekTo) }
 	if !strings.Contains(got.statusMsg, "manually skipped sponsor") { t.Fatalf("status = %q", got.statusMsg) }
 }
+
+func TestSponsorBlockExplicitEmptyCategoryListDoesNotRestoreDefaults(t *testing.T) {
+	m := Model{cfg: config.Config{SponsorBlockCategories: []string{}}}
+	if got := m.effectiveSponsorBlockCategories(); len(got) != 0 { t.Fatalf("effective categories = %#v, want empty", got) }
+	m = Model{}
+	if got := m.effectiveSponsorBlockCategories(); len(got) != 2 || got[0] != "sponsor" || got[1] != "selfpromo" {
+		t.Fatalf("first-run defaults = %#v, want sponsor and selfpromo", got)
+	}
+}
