@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestSaveUsesPrivatePermissions(t *testing.T) {
@@ -141,9 +142,9 @@ func TestDataPathOverrideLoadsAndSavesIsolatedState(t *testing.T) {
 
 func TestSortWatchLaterPersistsSupportedOrders(t *testing.T) {
 	s := &Store{dir: t.TempDir(), WatchLater: []WatchLaterEntry{
-		{VideoID: "b", Title: "Beta", Channel: "zeta"},
-		{VideoID: "c", Title: "alpha", Channel: "middle"},
-		{VideoID: "a", Title: "Gamma", Channel: "alpha"},
+		{VideoID: "b", Title: "Beta", Channel: "zeta", AddedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{VideoID: "c", Title: "alpha", Channel: "middle", AddedAt: time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC)},
+		{VideoID: "a", Title: "Gamma", Channel: "alpha", AddedAt: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)},
 	}}
 	if err := s.SortWatchLater("title"); err != nil { t.Fatal(err) }
 	if got := s.WatchLater[0].VideoID; got != "c" { t.Fatalf("title sort first ID = %q, want c", got) }
@@ -154,7 +155,7 @@ func TestSortWatchLaterPersistsSupportedOrders(t *testing.T) {
 	if err := s.SortWatchLater("channel"); err != nil { t.Fatal(err) }
 	if got := s.WatchLater[0].VideoID; got != "a" { t.Fatalf("channel sort first ID = %q, want a", got) }
 	if err := s.SortWatchLater("added"); err != nil { t.Fatal(err) }
-	if got := s.WatchLater[0].VideoID; got != "b" { t.Fatalf("added sort should be stable for zero timestamps, first ID = %q, want b", got) }
+	if got := s.WatchLater[0].VideoID; got != "b" { t.Fatalf("added sort first ID = %q, want b", got) }
 	if err := s.SortWatchLater("invalid"); err == nil { t.Fatal("invalid sort mode unexpectedly succeeded") }
 }
 
