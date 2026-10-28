@@ -86,6 +86,8 @@ func (m *Model) refreshList() {
 		m.list.Title = m.browsingPlaylistTitle
 	case m.activeTab == tabSubscriptions && m.browsingChannelID != "":
 		m.list.Title = m.browsingChannelTitle
+	case m.activeTab == tabSearch && m.searchPlaylistTitle != "":
+		m.list.Title = m.searchPlaylistTitle
 	default:
 		m.list.Title = tabNames[m.activeTab]
 	}
