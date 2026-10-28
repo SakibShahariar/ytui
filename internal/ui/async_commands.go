@@ -36,9 +36,9 @@ func doSearchWith(query string, search func(string, int) ([]ytdlp.Video, error))
 	}
 }
 
-type playbackExitedMsg struct{ p *player.Player }
+type playbackExitedMsg struct{ p playbackSession }
 
-func waitForPlaybackExitCmd(p *player.Player) tea.Cmd {
+func waitForPlaybackExitCmd(p playbackSession) tea.Cmd {
 	return func() tea.Msg {
 		_ = p.Wait()
 		return playbackExitedMsg{p: p}
