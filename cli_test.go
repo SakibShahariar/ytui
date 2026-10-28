@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SakibShahariar/ytui/internal/auth"
 	"github.com/SakibShahariar/ytui/internal/config"
 )
 
@@ -101,4 +102,37 @@ func TestConfigImportSubcommandHonorsYesFlag(t *testing.T) {
 	if got.DownloadDir != "portable-downloads" {
 		t.Fatalf("DownloadDir = %q, want imported value", got.DownloadDir)
 	}
+}
+
+func TestProfileSubcommandsCreateSelectListAndRemove(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	var output bytes.Buffer
+	if err := runProfileSubcommand([]string{"create", "work"}, strings.NewReader(""), &output, false); err != nil {
+		t.Fatalf("create profile: %v", err)
+	}
+	if err := runProfileSubcommand([]string{"use", "work"}, strings.NewReader(""), &output, false); err != nil {
+		t.Fatalf("select profile: %v", err)
+	}
+	active, err := auth.ActiveProfile()
+	if err != nil || active != "work" { t.Fatalf("active profile = %q, %v; want work", active, err) }
+	output.Reset()
+	if err := runProfileSubcommand([]string{"list"}, strings.NewReader(""), &output, false); err != nil { t.Fatal(err) }
+	if !strings.Contains(output.String(), "* work (no token)") || !strings.Contains(output.String(), "default") {
+		t.Fatalf("profile list output = %q", output.String())
+	}
+	output.Reset()
+	if err := runProfileSubcommand([]string{"remove", "work"}, strings.NewReader("n\n"), &output, false); err != nil { t.Fatal(err) }
+	active, err = auth.ActiveProfile()
+	if err != nil || active != "work" { t.Fatalf("cancelled removal changed active profile to %q (%v)", active, err) }
+	if err := runProfileSubcommand([]string{"remove", "work", "--yes"}, strings.NewReader(""), &output, false); err != nil { t.Fatal(err) }
+	active, err = auth.ActiveProfile()
+	if err != nil || active != "default" { t.Fatalf("active profile after removal = %q, %v; want default", active, err) }
+}
+
+func TestProfileSubcommandRemovalConfirmation(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := auth.CreateProfile("personal"); err != nil { t.Fatal(err) }
+	var output bytes.Buffer
+	if err := runProfileSubcommand([]string{"remove", "personal"}, strings.NewReader("yes\n"), &output, false); err != nil { t.Fatal(err) }
+	if !strings.Contains(output.String(), "Removed profile") { t.Fatalf("output = %q", output.String()) }
 }
