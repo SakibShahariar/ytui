@@ -2,6 +2,8 @@ package ytdlp
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -82,4 +84,30 @@ func TestParsePlaylistJSONPreservesOrderAndSkipsMissingIDs(t *testing.T) {
 func TestParsePlaylistJSONRejectsEmptyAccessiblePlaylist(t *testing.T) {
 	_, _, err := parsePlaylistJSON([]byte(`{"title":"Private mix","entries":[{"title":"Unavailable"}]}`))
 	if err == nil { t.Fatal("empty accessible playlist unexpectedly succeeded") }
+}
+
+
+func TestGetSubtitleTracksListsManualAndAutomaticLanguages(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "yt-dlp")
+	output := `{"subtitles":{"fr":[{"name":"French"}],"en":[{"name":"English"}]},"automatic_captions":{"es":[{"name":"Spanish auto"}],"en":[{"name":"Duplicate English"}]}}`
+	script := "#!/bin/sh\nprintf '%s\\n' '" + output + "'\n"
+	if err := os.WriteFile(bin, []byte(script), 0o700); err != nil { t.Fatal(err) }
+	old := binaryName
+	binaryName = bin
+	defer func(){ binaryName = old }()
+	tracks, err := GetSubtitleTracks("https://www.youtube.com/watch?v=example")
+	if err != nil { t.Fatalf("GetSubtitleTracks() error = %v", err) }
+	if len(tracks) != 3 { t.Fatalf("tracks length = %d, want 3: %#v", len(tracks), tracks) }
+	if tracks[0].Language != "en" || tracks[0].Name != "English" || tracks[0].Automatic { t.Fatalf("first track = %#v", tracks[0]) }
+	if tracks[1].Language != "fr" || tracks[1].Name != "French" { t.Fatalf("second track = %#v", tracks[1]) }
+	if tracks[2].Language != "es" || !tracks[2].Automatic { t.Fatalf("automatic track = %#v", tracks[2]) }
+}
+
+func TestGetSubtitleTracksReportsNoCaptions(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "yt-dlp")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf '%s\\n' '{\"subtitles\":{},\"automatic_captions\":{}}'\n"), 0o700); err != nil { t.Fatal(err) }
+	old := binaryName
+	binaryName = bin
+	defer func(){ binaryName = old }()
+	if _, err := GetSubtitleTracks("https://www.youtube.com/watch?v=example"); err == nil { t.Fatal("expected no-caption error") }
 }
