@@ -71,3 +71,17 @@ This allows ytui to read your subscriptions, playlists, and liked videos. It can
 - The Playlists tab shows your playlists.
 - Press `Enter` on a playlist to view its videos.
 - Press `Esc` to return to the playlist list.
+
+## Multiple Google accounts
+
+The original login is preserved as the `default` profile, using the existing `~/.config/ytui/token.json` location (or the equivalent XDG config path). To add another account, create and select a named profile, then launch ytui and press `Ctrl+L` to complete the normal browser login:
+
+```bash
+ytui profile create personal
+ytui profile use personal
+ytui
+```
+
+Use `ytui profile list` to see which profile is active and whether it has a saved token. Switch accounts with `ytui profile use NAME`. Remove a named profile with `ytui profile remove NAME`; the command asks before deleting the profile and its token. Add `--yes` to skip confirmation in scripts. Removing the active named profile switches back to `default` first; the default profile itself cannot be removed.
+
+Google's `client_secret.json` is the shared OAuth application registration, not an account token. Each named profile stores its own `profiles/NAME/token.json` under the ytui config directory. Profile directories are restricted to the current user (`0700`), while tokens and the active-profile marker are written atomically with `0600` permissions. Token refreshes are pinned to the profile that created the authenticated client so switching profiles in another process cannot redirect refreshed credentials into a different profile.
