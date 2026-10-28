@@ -63,6 +63,12 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 
 SponsorBlock is optional and off by default. Press `Ctrl+B` to enable it and choose which categories are automatically skipped. Other available segments are highlighted in the Now Playing bar; press `Ctrl+J` while inside a segment to skip it manually. ytui uses SponsorBlock’s privacy-preserving hash-prefix endpoint, sending only four SHA-256 hash characters rather than the raw video ID. Network errors or missing segment data never stop playback. See the [SponsorBlock API documentation](https://wiki.sponsor.ajay.app/w/API_Docs).
 
+## Shared queue with Ytrawl
+
+Ytrawl can send extracted media URLs into ytui without a running daemon. Its **Send to ytui** action writes a request to the shared inbox; ytui imports it on startup, or you can use the colon command palette action **Import shared queue from Ytrawl** while ytui is already open. Imported requests enter the persistent Downloads queue. If the shared file is absent, ytui behaves normally.
+
+The inbox uses a versioned JSON schema, an exclusive lock file, atomic replacement, and per-user file permissions. See [the format and concurrency contract](docs/shared-queue.md).
+
 ## Essential keys
 
 | Key | Action |
