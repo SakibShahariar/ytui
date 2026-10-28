@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"github.com/SakibShahariar/ytui/internal/logging"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -37,6 +38,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case directURLMsg:
 		m.directURL = ""
 		if msg.err != nil {
+			logging.Error("open direct URL failed", msg.err)
 			m.errMsg = "open URL: " + msg.err.Error()
 			return m, nil
 		}
@@ -54,6 +56,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.everSearched = true
 		if msg.err != nil {
+			logging.Error("search failed", msg.err)
 			m.errMsg = msg.err.Error()
 			return m, nil
 		}
@@ -94,6 +97,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(tea.ClearScreen, waitForPlaybackExitCmd(msg.p))
 		}
 		if msg.err != nil {
+			logging.Error("playback startup failed", msg.err)
 			m.errMsg = msg.err.Error()
 		} else {
 			m.errMsg = ""
@@ -171,11 +175,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.previewedID = msg.id
 		return m, nil
 	case thumbErrMsg:
+		logging.Error("thumbnail preview failed", msg.err)
 		m.errMsg = "thumbnail: " + msg.err.Error()
 		return m, nil
 
 	case loginResultMsg:
 		if msg.err != nil {
+			logging.Error("login failed", msg.err)
 			m.errMsg = "login: " + msg.err.Error()
 			m.statusMsg = ""
 			return m, nil
@@ -211,6 +217,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case subsLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
+			logging.Error("subscriptions fetch failed", msg.err)
 			m.errMsg = "subscriptions: " + msg.err.Error()
 			return m, nil
 		}
@@ -228,6 +235,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case playlistsLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
+			logging.Error("playlists fetch failed", msg.err)
 			m.errMsg = "playlists: " + msg.err.Error()
 			return m, nil
 		}
@@ -245,6 +253,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case playlistVideosLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
+			logging.Error("playlist videos fetch failed", msg.err)
 			m.errMsg = "playlist videos: " + msg.err.Error()
 			return m, nil
 		}
@@ -262,6 +271,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case channelVideosLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
+			logging.Error("channel uploads fetch failed", msg.err)
 			m.errMsg = "channel uploads: " + msg.err.Error()
 			return m, nil
 		}
@@ -320,6 +330,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case likedLoadedMsg:
 		m.ytLoading = false
 		if msg.err != nil {
+			logging.Error("liked videos fetch failed", msg.err)
 			m.errMsg = "liked videos: " + msg.err.Error()
 			return m, nil
 		}
