@@ -18,7 +18,7 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+T` | Toggle the thumbnail preview panel |
 | `Ctrl+D` | Open download options, or cancel a download from the Downloads tab |
 | `Ctrl+R` | Retry a failed/canceled download or resume a retained partial download |
-| `Ctrl+Space` | Pause/resume the selected queued download |
+| `Ctrl+Space` | Pause/resume the selected queued or active download |
 | `Ctrl+↑` / `Ctrl+↓` | Move the selected queued download up/down |
 | `Ctrl+O` | Switch Downloads between the live queue and saved offline files |
 | `Ctrl+L` | Log in with Google, or log out if already signed in |
