@@ -3,6 +3,8 @@ package downloader
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -138,5 +140,38 @@ func TestCancelQueuedDownloadMarksItCanceled(t *testing.T) {
 	}
 	if d.cmd != nil {
 		t.Error("canceled queued download unexpectedly created a process")
+	}
+}
+
+func TestRunIncludesStderrInFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	script := "#!/bin/sh\nprintf '%s\\n' 'fake diagnostic from stderr' >&2\nexit 1\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	d := &Download{
+		VideoID: "stderr-test",
+		URL:     "https://example.invalid/video",
+		Status:  StatusQueued,
+	}
+	m := &Manager{
+		byID:    map[string]*Download{"stderr-test": d},
+		order:   []string{"stderr-test"},
+		destDir: t.TempDir(),
+	}
+
+	m.run(d)
+	if d.Status != StatusError {
+		t.Fatalf("status after failing yt-dlp = %v, want error", d.Status)
+	}
+	if d.Err == nil || !strings.Contains(d.Err.Error(), "fake diagnostic from stderr") {
+		t.Fatalf("error = %v, want stderr diagnostic", d.Err)
 	}
 }
