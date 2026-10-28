@@ -15,7 +15,7 @@ The inbox is also useful when ytui is not installed or not running yet: Ytrawl w
 
 The default path is $XDG_STATE_HOME/ytui/shared-queue.json, or ~/.local/state/ytui/shared-queue.json when XDG_STATE_HOME is unset. Both applications honor the same XDG state directory. ytui also accepts an absolute YTUI_SHARED_QUEUE_PATH override for tests or deliberate custom setups.
 
-Writers use the sibling shared-queue.json.lock lock file, then atomically replace the JSON document. Locks older than 30 seconds are treated as stale. The state directory is restricted to the current user (0700), and the queue and lock files use 0600 permissions. The queue is an inbox, not a continuously mirrored view of both apps' in-memory queues.
+Writers use the sibling shared-queue.json.lock lock file, then atomically replace the JSON document. Locks older than 30 seconds are treated as stale. The state directory is restricted to the current user (0700), and the queue and lock files use 0600 permissions. Queue URLs must use absolute HTTP(S) URLs without embedded credentials, local hostnames, private/local IPs, or alternate numeric IP spellings. This prevents non-canonical IPv4 forms from bypassing the public-host check. The queue is an inbox, not a continuously mirrored view of both apps' in-memory queues.
 
 Each item has a stable ID. ytui enqueues it under an ID derived from that value, so if the app crashes after accepting an item but before acknowledging it, a later import does not create a duplicate download. Acknowledgement removes only the IDs that were accepted; concurrently appended requests remain in the file.
 
