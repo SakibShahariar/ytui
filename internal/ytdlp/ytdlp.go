@@ -370,7 +370,7 @@ func GetTranscript(videoURL, language string) (string, error) {
 }
 
 var (
-	transcriptTimestampRE = regexp.MustCompile(`^\\d{2}:\\d{2}(?::\\d{2})?\\.\\d{3}\\s+-->`)
+	transcriptTimestampRE = regexp.MustCompile(`^[0-9]{2}:[0-9]{2}(:[0-9]{2})?[.][0-9]{3}[[:space:]]+-->`)
 	transcriptTagRE = regexp.MustCompile(`<[^>]*>`)
 )
 
