@@ -59,6 +59,10 @@ Tagged versions publish Linux (`amd64`, `arm64`) and macOS (`amd64`, `arm64`) ar
 
 Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved in `config.json` as `autoplay_next`. When enabled, ytui plays the next Watch Later item first, then advances to the next playable item in the current list. Manually stopping playback with `Ctrl+X` does not trigger autoplay. Local downloaded files do not autoplay into online videos.
 
+## SponsorBlock
+
+SponsorBlock is optional and off by default. Press `Ctrl+B` to enable it and choose which categories are automatically skipped. Other available segments are highlighted in the Now Playing bar; press `Ctrl+J` while inside a segment to skip it manually. ytui uses SponsorBlock’s privacy-preserving hash-prefix endpoint, sending only four SHA-256 hash characters rather than the raw video ID. Network errors or missing segment data never stop playback.
+
 ## Essential keys
 
 | Key | Action |
@@ -72,6 +76,8 @@ Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved
 | `Ctrl+D` | Download options |
 | `Ctrl+P` | Pause or resume |
 | `Ctrl+X` | Stop playback |
+| `Ctrl+B` | SponsorBlock settings and category toggles |
+| `Ctrl+J` | Manually skip the active SponsorBlock segment |
 | `Ctrl+L` | Google login / logout |
 | `Ctrl+C` | Quit ytui and stop the current mpv playback session |
 
