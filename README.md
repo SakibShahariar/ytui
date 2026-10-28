@@ -190,5 +190,5 @@ MIT. See [LICENSE](LICENSE).
 
 ## Watch Later queue controls
 
-On the Watch Later tab, press `s` to cycle through oldest-added, title A–Z, and channel A–Z sorting. The selected order is persisted locally. Press `x`, then `y` to clear the entire queue; any other key cancels the confirmation.
+On the Watch Later tab, press `s` to cycle through oldest-added, title A–Z, shortest-duration, and channel A–Z sorting. The selected order is persisted locally. Press `Space` to select/deselect items, then `m` to remove all selected entries after confirmation. Press `x`, then `y` to clear the entire queue; any other key cancels either confirmation. Videos without known duration sort after videos with known duration.
 
