@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -135,4 +136,41 @@ func TestDataPathOverrideLoadsAndSavesIsolatedState(t *testing.T) {
 	if len(loaded.History) != 1 || loaded.History[0].VideoID != "isolated" {
 		t.Fatalf("reloaded state = %#v, want isolated history entry", loaded.History)
 	}
+}
+
+
+func TestSortWatchLaterPersistsSupportedOrders(t *testing.T) {
+	s := &Store{dir: t.TempDir(), WatchLater: []WatchLaterEntry{
+		{VideoID: "b", Title: "Beta", Channel: "zeta"},
+		{VideoID: "c", Title: "alpha", Channel: "middle"},
+		{VideoID: "a", Title: "Gamma", Channel: "alpha"},
+	}}
+	if err := s.SortWatchLater("title"); err != nil { t.Fatal(err) }
+	if got := s.WatchLater[0].VideoID; got != "c" { t.Fatalf("title sort first ID = %q, want c", got) }
+	loaded, err := LoadStoreFromPathForTest(s.path())
+	if err != nil { t.Fatal(err) }
+	if got := loaded.WatchLater[0].VideoID; got != "c" { t.Fatalf("persisted title sort first ID = %q, want c", got) }
+
+	if err := s.SortWatchLater("channel"); err != nil { t.Fatal(err) }
+	if got := s.WatchLater[0].VideoID; got != "a" { t.Fatalf("channel sort first ID = %q, want a", got) }
+	if err := s.SortWatchLater("added"); err != nil { t.Fatal(err) }
+	if got := s.WatchLater[0].VideoID; got != "b" { t.Fatalf("added sort should be stable for zero timestamps, first ID = %q, want b", got) }
+	if err := s.SortWatchLater("invalid"); err == nil { t.Fatal("invalid sort mode unexpectedly succeeded") }
+}
+
+func TestClearWatchLaterPersistsEmptyQueue(t *testing.T) {
+	s := &Store{dir: t.TempDir(), WatchLater: []WatchLaterEntry{{VideoID: "one"}}}
+	if err := s.ClearWatchLater(); err != nil { t.Fatal(err) }
+	if len(s.WatchLater) != 0 { t.Fatalf("queue length = %d, want 0", len(s.WatchLater)) }
+	loaded, err := LoadStoreFromPathForTest(s.path())
+	if err != nil { t.Fatal(err) }
+	if len(loaded.WatchLater) != 0 { t.Fatalf("persisted queue length = %d, want 0", len(loaded.WatchLater)) }
+}
+
+func LoadStoreFromPathForTest(path string) (*Store, error) {
+	data, err := os.ReadFile(path)
+	if err != nil { return nil, err }
+	var s Store
+	if err := json.Unmarshal(data, &s); err != nil { return nil, err }
+	return &s, nil
 }
