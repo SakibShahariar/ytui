@@ -17,8 +17,15 @@ func loadDirectURLCmd(videoURL string) tea.Cmd {
 }
 
 func doSearch(query string) tea.Cmd {
+	return doSearchWith(query, ytdlp.Search)
+}
+
+// doSearchWith keeps the asynchronous search command testable without
+// requiring yt-dlp or network access. Production uses ytdlp.Search; tests
+// supply a deterministic function and inspect the resulting Bubble Tea message.
+func doSearchWith(query string, search func(string, int) ([]ytdlp.Video, error)) tea.Cmd {
 	return func() tea.Msg {
-		results, err := ytdlp.Search(query, 25)
+		results, err := search(query, 25)
 		return searchResultsMsg{results: results, err: err}
 	}
 }
