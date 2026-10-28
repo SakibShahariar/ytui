@@ -220,6 +220,8 @@ func (i downloadItem) Description() string {
 	switch i.d.Status {
 	case downloader.StatusQueued:
 		return q + "queued"
+	case downloader.StatusPaused:
+		return q + "paused — Ctrl+Space to resume"
 	case downloader.StatusDownloading:
 		bar := progressBar(i.d.Progress, 20)
 		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", q, bar, i.d.Progress, i.d.Speed, i.d.ETA)
