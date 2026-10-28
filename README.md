@@ -16,7 +16,7 @@ A terminal YouTube client: search, play with mpv, manage subscriptions, Watch La
 
 ## Requirements
 
-- Go
+- Go 1.24 or newer
 - [mpv](https://mpv.io/)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 
@@ -30,7 +30,7 @@ sudo dnf install golang mpv yt-dlp
 
 ## Quick start
 
-Install the latest release directly with Go (requires Go 1.22 or newer):
+Install the latest release directly with Go (requires Go 1.24 or newer):
 
 ```bash
 go install github.com/SakibShahariar/ytui@latest
