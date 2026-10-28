@@ -18,6 +18,7 @@ func keyboardHelpLines() []string {
 		"/                   Jump to Search",
 		"?                   Open/close this help",
 		"Esc                 Cancel search, close help, or back out",
+		":                   Open the searchable command palette",
 		"",
 		"Search and lists",
 		"Plain letters       Start or edit a Search query",
