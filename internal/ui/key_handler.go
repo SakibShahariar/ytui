@@ -440,6 +440,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.libraryFilter = ""
 			m.libraryFilterInput.SetValue("")
 			m.downloadStatusFilter = 0
+			m.libraryDateFilter = 0
 			m.refreshList()
 			m.statusMsg = "library filters cleared"
 			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
@@ -461,6 +462,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+down":
 		if m.activeTab == tabDownloads && !m.offlineDownloads {
 			return m.moveSelectedDownload(1)
+		}
+		return m, nil
+
+	case "ctrl+y":
+		if m.activeTab == tabHistory || m.activeTab == tabDownloads {
+			m.libraryDateFilter = (m.libraryDateFilter + 1) % 4
+			m.refreshList()
+			m.statusMsg = "date filter: " + m.libraryDateFilterLabel()
+			return m, nil
 		}
 		return m, nil
 
