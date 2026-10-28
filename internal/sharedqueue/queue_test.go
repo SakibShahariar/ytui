@@ -72,3 +72,17 @@ func TestReadAcceptsYtrawlVersionOneFixture(t *testing.T) {
 		t.Fatalf("parsed Ytrawl fixture = %#v", items)
 	}
 }
+
+func TestCustomQueuePathDoesNotChangeExistingParentPermissions(t *testing.T) {
+	parent := filepath.Join(t.TempDir(), "shared")
+	if err := os.Mkdir(parent, 0o755); err != nil { t.Fatal(err) }
+	if err := os.Chmod(parent, 0o755); err != nil { t.Fatal(err) }
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", filepath.Join(parent, "inbox.json"))
+	if err := Append(Item{ID: "permission-check", URL: "https://example.com/video"}); err != nil { t.Fatal(err) }
+	info, err := os.Stat(parent)
+	if err != nil { t.Fatal(err) }
+	if got := info.Mode().Perm(); got != 0o755 { t.Fatalf("custom parent permissions = %04o, want unchanged 0755", got) }
+	info, err = os.Stat(filepath.Join(parent, "inbox.json"))
+	if err != nil { t.Fatal(err) }
+	if got := info.Mode().Perm(); got != 0o600 { t.Fatalf("queue file permissions = %04o, want 0600", got) }
+}
