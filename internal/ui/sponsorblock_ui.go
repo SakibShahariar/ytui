@@ -19,7 +19,7 @@ func containsSponsorCategory(categories []string, wanted string) bool {
 }
 
 func (m Model) effectiveSponsorBlockCategories() []string {
-    if m.cfg.SponsorBlockCategoriesConfigured {
+    if m.cfg.SponsorBlockCategoriesConfigured || m.cfg.SponsorBlockCategories != nil {
         return append([]string(nil), m.cfg.SponsorBlockCategories...)
     }
     return append([]string(nil), defaultSponsorBlockSkipCategories...)
