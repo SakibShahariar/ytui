@@ -366,6 +366,9 @@ type Model struct {
 	activeTab   tab
 	inputMode   bool // true = typing in the search box; false = list navigation
 	searchInput textinput.Model
+	commandPalette bool
+	commandPaletteInput textinput.Model
+	commandPaletteCursor int
 	libraryFilterInput textinput.Model
 	libraryFilter string
 	libraryFilterMode bool
