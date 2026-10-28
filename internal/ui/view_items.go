@@ -89,7 +89,9 @@ func (i videoItem) Title() string {
 	return fmt.Sprintf("%s  [%s]", i.v.Title, formatDuration(i.v.Duration))
 }
 func (i videoItem) Description() string {
-	return fmt.Sprintf("%s · %s views", i.v.Channel, formatViews(i.v.ViewCount))
+	prefix := ""
+	if i.v.PlaylistIndex > 0 { prefix = fmt.Sprintf("#%d · ", i.v.PlaylistIndex) }
+	return fmt.Sprintf("%s%s · %s views", prefix, i.v.Channel, formatViews(i.v.ViewCount))
 }
 func (i videoItem) FilterValue() string { return i.v.Title }
 
