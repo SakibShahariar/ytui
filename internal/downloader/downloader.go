@@ -285,16 +285,11 @@ var progressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)%.*?at\s+(\S+)\s+ETA
 var destRe = regexp.MustCompile(`\[download\]\s+Destination:\s+(.+)`)
 var alreadyDoneRe = regexp.MustCompile(`has already been downloaded`)
 
-func (m *Manager) run(d *Download) {
-	m.mu.Lock()
-	if d.Status == StatusCanceled {
-		m.mu.Unlock()
-		return
-	}
-	d.Status = StatusDownloading
-	m.mu.Unlock()
-
-	outputTemplate := filepath.Join(m.destDir, "%(title).100s [%(id)s].%(ext)s")
+// buildArgs creates the yt-dlp arguments for a download without starting a
+// process. Keeping option translation pure makes the command contract testable
+// without requiring yt-dlp to be installed.
+func buildArgs(destDir string, d *Download) []string {
+	outputTemplate := filepath.Join(destDir, "%(title).100s [%(id)s].%(ext)s")
 	args := []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate}
 
 	if d.Opts.ExtractAudio {
@@ -318,8 +313,19 @@ func (m *Manager) run(d *Download) {
 	if d.Opts.CookiesFromBrowser != "" {
 		args = append(args, "--cookies-from-browser", d.Opts.CookiesFromBrowser)
 	}
-	args = append(args, d.URL)
+	return append(args, d.URL)
+}
 
+func (m *Manager) run(d *Download) {
+	m.mu.Lock()
+	if d.Status == StatusCanceled {
+		m.mu.Unlock()
+		return
+	}
+	d.Status = StatusDownloading
+	m.mu.Unlock()
+
+	args := buildArgs(m.destDir, d)
 	cmd := exec.Command("yt-dlp", args...)
 
 	// Use one explicit pipe for both streams. StdoutPipe leaves cmd.Stdout
