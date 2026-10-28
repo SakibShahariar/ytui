@@ -22,7 +22,6 @@ import (
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/downloader"
 	"github.com/SakibShahariar/ytui/internal/library"
-	"github.com/SakibShahariar/ytui/internal/player"
 	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/ytapi"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
@@ -303,7 +302,7 @@ type directURLMsg struct {
 	err error
 }
 type playbackStartedMsg struct {
-	p   *player.Player
+	p   playbackSession
 	err error
 }
 
@@ -384,7 +383,7 @@ type Model struct {
 	statusMsg string
 	errMsg    string
 
-	nowPlaying *player.Player
+	nowPlaying playbackSession
 	playingVid *ytdlp.Video
 	playingLocal bool
 	audioOnly  bool
