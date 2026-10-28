@@ -52,6 +52,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 		return m, startPlayback(msg.video.URL, m.audioOnly, 0)
 
+	case transcriptMsg:
+		if msg.err != nil {
+			m.errMsg = "transcript: " + msg.err.Error()
+			m.statusMsg = ""
+			return m, nil
+		}
+		m.errMsg = ""
+		m.transcriptViewer = true
+		m.transcriptTitle = msg.video.Title
+		m.transcriptText = msg.text
+		m.transcriptOffset = 0
+		m.inputMode = false
+		m.searchInput.Blur()
+		m.statusMsg = "transcript loaded: " + msg.video.Title
+		return m, tea.ClearScreen
+
 	case subtitleTracksMsg:
 		if msg.err != nil {
 			m.errMsg = "subtitles: " + msg.err.Error()
