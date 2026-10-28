@@ -63,6 +63,7 @@ type Download struct {
 	Err      error
 
 	cmd *exec.Cmd
+	processDone chan struct{}
 }
 
 // Manager owns the download queue. Zero value isn't usable — use New().
@@ -220,7 +221,7 @@ func (m *Manager) Shutdown() {
 	m.pending = nil
 	processes := make([]*exec.Cmd, 0)
 	for _, d := range m.byID {
-		activeProcess := d.cmd != nil && d.cmd.Process != nil && d.cmd.ProcessState == nil
+		activeProcess := d.cmd != nil && d.cmd.Process != nil && !processFinished(d.processDone)
 		if d.Status == StatusDownloading || (d.Status == StatusPaused && activeProcess) {
 			// Preserve interrupted work as queued so yt-dlp can continue partial files.
 			d.Status = StatusQueued
@@ -370,10 +371,12 @@ func (m *Manager) run(d *Download) {
 		return
 	}
 	d.cmd = cmd
+	d.processDone = make(chan struct{})
 	startErr := cmd.Start()
 	m.mu.Unlock()
 	_ = stderrWriter.Close() // the child owns its inherited writer after Start
 	if startErr != nil {
+		close(d.processDone)
 		_ = stdout.Close()
 		m.setError(d.VideoID, fmt.Errorf("couldn't start yt-dlp: %w", startErr))
 		return
@@ -415,6 +418,7 @@ func (m *Manager) run(d *Download) {
 
 
 	err = cmd.Wait()
+	close(d.processDone)
 	resumable := err != nil && hasPartialForVideo(m.destDir, d.VideoID)
 
 	m.mu.Lock()
@@ -576,7 +580,7 @@ func (m *Manager) Pause(videoID string) error {
 		m.mu.Unlock()
 		return nil
 	}
-	if d.Status != StatusDownloading || d.cmd == nil || d.cmd.Process == nil || d.cmd.ProcessState != nil {
+	if d.Status != StatusDownloading || d.cmd == nil || d.cmd.Process == nil || processFinished(d.processDone) {
 		m.mu.Unlock()
 		return fmt.Errorf("download is not currently pausable")
 	}
@@ -603,7 +607,7 @@ func (m *Manager) Resume(videoID string) error {
 	if d.Status != StatusPaused { m.mu.Unlock(); return fmt.Errorf("download is not paused") }
 	if m.closed { m.mu.Unlock(); return fmt.Errorf("download manager is shut down") }
 	cmd := d.cmd
-	if cmd != nil && cmd.Process != nil && cmd.ProcessState == nil {
+	if cmd != nil && cmd.Process != nil && !processFinished(d.processDone) {
 		m.mu.Unlock()
 		if err := resumeProcess(cmd); err != nil { return err }
 		m.mu.Lock()
@@ -612,7 +616,7 @@ func (m *Manager) Resume(videoID string) error {
 		m.mu.Unlock()
 		return nil
 	}
-	if cmd != nil && cmd.ProcessState != nil {
+	if cmd != nil && processFinished(d.processDone) {
 		m.mu.Unlock()
 		return fmt.Errorf("paused process has already exited")
 	}
@@ -680,4 +684,17 @@ func (m *Manager) persistQueueLocked() error {
 	if err := tmp.Sync(); err != nil { _ = tmp.Close(); return err }
 	if err := tmp.Close(); err != nil { return err }
 	return os.Rename(tmpName, m.queueFile)
+}
+
+
+// processFinished reports whether Wait has completed without reading Cmd.ProcessState,
+// which os/exec writes concurrently with callers.
+func processFinished(done <-chan struct{}) bool {
+	if done == nil { return true }
+	select {
+	case <-done:
+		return true
+	default:
+		return false
+	}
 }
