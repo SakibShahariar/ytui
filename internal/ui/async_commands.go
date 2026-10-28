@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"context"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/SakibShahariar/ytui/internal/player"
+	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
@@ -154,5 +156,16 @@ func loadTranscriptWith(video ytdlp.Video, language string, getTranscript func(s
 	return func() tea.Msg {
 		transcript, err := getTranscript(video.URL, language)
 		return transcriptMsg{video: video, text: transcript, err: err}
+	}
+}
+
+func loadSponsorSegmentsCmd(videoID string) tea.Cmd {
+	return loadSponsorSegmentsWith(videoID, sponsorblock.Categories, sponsorblock.Fetch)
+}
+
+func loadSponsorSegmentsWith(videoID string, categories []string, fetch func(context.Context, string, []string) ([]sponsorblock.Segment, error)) tea.Cmd {
+	return func() tea.Msg {
+		segments, err := fetch(context.Background(), videoID, categories)
+		return sponsorSegmentsMsg{videoID: videoID, segments: segments, err: err}
 	}
 }
