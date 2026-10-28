@@ -25,6 +25,27 @@ import (
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
+	if m.watchLaterClearPending {
+		m.watchLaterClearPending = false
+		switch key {
+		case "y":
+			if err := m.store.ClearWatchLater(); err != nil {
+				m.errMsg = "clear Watch Later: " + err.Error()
+			} else {
+				m.errMsg = ""
+				m.statusMsg = "Watch Later queue cleared"
+				m.refreshList()
+			}
+			return m, nil
+		case "n", "esc":
+			m.statusMsg = "clear Watch Later canceled"
+			return m, nil
+		default:
+			m.statusMsg = "clear Watch Later canceled"
+			return m, nil
+		}
+	}
+
 	if m.offlineDeletePending != nil {
 		pending := m.offlineDeletePending
 		m.offlineDeletePending = nil
@@ -207,6 +228,31 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.pathInput, cmd = m.pathInput.Update(msg)
 		return m, cmd
+	}
+
+	if m.activeTab == tabWatchLater && !m.inputMode {
+		switch key {
+		case "s":
+			m.watchLaterSortMode = (m.watchLaterSortMode + 1) % 3
+			modes := []string{"added", "title", "channel"}
+			labels := []string{"oldest added", "title A–Z", "channel A–Z"}
+			if err := m.store.SortWatchLater(modes[m.watchLaterSortMode]); err != nil {
+				m.errMsg = "sort Watch Later: " + err.Error()
+				return m, nil
+			}
+			m.errMsg = ""
+			m.statusMsg = "Watch Later sorted by " + labels[m.watchLaterSortMode]
+			m.refreshList()
+			return m, nil
+		case "x":
+			if len(m.store.WatchLater) == 0 {
+				m.statusMsg = "Watch Later queue is already empty"
+				return m, nil
+			}
+			m.watchLaterClearPending = true
+			m.statusMsg = fmt.Sprintf("remove all %d Watch Later items? press y to confirm, any other key to cancel", len(m.store.WatchLater))
+			return m, nil
+		}
 	}
 
 	switch key {
