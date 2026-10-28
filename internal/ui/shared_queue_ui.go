@@ -10,10 +10,10 @@ import (
 	"github.com/SakibShahariar/ytui/internal/sharedqueue"
 )
 
-func loadSharedQueueCmd() tea.Cmd {
+func loadSharedQueueCmd(manual bool) tea.Cmd {
 	return func() tea.Msg {
 		items, err := sharedqueue.Read()
-		return sharedQueueMsg{items: items, err: err}
+		return sharedQueueMsg{items: items, err: err, manual: manual}
 	}
 }
 
