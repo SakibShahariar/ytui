@@ -295,7 +295,8 @@ type playbackSession interface {
 // messages
 type searchResultsMsg struct {
 	results []ytdlp.Video
-	err     error
+	err error
+	playlistTitle string
 }
 type directURLMsg struct {
 	video ytdlp.Video
@@ -413,6 +414,7 @@ type Model struct {
 	// whatever tab you last visited instead of your search results —
 	// there was nowhere else the results were being kept.
 	searchResults []list.Item
+	searchPlaylistTitle string
 
 	// --- Google login + real YouTube data (all optional; app works
 	// entirely without login using the local store) ---
