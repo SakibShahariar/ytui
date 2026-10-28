@@ -303,6 +303,11 @@ type subtitleTracksMsg struct {
 	tracks []ytdlp.SubtitleTrack
 	err error
 }
+type transcriptMsg struct {
+	video ytdlp.Video
+	text string
+	err error
+}
 type directURLMsg struct {
 	video ytdlp.Video
 	err error
@@ -380,6 +385,10 @@ type Model struct {
 	subtitleTracks []ytdlp.SubtitleTrack
 	subtitlePickerCursor int
 	subtitleLanguage string
+	transcriptViewer bool
+	transcriptTitle string
+	transcriptText string
+	transcriptOffset int
 	libraryFilterInput textinput.Model
 	libraryFilter string
 	libraryFilterMode bool
