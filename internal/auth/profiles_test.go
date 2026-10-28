@@ -30,6 +30,16 @@ func TestProfilesKeepLegacyDefaultAndIsolateTokens(t *testing.T) {
 	defaultPath, _ := tokenPathForProfile("default")
 	workPath, _ := tokenPathForProfile("work")
 	if defaultPath == workPath { t.Fatal("default and named profiles share a token path") }
+	for path, want := range map[string]os.FileMode{workPath: 0o600} {
+		info, err := os.Stat(path)
+		if err != nil { t.Fatal(err) }
+		if got := info.Mode().Perm(); got != want { t.Errorf("%s permissions = %04o, want %04o", path, got, want) }
+	}
+	configDirPath, err := configDir()
+	if err != nil { t.Fatal(err) }
+	activeInfo, err := os.Stat(filepath.Join(configDirPath, "active_profile"))
+	if err != nil { t.Fatal(err) }
+	if got := activeInfo.Mode().Perm(); got != 0o600 { t.Errorf("active profile file permissions = %04o, want 0600", got) }
 	var raw map[string]any
 	data, err := os.ReadFile(workPath)
 	if err != nil { t.Fatal(err) }
