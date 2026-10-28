@@ -152,6 +152,8 @@ func TestSortWatchLaterPersistsSupportedOrders(t *testing.T) {
 	if err != nil { t.Fatal(err) }
 	if got := loaded.WatchLater[0].VideoID; got != "c" { t.Fatalf("persisted title sort first ID = %q, want c", got) }
 
+	if err := s.SortWatchLater("duration"); err != nil { t.Fatal(err) }
+	if got := s.WatchLater[0].VideoID; got != "b" { t.Fatalf("duration sort first ID = %q, want b", got) }
 	if err := s.SortWatchLater("channel"); err != nil { t.Fatal(err) }
 	if got := s.WatchLater[0].VideoID; got != "a" { t.Fatalf("channel sort first ID = %q, want a", got) }
 	if err := s.SortWatchLater("added"); err != nil { t.Fatal(err) }
@@ -174,4 +176,20 @@ func LoadStoreFromPathForTest(path string) (*Store, error) {
 	var s Store
 	if err := json.Unmarshal(data, &s); err != nil { return nil, err }
 	return &s, nil
+}
+
+
+func TestRemoveWatchLaterManyRemovesSelectedAndPreservesOthers(t *testing.T) {
+	s := &Store{dir: t.TempDir(), WatchLater: []WatchLaterEntry{
+		{VideoID: "one"}, {VideoID: "two"}, {VideoID: "three"},
+	}}
+	if err := s.RemoveWatchLaterMany([]string{"one", "three", "missing"}); err != nil { t.Fatal(err) }
+	if len(s.WatchLater) != 1 || s.WatchLater[0].VideoID != "two" {
+		t.Fatalf("queue after bulk removal = %#v, want only two", s.WatchLater)
+	}
+	loaded, err := LoadStoreFromPathForTest(s.path())
+	if err != nil { t.Fatal(err) }
+	if len(loaded.WatchLater) != 1 || loaded.WatchLater[0].VideoID != "two" {
+		t.Fatalf("persisted queue after bulk removal = %#v, want only two", loaded.WatchLater)
+	}
 }
