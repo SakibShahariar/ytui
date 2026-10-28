@@ -8,7 +8,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"os/exec"
 	"strings"
 	"sort"
@@ -328,4 +332,64 @@ func GetSubtitleTracks(videoURL string) ([]SubtitleTrack, error) {
 	appendTracks(metadata.AutomaticCaptions, true)
 	if len(tracks) == 0 { return nil, fmt.Errorf("no subtitles or automatic captions are available") }
 	return tracks, nil
+}
+
+
+// GetTranscript fetches a text transcript for one language without downloading
+// the media. It uses a temporary directory and always removes downloaded
+// caption sidecars before returning.
+func GetTranscript(videoURL, language string) (string, error) {
+	if strings.TrimSpace(videoURL) == "" { return "", fmt.Errorf("video URL is empty") }
+	if err := checkInstalled(); err != nil { return "", err }
+	lang := strings.TrimSpace(language)
+	if lang == "" { lang = "en.*,en" }
+	dir, err := os.MkdirTemp("", "ytui-transcript-")
+	if err != nil { return "", fmt.Errorf("create transcript temp directory: %w", err) }
+	defer os.RemoveAll(dir)
+	output := filepath.Join(dir, "%(id)s.%(ext)s")
+	cmd := exec.Command(binaryName, "--skip-download", "--no-warnings", "--no-playlist", "--write-subs", "--write-auto-subs", "--sub-langs", lang, "--sub-format", "vtt", "-o", output, videoURL)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" { message = err.Error() }
+		return "", fmt.Errorf("yt-dlp could not fetch transcript: %s", message)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil { return "", fmt.Errorf("read transcript files: %w", err) }
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".vtt") { continue }
+		data, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+		if readErr != nil { return "", fmt.Errorf("read transcript: %w", readErr) }
+		transcript := parseTranscriptVTT(data)
+		if transcript == "" { return "", fmt.Errorf("transcript file contains no readable captions") }
+		return transcript, nil
+	}
+	return "", fmt.Errorf("no transcript available for language %q", lang)
+}
+
+var (
+	transcriptTimestampRE = regexp.MustCompile(`^\\d{2}:\\d{2}(?::\\d{2})?\\.\\d{3}\\s+-->`)
+	transcriptTagRE = regexp.MustCompile(`<[^>]*>`)
+)
+
+// parseTranscriptVTT removes WebVTT headers, cue timing and markup, returning
+// readable caption text with consecutive duplicate lines collapsed.
+func parseTranscriptVTT(data []byte) string {
+	text := strings.TrimPrefix(string(data), "\\ufeff")
+	lines := strings.Split(strings.ReplaceAll(text, "\\r\\n", "\\n"), "\\n")
+	var captions []string
+	previous := ""
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.EqualFold(line, "WEBVTT") || strings.HasPrefix(line, "NOTE") || strings.EqualFold(line, "STYLE") || strings.EqualFold(line, "REGION") || transcriptTimestampRE.MatchString(line) || regexp.MustCompile(`^\\d+$`).MatchString(line) { continue }
+		line = transcriptTagRE.ReplaceAllString(line, "")
+		line = html.UnescapeString(strings.TrimSpace(line))
+		line = strings.Join(strings.Fields(line), " ")
+		if line == "" || line == previous { continue }
+		captions = append(captions, line)
+		previous = line
+	}
+	return strings.Join(captions, "\\n")
 }
