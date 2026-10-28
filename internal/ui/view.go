@@ -47,7 +47,7 @@ func (m Model) View() string {
 	panelH := m.panelHeight()
 
 	var listContent strings.Builder
-	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker {
+	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker && !m.transcriptViewer {
 		listContent.WriteString(m.searchInput.View())
 		if m.loading {
 			listContent.WriteString("  " + m.spin.View())
@@ -67,6 +67,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.transcriptViewer:
+		listContent.WriteString(m.transcriptViewerContent(listWidth-4, panelH-4))
 	case m.subtitlePicker:
 		listContent.WriteString(m.subtitlePickerContent(listWidth-4))
 	case m.commandPalette:
