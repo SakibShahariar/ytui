@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/SakibShahariar/ytui/internal/auth"
+	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/library"
 	"github.com/SakibShahariar/ytui/internal/thumb"
@@ -51,6 +52,28 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.subtitlePicker = false
 			m.subtitlePickerVideo = nil
 			return m, nil
+		default:
+			return m, nil
+		}
+	}
+
+	if m.sponsorBlockSettings {
+		switch key {
+		case "esc":
+			m.sponsorBlockSettings = false
+			return m, nil
+		case "ctrl+c":
+			return m, tea.Quit
+		case "up":
+			if m.sponsorBlockCursor > 0 { m.sponsorBlockCursor-- }
+			return m, nil
+		case "down":
+			if m.sponsorBlockCursor < len(sponsorblock.SkipCategories) { m.sponsorBlockCursor++ }
+			return m, nil
+		case " ", "space":
+			return m.toggleSponsorBlockSetting(), nil
+		case "enter":
+			return m.saveSponsorBlockSettings()
 		default:
 			return m, nil
 		}
@@ -636,6 +659,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+s":
 		return m.subscribeToSelected()
+	case "ctrl+b":
+		m = m.openSponsorBlockSettings()
+		return m, nil
+	case "ctrl+j":
+		return m.skipCurrentSponsorSegment()
+
 	case "ctrl+e":
 		if v, ok := m.selectedVideo(); ok {
 			m.errMsg = ""
