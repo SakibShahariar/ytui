@@ -309,3 +309,51 @@ func TestCancelActiveDownloadStopsProcess(t *testing.T) {
 		t.Fatalf("status after cancellation = %v, want canceled", d.Status)
 	}
 }
+
+
+func TestMoveQueuedChangesPendingAndVisibleOrder(t *testing.T) {
+	first := &Download{VideoID: "first", Status: StatusQueued}
+	second := &Download{VideoID: "second", Status: StatusQueued}
+	third := &Download{VideoID: "third", Status: StatusQueued}
+	m := &Manager{
+		byID: map[string]*Download{"first": first, "second": second, "third": third},
+		order: []string{"first", "second", "third"},
+		pending: []string{"first", "second", "third"},
+		wake: make(chan struct{}, 1),
+	}
+	if !m.MoveQueued("third", -1) { t.Fatal("MoveQueued(third, -1) = false, want true") }
+	if got, want := strings.Join(m.pending, ","), "first,third,second"; got != want { t.Fatalf("pending = %q, want %q", got, want) }
+	if got, want := strings.Join(m.ListIDsForTest(), ","), "first,third,second"; got != want { t.Fatalf("visible order = %q, want %q", got, want) }
+	if m.MoveQueued("first", -1) { t.Fatal("moving first item up unexpectedly succeeded") }
+	if m.MoveQueued("second", 0) { t.Fatal("invalid move delta unexpectedly succeeded") }
+}
+
+func (m *Manager) ListIDsForTest() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string(nil), m.order...)
+}
+
+func TestPauseResumeQueuedDownload(t *testing.T) {
+	d := &Download{VideoID: "video", Status: StatusQueued}
+	m := &Manager{
+		byID: map[string]*Download{"video": d},
+		order: []string{"video"},
+		pending: []string{"video"},
+		wake: make(chan struct{}, 1),
+	}
+	if err := m.Pause("video"); err != nil { t.Fatalf("Pause() error = %v", err) }
+	if d.Status != StatusPaused { t.Fatalf("status after Pause() = %v, want paused", d.Status) }
+	if len(m.pending) != 0 { t.Fatalf("pending after Pause() = %v, want empty", m.pending) }
+	if err := m.Resume("video"); err != nil { t.Fatalf("Resume() error = %v", err) }
+	if d.Status != StatusQueued { t.Fatalf("status after Resume() = %v, want queued", d.Status) }
+	if len(m.pending) != 1 || m.pending[0] != "video" { t.Fatalf("pending after Resume() = %v, want [video]", m.pending) }
+	select { case <-m.wake: default: t.Fatal("Resume() did not wake scheduler") }
+}
+
+func TestPauseRejectsActiveDownload(t *testing.T) {
+	d := &Download{VideoID: "active", Status: StatusDownloading}
+	m := &Manager{byID: map[string]*Download{"active": d}, wake: make(chan struct{}, 1)}
+	if err := m.Pause("active"); err == nil { t.Fatal("Pause() unexpectedly accepted an active download") }
+	if d.Status != StatusDownloading { t.Fatalf("status changed to %v after rejected Pause()", d.Status) }
+}
