@@ -3,11 +3,61 @@ package downloader
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestBuildArgs(t *testing.T) {
+	destDir := filepath.Join("tmp", "downloads")
+	outputTemplate := filepath.Join(destDir, "%(title).100s [%(id)s].%(ext)s")
+	videoURL := "https://example.invalid/video"
+
+	tests := []struct {
+		name string
+		download Download
+		want []string
+	}{
+		{
+			name: "defaults to best video and audio",
+			download: Download{URL: videoURL},
+			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate, "-f", "bestvideo+bestaudio/best", videoURL},
+		},
+		{
+			name: "video options",
+			download: Download{URL: videoURL, Opts: Options{
+				Format: "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+				WriteSubs: true, EmbedThumbnail: true, CookiesFromBrowser: "firefox",
+			}},
+			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate,
+				"-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+				"--write-subs", "--sub-langs", "en.*,en", "--embed-subs", "--embed-thumbnail",
+				"--cookies-from-browser", "firefox", videoURL},
+		},
+		{
+			name: "audio extraction ignores video format",
+			download: Download{URL: videoURL, Opts: Options{
+				Format: "should-not-be-used", ExtractAudio: true, AudioFormat: "opus",
+			}},
+			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate, "-x", "--audio-format", "opus", videoURL},
+		},
+		{
+			name: "audio extraction leaves format to yt-dlp when unspecified",
+			download: Download{URL: videoURL, Opts: Options{ExtractAudio: true}},
+			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate, "-x", videoURL},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := buildArgs(destDir, &tt.download); !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("buildArgs() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
 
 func TestProgressRegex(t *testing.T) {
 	line := "[download]  42.3% of  123.45MiB at  5.67MiB/s ETA 00:12"
