@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os/exec"
 	"strings"
+	"sort"
 	"time"
 )
 
@@ -278,4 +279,53 @@ func parsePlaylistJSON(data []byte) (string, []Video, error) {
 	}
 	if len(videos) == 0 { return title, nil, fmt.Errorf("playlist contains no accessible videos") }
 	return title, videos, nil
+}
+
+
+type SubtitleTrack struct {
+	Language string
+	Name string
+	Automatic bool
+}
+
+type subtitleMetadataJSON struct {
+	Subtitles map[string][]struct { Name string `json:"name"` } `json:"subtitles"`
+	AutomaticCaptions map[string][]struct { Name string `json:"name"` } `json:"automatic_captions"`
+}
+
+// GetSubtitleTracks lists manually uploaded and automatic caption languages
+// without downloading media. Automatic captions are marked for the UI.
+func GetSubtitleTracks(videoURL string) ([]SubtitleTrack, error) {
+	if strings.TrimSpace(videoURL) == "" { return nil, fmt.Errorf("video URL is empty") }
+	if err := checkInstalled(); err != nil { return nil, err }
+	cmd := exec.Command(binaryName, "--dump-single-json", "--no-warnings", "--skip-download", "--no-playlist", videoURL)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" { message = err.Error() }
+		return nil, fmt.Errorf("yt-dlp could not list subtitles: %s", message)
+	}
+	var metadata subtitleMetadataJSON
+	if err := json.Unmarshal(stdout.Bytes(), &metadata); err != nil { return nil, fmt.Errorf("parse subtitle metadata: %w", err) }
+	tracks := make([]SubtitleTrack, 0, len(metadata.Subtitles)+len(metadata.AutomaticCaptions))
+	seen := make(map[string]bool)
+	appendTracks := func(groups map[string][]struct { Name string `json:"name"` }, automatic bool) {
+		langs := make([]string, 0, len(groups))
+		for lang := range groups { langs = append(langs, lang) }
+		sort.Strings(langs)
+		for _, lang := range langs {
+			if seen[lang] { continue }
+			name := ""
+			if len(groups[lang]) > 0 { name = strings.TrimSpace(groups[lang][0].Name) }
+			if name == "" { name = lang }
+			tracks = append(tracks, SubtitleTrack{Language: lang, Name: name, Automatic: automatic})
+			seen[lang] = true
+		}
+	}
+	appendTracks(metadata.Subtitles, false)
+	appendTracks(metadata.AutomaticCaptions, true)
+	if len(tracks) == 0 { return nil, fmt.Errorf("no subtitles or automatic captions are available") }
+	return tracks, nil
 }
