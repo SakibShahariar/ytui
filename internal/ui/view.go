@@ -148,6 +148,9 @@ func (m Model) View() string {
 	if m.subtitlePicker {
 		modeBar = footerModeInput.Render("SUBTITLES")
 		help = "↑↓: select track · enter: apply · esc: cancel"
+	} else if m.transcriptViewer {
+		modeBar = footerModeInput.Render("TRANSCRIPT")
+		help = "↑↓: scroll · pgup/pgdn: page · home/end: jump · esc: close"
 	} else if m.commandPalette {
 		modeBar = footerModeInput.Render("COMMANDS")
 		help = "type to filter · ↑↓: select · enter: run · esc: close"
