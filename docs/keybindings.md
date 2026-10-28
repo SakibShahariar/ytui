@@ -38,7 +38,7 @@ Autoplay is disabled by default. With it enabled, ytui plays the next Watch Late
 
 ## Watch Later queue
 
-On the **Watch Later** tab, press `s` to cycle through oldest-added, title A–Z, and channel A–Z sorting. The chosen order is saved with your local data. Press `x`, then `y` to confirm clearing the entire queue; any other key cancels. Adding duplicate videos remains a no-op.
+On the **Watch Later** tab, press `s` to cycle through oldest-added, title A–Z, shortest-duration, and channel A–Z sorting. The chosen order is saved with your local data. Press `Space` to select/deselect entries, then `m` to remove all selected entries in one operation; confirm with `y` or cancel with any other key. Press `x`, then `y` to confirm clearing the entire queue; any other key cancels. Items without saved duration metadata sort after entries with known durations. Adding duplicate videos remains a no-op.
 
 ## Lists
 
