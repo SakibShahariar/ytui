@@ -131,3 +131,13 @@ func TestStalePlaybackExitDoesNotClearNewSession(t *testing.T) {
 		t.Fatal("stale exit message unexpectedly scheduled follow-up work")
 	}
 }
+
+func TestPositionTickStopsWhenNoPlaybackSessionExists(t *testing.T) {
+	updated, cmd := (Model{}).Update(positionTickMsg{})
+	if cmd != nil {
+		t.Fatal("position tick scheduled another tick without active playback")
+	}
+	if updated.(Model).nowPlaying != nil {
+		t.Fatal("position tick unexpectedly created a playback session")
+	}
+}
