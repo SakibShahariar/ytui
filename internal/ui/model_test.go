@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/rivo/uniseg"
 	"github.com/SakibShahariar/ytui/internal/player"
+	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
@@ -172,5 +173,41 @@ func TestClampListIndex(t *testing.T) {
 		if got := clampListIndex(tc.index, tc.count); got != tc.want {
 			t.Errorf("clampListIndex(%d, %d) = %d, want %d", tc.index, tc.count, got, tc.want)
 		}
+	}
+}
+
+
+func TestNextWatchLaterVideoUsesQueueOrder(t *testing.T) {
+	m := Model{store: &store.Store{WatchLater: []store.WatchLaterEntry{
+		{VideoID: "one", Title: "One", URL: "https://youtube.com/watch?v=one"},
+		{VideoID: "two", Title: "Two", URL: "https://youtube.com/watch?v=two"},
+		{VideoID: "three", Title: "Three", URL: "https://youtube.com/watch?v=three"},
+	}}}
+	if got, ok := m.nextWatchLaterVideo("one"); !ok || got.ID != "two" {
+		t.Fatalf("next after first = (%q, %v), want (two, true)", got.ID, ok)
+	}
+	if got, ok := m.nextWatchLaterVideo("not-in-queue"); !ok || got.ID != "one" {
+		t.Fatalf("next for non-queue video = (%q, %v), want (one, true)", got.ID, ok)
+	}
+	if _, ok := m.nextWatchLaterVideo("three"); ok {
+		t.Fatal("last queue item unexpectedly wrapped to the beginning")
+	}
+}
+
+func TestNextCurrentListVideoAdvancesPastSelection(t *testing.T) {
+	items := []list.Item{
+		videoItem{v: ytdlp.Video{ID: "one", Title: "One"}},
+		videoItem{v: ytdlp.Video{ID: "two", Title: "Two"}},
+	}
+	l := list.New(items, ytDelegate{}, defaultWidth, defaultHeight)
+	l.Select(0)
+	m := Model{list: l}
+	if got, ok := m.nextCurrentListVideo(); !ok || got.ID != "two" {
+		t.Fatalf("next list video = (%q, %v), want (two, true)", got.ID, ok)
+	}
+	l.Select(1)
+	m.list = l
+	if _, ok := m.nextCurrentListVideo(); ok {
+		t.Fatal("last list item unexpectedly wrapped to the beginning")
 	}
 }
