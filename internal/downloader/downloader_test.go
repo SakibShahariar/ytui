@@ -357,3 +357,30 @@ func TestPauseRejectsActiveDownload(t *testing.T) {
 	if err := m.Pause("active"); err == nil { t.Fatal("Pause() unexpectedly accepted an active download") }
 	if d.Status != StatusDownloading { t.Fatalf("status changed to %v after rejected Pause()", d.Status) }
 }
+
+
+func TestPersistedQueueRestoresOrderAndPausedState(t *testing.T) {
+	queueFile := filepath.Join(t.TempDir(), ".ytui-queue.json")
+	queued := &Download{VideoID: "queued", Title: "Queued", URL: "https://example.invalid/queued", Status: StatusQueued, Opts: Options{QualityLabel: "1080p"}}
+	paused := &Download{VideoID: "paused", Title: "Paused", URL: "https://example.invalid/paused", Status: StatusPaused}
+	m := &Manager{
+		byID: map[string]*Download{"queued": queued, "paused": paused},
+		order: []string{"queued", "paused"},
+		pending: []string{"queued"},
+		queueFile: queueFile,
+	}
+	m.mu.Lock()
+	err := m.persistQueueLocked()
+	m.mu.Unlock()
+	if err != nil { t.Fatalf("persistQueueLocked() error = %v", err) }
+	info, err := os.Stat(queueFile)
+	if err != nil { t.Fatal(err) }
+	if info.Mode().Perm() != 0o600 { t.Fatalf("queue file mode = %04o, want 0600", info.Mode().Perm()) }
+
+	restored := &Manager{byID: make(map[string]*Download), queueFile: queueFile}
+	if err := restored.loadQueue(); err != nil { t.Fatalf("loadQueue() error = %v", err) }
+	if got, want := strings.Join(restored.order, ","), "queued,paused"; got != want { t.Fatalf("restored order = %q, want %q", got, want) }
+	if len(restored.pending) != 1 || restored.pending[0] != "queued" { t.Fatalf("restored pending = %v, want [queued]", restored.pending) }
+	if got := restored.byID["paused"].Status; got != StatusPaused { t.Fatalf("restored paused status = %v, want paused", got) }
+	if got := restored.byID["queued"].Opts.QualityLabel; got != "1080p" { t.Fatalf("restored quality = %q, want 1080p", got) }
+}
