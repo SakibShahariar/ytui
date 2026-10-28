@@ -43,7 +43,8 @@ type Options struct {
 	Format             string // yt-dlp -f selector; ignored if ExtractAudio is true
 	ExtractAudio       bool   // -x
 	AudioFormat        string // --audio-format (e.g. "mp3", "opus"); only used if ExtractAudio
-	WriteSubs          bool   // --write-subs --embed-subs
+	WriteSubs          bool   // save subtitle sidecars when available
+	SubtitleLang       string // selected language code; empty uses English fallback
 	EmbedThumbnail     bool   // --embed-thumbnail
 	CookiesFromBrowser string // --cookies-from-browser <name>; empty = don't use cookies
 	QualityLabel       string // display-only, e.g. "1080p" — shown in the Downloads list
@@ -327,7 +328,9 @@ func buildArgs(destDir string, d *Download) []string {
 		args = append(args, "-f", format)
 	}
 	if d.Opts.WriteSubs {
-		args = append(args, "--write-subs", "--sub-langs", "en.*,en", "--embed-subs")
+		lang := d.Opts.SubtitleLang
+		if lang == "" { lang = "en.*,en" }
+		args = append(args, "--write-subs", "--write-auto-subs", "--sub-langs", lang)
 	}
 	if d.Opts.EmbedThumbnail {
 		args = append(args, "--embed-thumbnail")
