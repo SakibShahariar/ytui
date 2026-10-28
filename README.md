@@ -187,3 +187,8 @@ Existing flags such as `--show-paths`, `--export-config`, and `--import-config` 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Watch Later queue controls
+
+On the Watch Later tab, press `s` to cycle through oldest-added, title A–Z, and channel A–Z sorting. The selected order is persisted locally. Press `x`, then `y` to clear the entire queue; any other key cancels the confirmation.
+
