@@ -154,6 +154,30 @@ func (m Model) downloadPickerContent(width int) string {
 	return "\n" + strings.Join(lines, "\n")
 }
 
+func (m Model) subtitlePickerContent(width int) string {
+	heading := lipgloss.NewStyle().Bold(true).Foreground(ctpMauve).Render("Subtitle tracks")
+	title := ""
+	if m.subtitlePickerVideo != nil { title = subtitleStyle.Render(truncate(m.subtitlePickerVideo.Title, width)) }
+	lines := []string{heading, title, ""}
+	for i := 0; i <= len(m.subtitleTracks); i++ {
+		label := "None (use player default)"
+		if i > 0 {
+			track := m.subtitleTracks[i-1]
+			label = track.Name + " (" + track.Language + ")"
+			if track.Automatic { label += " · automatic captions" }
+		}
+		prefix := "  "
+		style := lipgloss.NewStyle().Foreground(ctpText)
+		if i == m.subtitlePickerCursor {
+			prefix = lipgloss.NewStyle().Foreground(ctpMauve).Bold(true).Render("▸ ")
+			style = lipgloss.NewStyle().Foreground(ctpMauve).Bold(true)
+		}
+		lines = append(lines, prefix+style.Render(label))
+	}
+	lines = append(lines, "", lipgloss.NewStyle().Foreground(ctpOverlay1).Render("↑↓: select · enter: use language · esc: cancel"))
+	return "\n" + strings.Join(lines, "\n")
+}
+
 func (m Model) loginHelpContent(width int) string {
 	heading := lipgloss.NewStyle().Bold(true).Foreground(ctpMauve).Render("Set up Google Login")
 	sub := subtitleStyle.Render("one-time, ~3 minutes, free — needed for real subs/playlists/liked videos")
