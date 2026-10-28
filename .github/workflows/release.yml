@@ -42,7 +42,7 @@ jobs:
           mkdir -p dist
           output="ytui-${VERSION}-${GOOS}-${GOARCH}"
           CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "dist/${output}" .
-          tar -C dist -czf "dist/${output}.tar.gz" "${output}"
+          tar -czf "dist/${output}.tar.gz" -C dist "${output}"
           rm "dist/${output}"
       - name: Upload build artifact
         uses: actions/upload-artifact@v6
