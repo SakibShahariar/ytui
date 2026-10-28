@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,6 +26,7 @@ type Video struct {
 	URL         string
 	Thumbnail   string
 	Description string    // only populated by GetDescription — search results don't include it
+	PlaylistIndex int // one-based position when loaded from a playlist
 	PublishedAt time.Time // zero value if unknown (e.g. yt-dlp search results don't provide this)
 }
 
