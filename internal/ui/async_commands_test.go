@@ -154,3 +154,29 @@ func TestLoadPlaylistWithPreservesError(t *testing.T) {
 	if !ok { t.Fatalf("message type = %T, want searchResultsMsg", msg) }
 	if !errors.Is(got.err, wantErr) { t.Fatalf("error = %v, want %v", got.err, wantErr) }
 }
+
+func TestLoadTranscriptWithUsesSelectedLanguage(t *testing.T) {
+	video := ytdlp.Video{ID: "video-id", Title: "Transcript video", URL: "https://youtube.com/watch?v=video-id"}
+	called := false
+	msg := loadTranscriptWith(video, "fr", func(rawURL, language string) (string, error) {
+		called = true
+		if rawURL != video.URL { t.Fatalf("URL = %q, want %q", rawURL, video.URL) }
+		if language != "fr" { t.Fatalf("language = %q, want fr", language) }
+		return "Bonjour", nil
+	})()
+	got, ok := msg.(transcriptMsg)
+	if !ok { t.Fatalf("message type = %T, want transcriptMsg", msg) }
+	if !called || got.err != nil || got.text != "Bonjour" || got.video.ID != video.ID {
+		t.Fatalf("transcript result = %#v, called = %v", got, called)
+	}
+}
+
+func TestLoadTranscriptWithPreservesError(t *testing.T) {
+	wantErr := errors.New("captions unavailable")
+	msg := loadTranscriptWith(ytdlp.Video{URL: "https://youtube.com/watch?v=video-id"}, "en", func(string, string) (string, error) {
+		return "", wantErr
+	})()
+	got, ok := msg.(transcriptMsg)
+	if !ok { t.Fatalf("message type = %T, want transcriptMsg", msg) }
+	if !errors.Is(got.err, wantErr) { t.Fatalf("error = %v, want %v", got.err, wantErr) }
+}
