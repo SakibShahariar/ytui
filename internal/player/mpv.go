@@ -222,6 +222,9 @@ func (p *Player) Wait() error {
 		p.waitDone = make(chan struct{})
 		go func() {
 			p.waitErr = p.cmd.Wait()
+			if p.socketPath != "" {
+				_ = os.Remove(p.socketPath)
+			}
 			close(p.waitDone)
 		}()
 	})
