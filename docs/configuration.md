@@ -23,6 +23,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
   "default_cookies_browser": "firefox",
   "default_audio_only": false,
   "desktop_notifications": false,
+  "autoplay_next": false,
   "thumbnail_cache_max_entries": 250,
   "thumbnail_cache_max_age_days": 30
 }
@@ -37,6 +38,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |
 | `desktop_notifications` | Send best-effort Linux desktop notifications when downloads finish or fail. Requires `notify-send`; notifications are disabled if false. | `false` |
+| `autoplay_next` | Automatically play the next Watch Later item, or the next item in the current list, when playback ends. Toggle with `Ctrl+N`. | `false` |
 | `thumbnail_cache_max_entries` | Maximum cached thumbnail images; oldest unused entries are removed first. | `250` |
 | `thumbnail_cache_max_age_days` | Maximum age of cached thumbnails before cleanup. | `30` |
 
