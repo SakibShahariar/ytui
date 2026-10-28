@@ -8,9 +8,9 @@ import (
 	"github.com/SakibShahariar/ytui/internal/auth"
 )
 
-func loginCmd() tea.Cmd {
+func loginCmd(profile string) tea.Cmd {
 	return func() tea.Msg {
-		err := auth.Login(context.Background())
+		err := auth.LoginForProfile(context.Background(), profile)
 		return loginResultMsg{err: err}
 	}
 }
@@ -29,9 +29,9 @@ func importClientCredentialsCmd(clientID, clientSecret string) tea.Cmd {
 	}
 }
 
-func authClientCmd() tea.Cmd {
+func authClientCmd(profile string) tea.Cmd {
 	return func() tea.Msg {
-		client, err := auth.Client(context.Background())
+		client, err := auth.ClientForProfile(context.Background(), profile)
 		return authClientReadyMsg{client: client, err: err}
 	}
 }
