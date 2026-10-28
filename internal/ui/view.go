@@ -47,7 +47,7 @@ func (m Model) View() string {
 	panelH := m.panelHeight()
 
 	var listContent strings.Builder
-	if m.activeTab == tabSearch && !m.commandPalette {
+	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker {
 		listContent.WriteString(m.searchInput.View())
 		if m.loading {
 			listContent.WriteString("  " + m.spin.View())
@@ -67,6 +67,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.subtitlePicker:
+		listContent.WriteString(m.subtitlePickerContent(listWidth-4))
 	case m.commandPalette:
 		listContent.WriteString(m.commandPaletteContent(listWidth-4, panelH-4))
 	case m.downloadPicker:
@@ -141,7 +143,10 @@ func (m Model) View() string {
 	// --- Footer: solid status bar, like a statusline, not floating text ---
 	modeBar := footerModeNav.Render("BROWSE")
 	help := m.contextualHelp()
-	if m.commandPalette {
+	if m.subtitlePicker {
+		modeBar = footerModeInput.Render("SUBTITLES")
+		help = "↑↓: select track · enter: apply · esc: cancel"
+	} else if m.commandPalette {
 		modeBar = footerModeInput.Render("COMMANDS")
 		help = "type to filter · ↑↓: select · enter: run · esc: close"
 	} else if m.downloadPicker {
