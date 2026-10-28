@@ -22,6 +22,12 @@ var Categories = []string{
 	"music_offtopic", "filler", "exclusive_access", "hook", "poi_highlight", "chapter",
 }
 
+// SkipCategories are categories whose SponsorBlock action type can be skipped automatically.
+var SkipCategories = []string{
+	"sponsor", "selfpromo", "interaction", "intro", "outro", "preview",
+	"music_offtopic", "filler", "exclusive_access", "hook",
+}
+
 // Segment is a validated time range returned by SponsorBlock.
 type Segment struct {
 	Start float64
