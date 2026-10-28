@@ -172,14 +172,22 @@ func (m *Manager) Active() bool {
 func (m *Manager) Cancel(videoID string) {
 	m.mu.Lock()
 	d, ok := m.byID[videoID]
+	var process *os.Process
 	if ok {
 		d.Status = StatusCanceled
+		// d.cmd is assigned while holding m.mu in run. Snapshot the process
+		// under the same lock so cancellation cannot race with process startup.
+		if d.cmd != nil {
+			process = d.cmd.Process
+		}
 	}
 	m.mu.Unlock()
-	if !ok || d.cmd == nil || d.cmd.Process == nil {
-		return
+
+	// Killing the process can block or trigger worker cleanup; never do it
+	// while holding the manager lock.
+	if process != nil {
+		_ = process.Kill()
 	}
-	_ = d.cmd.Process.Kill()
 }
 
 // Shutdown prevents new downloads, cancels queued and active work, and waits
