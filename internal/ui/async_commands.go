@@ -145,3 +145,14 @@ func downloadsTickCmd() tea.Cmd {
 	})
 }
 
+
+func loadTranscriptCmd(video ytdlp.Video, language string) tea.Cmd {
+	return loadTranscriptWith(video, language, ytdlp.GetTranscript)
+}
+
+func loadTranscriptWith(video ytdlp.Video, language string, getTranscript func(string, string) (string, error)) tea.Cmd {
+	return func() tea.Msg {
+		transcript, err := getTranscript(video.URL, language)
+		return transcriptMsg{video: video, text: transcript, err: err}
+	}
+}
