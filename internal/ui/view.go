@@ -237,6 +237,11 @@ func (m Model) nowPlayingBar() string {
 	timeStr := fmt.Sprintf("%s / %s", formatDuration(m.npPos), formatDuration(m.npDur))
 	progressRow := lipgloss.NewStyle().Foreground(ctpLavender).Render(bar) + "  " +
 		lipgloss.NewStyle().Foreground(ctpSubtext0).Render(timeStr)
+	if highlight := m.nextSponsorHighlight(); highlight != "" {
+		highlightWidth := m.width / 2
+		if highlightWidth < 18 { highlightWidth = 18 }
+		progressRow += "  " + lipgloss.NewStyle().Foreground(ctpYellow).Render(truncate(highlight, highlightWidth))
+	}
 
 	return titleRow + "\n" + progressRow
 }
