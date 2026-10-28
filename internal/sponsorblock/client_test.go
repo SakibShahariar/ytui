@@ -17,7 +17,7 @@ func TestFetchUsesHashPrefixAndFiltersMatchingSegments(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/skipSegments/"+fullHash[:4] { t.Errorf("request path = %q; want hash prefix only", r.URL.Path) }
 		if r.URL.Query().Get("videoID") != "" { t.Error("request exposed raw video ID") }
-		if got := r.URL.Query().Get("categories"); got != "[\"sponsor\",\"selfpromo\"]" { t.Errorf("categories = %q", got) }
+		if got := r.URL.Query().Get("categories"); got != "[\"selfpromo\",\"sponsor\"]" { t.Errorf("categories = %q", got) }
 		fmt.Fprintf(w, `[
 			{"videoID":"other","hash":"deadbeef","segments":[{"segment":[1,2],"category":"sponsor"}]},
 			{"videoID":"ignored","hash":"%s","segments":[
