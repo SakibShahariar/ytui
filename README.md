@@ -84,6 +84,10 @@ To use your real YouTube subscriptions, playlists, and liked videos, press `Ctrl
 
 Full setup instructions: [Google login](docs/google-login.md).
 
+### Download queue recovery
+
+The live download queue is saved to `.ytui-queue.json` inside the configured download directory. Pending order and paused items are restored on the next launch; an interrupted active download is returned to the queue so yt-dlp can continue its partial file. The queue state file is written atomically with owner-only permissions.
+
 ## Configuration
 
 Configuration lives at:
