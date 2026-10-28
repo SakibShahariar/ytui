@@ -50,6 +50,16 @@ func Path() (string, error) {
 	return filepath.Join(base, "ytui", "shared-queue.json"), nil
 }
 
+func isNumericHost(host string) bool {
+	if host == "" { return false }
+	for _, r := range host {
+		if (r >= '0' && r <= '9') || r == '.' { continue }
+		if r == 'x' || r == 'X' || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F') { continue }
+		return false
+	}
+	return true
+}
+
 func validateItem(item Item) error {
 	if item.ID == "" || len(item.ID) > 128 { return fmt.Errorf("shared queue item has an invalid ID") }
 	for _, r := range item.ID {
@@ -73,6 +83,8 @@ func validateItem(item Item) error {
 	if ip := net.ParseIP(ipHost); ip != nil &&
 		(ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast()) {
 		return fmt.Errorf("shared queue URL must not target a private or local IP address")
+	} else if ip == nil && isNumericHost(ipHost) {
+		return fmt.Errorf("shared queue URL must not use a numeric host")
 	}
 	if item.URL != strings.TrimSpace(item.URL) { return fmt.Errorf("shared queue URL contains surrounding whitespace") }
 	if strings.ContainsAny(item.Title+item.Quality+item.AudioFormat, "\x00\r\n\x1b") { return fmt.Errorf("shared queue metadata contains terminal control characters") }
