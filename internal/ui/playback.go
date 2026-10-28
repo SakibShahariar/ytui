@@ -127,6 +127,9 @@ func (m Model) clearNowPlaying() (tea.Model, tea.Cmd) {
 	shouldAutoplay := m.cfg.AutoplayNext && m.statusMsg != "playback stopped" && !m.playingLocal && endedID != ""
 	m.nowPlaying = nil
 	m.playingVid = nil
+	m.sponsorSegments = nil
+	m.sponsorSegmentVideoID = ""
+	m.sponsorLastSkipped = ""
 	m.playingLocal = false
 	m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 	m.npDescription = ""
