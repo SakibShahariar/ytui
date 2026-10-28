@@ -222,7 +222,7 @@ func (m *Manager) Shutdown() {
 	processes := make([]*exec.Cmd, 0)
 	for _, d := range m.byID {
 		activeProcess := d.cmd != nil && d.cmd.Process != nil && !processFinished(d.processDone)
-		if d.Status == StatusDownloading || (d.Status == StatusPaused && activeProcess) {
+		if d.Status == StatusDownloading || (d.Status == StatusPaused && d.cmd != nil) {
 			// Preserve interrupted work as queued so yt-dlp can continue partial files.
 			d.Status = StatusQueued
 			if activeProcess { processes = append(processes, d.cmd) }
