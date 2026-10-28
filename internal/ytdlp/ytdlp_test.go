@@ -111,3 +111,15 @@ func TestGetSubtitleTracksReportsNoCaptions(t *testing.T) {
 	defer func(){ binaryName = old }()
 	if _, err := GetSubtitleTracks("https://www.youtube.com/watch?v=example"); err == nil { t.Fatal("expected no-caption error") }
 }
+
+
+func TestParseTranscriptVTTStripsHeadersTimestampsAndMarkup(t *testing.T) {
+	input := []byte("WEBVTT\r\n\r\n00:00:00.000 --> 00:00:01.000\r\n<v Speaker>Hello &amp; welcome</v>\r\n\r\n00:00:01.000 --> 00:00:02.000\r\nHello &amp; welcome\r\n\r\n00:00:02.000 --> 00:00:03.000\r\n<c.green>Next line</c>\r\n")
+	got := parseTranscriptVTT(input)
+	want := "Hello & welcome\nNext line"
+	if got != want { t.Fatalf("parseTranscriptVTT() = %q, want %q", got, want) }
+}
+
+func TestParseTranscriptVTTEmptyInput(t *testing.T) {
+	if got := parseTranscriptVTT([]byte("WEBVTT\n\n")); got != "" { t.Fatalf("empty transcript = %q, want empty", got) }
+}
