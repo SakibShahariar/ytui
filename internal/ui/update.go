@@ -128,8 +128,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 
+	case sponsorSegmentsMsg:
+		if !m.cfg.SponsorBlockEnabled || m.playingVid == nil || m.playingVid.ID != msg.videoID {
+			return m, nil
+		}
+		m.sponsorSegmentVideoID = msg.videoID
+		m.sponsorLastSkipped = ""
+		if msg.err != nil {
+			logging.Error("SponsorBlock lookup failed", msg.err)
+			m.sponsorSegments = nil
+			m.statusMsg = "SponsorBlock unavailable; playback continues"
+			return m, nil
+		}
+		m.sponsorSegments = msg.segments
+		if len(msg.segments) == 0 {
+			m.statusMsg = "SponsorBlock: no segments found for this video"
+		} else {
+			m.statusMsg = fmt.Sprintf("SponsorBlock: %d segment(s) loaded", len(msg.segments))
+		}
+		return m, nil
+
 	case playbackStartedMsg:
 		m.nowPlaying = msg.p
+		m.sponsorSegments = nil
+		m.sponsorSegmentVideoID = ""
+		m.sponsorLastSkipped = ""
 		m.npPos, m.npDur, m.npVol, m.npPaused = 0, 0, 0, false
 		m.npDescription = ""
 		if msg.p != nil && msg.err != nil {
@@ -149,6 +172,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.playingVid != nil {
 				m.npDescriptionLoading = true
 				cmds = append(cmds, fetchDescriptionCmd(m.playingVid.ID, m.playingVid.URL))
+				if m.cfg.SponsorBlockEnabled && !m.playingLocal {
+					cmds = append(cmds, loadSponsorSegmentsCmd(m.playingVid.ID))
+				}
 			}
 			if m.activeTab == tabNowPlaying {
 				cmds = append(cmds, m.refreshPreview())
@@ -186,6 +212,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.clearNowPlaying()
 	}
 		m.npPos = pos
+		if m.cfg.SponsorBlockEnabled && m.playingVid != nil && !m.playingLocal && m.sponsorSegmentVideoID == m.playingVid.ID {
+			for _, segment := range m.sponsorSegments {
+				if segment.ActionType != "skip" || !containsSponsorCategory(m.effectiveSponsorBlockCategories(), segment.Category) || pos < segment.Start || pos >= segment.End {
+					continue
+				}
+				key := sponsorSegmentKey(segment)
+				if key == m.sponsorLastSkipped { continue }
+				if seekErr := m.nowPlaying.SeekAbsolute(segment.End); seekErr == nil {
+					m.sponsorLastSkipped = key
+					m.npPos = segment.End
+					m.statusMsg = fmt.Sprintf("SponsorBlock auto-skipped %s (%s-%s)", segment.Category, formatDuration(segment.Start), formatDuration(segment.End))
+					return m, nowPlayingTickCmd()
+				}
+			}
+		}
 		if dur, err := m.nowPlaying.Duration(); err == nil {
 			m.npDur = dur
 		}
