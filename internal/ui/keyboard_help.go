@@ -31,6 +31,7 @@ func keyboardHelpLines() []string {
 		"Ctrl+R              Retry/resume selected failed download",
 		"Ctrl+Space          Pause/resume selected download",
 		"Ctrl+↑ / Ctrl+↓     Move queued download up/down",
+		"Ctrl+Y              Cycle history/download date range",
 		"Ctrl+O              Toggle download queue / offline files",
 		"Delete              Remove selected offline file (asks for confirmation)",
 		"",
