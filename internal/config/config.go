@@ -32,6 +32,9 @@ type Config struct {
 	// DefaultAudioOnly sets the initial audio-only playback toggle.
 	DefaultAudioOnly bool `json:"default_audio_only,omitempty"`
 
+	// DesktopNotifications enables best-effort desktop notifications for download completion/failure.
+	DesktopNotifications bool `json:"desktop_notifications,omitempty"`
+
 	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
 	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
 
