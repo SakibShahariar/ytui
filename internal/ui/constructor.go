@@ -73,6 +73,8 @@ func New(s *store.Store) Model {
 	sp.Spinner = spinner.Dot
 
 	cfg, cfgErr := config.LoadWithError()
+	activeProfile, profileErr := auth.ActiveProfile()
+	if activeProfile == "" { activeProfile = "default" }
 	if override := os.Getenv("YTUI_DOWNLOAD_DIR"); override != "" {
 		cfg.DownloadDir = override
 	}
@@ -81,6 +83,7 @@ func New(s *store.Store) Model {
 	m := Model{
 		store:          s,
 		cfg:            cfg,
+		activeProfile:  activeProfile,
 		activeTab:      tabSearch,
 		inputMode:      true,
 		searchInput:    ti,
@@ -100,6 +103,10 @@ func New(s *store.Store) Model {
 	}
 	if cfgErr != nil {
 		m.errMsg = "config: " + cfgErr.Error()
+	}
+	if profileErr != nil {
+		if m.errMsg != "" { m.errMsg += "; " }
+		m.errMsg += "auth profile: " + profileErr.Error()
 	}
 	if downloadErr != nil {
 		if m.errMsg != "" {
