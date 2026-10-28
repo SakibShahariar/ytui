@@ -9,6 +9,7 @@ A terminal YouTube client: search, play with mpv, manage subscriptions, Watch La
 - [Essential keys](#essential-keys)
 - [Google login](#google-login)
 - [Configuration](#configuration)
+- [Logging](#logging)
 - [Downloads](#downloads)
 - [Thumbnails](#thumbnails)
 - [Documentation](#documentation)
@@ -109,6 +110,18 @@ ytui --import-config ~/ytui-settings.json
 Configuration export contains preferences only; OAuth tokens, credentials, subscriptions, history, and the Watch Later queue are not included.
 
 Full reference: [Configuration](docs/configuration.md).
+
+## Logging
+
+File logging is disabled by default. Enable it when troubleshooting with `--log-level`:
+
+```bash
+ytui --log-level error
+ytui --log-level info
+ytui --log-level debug
+```
+
+The log is appended to `$XDG_CACHE_HOME/ytui/ytui.log` (normally `~/.cache/ytui/ytui.log`). Use `--log-level off` to keep logging disabled. The log directory is created with private permissions and the log file is restricted to the current user (`0600`). Error messages are filtered for common credential fields and sensitive URL query parameters; still review logs before sharing them publicly.
 
 ## Downloads
 
