@@ -443,7 +443,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+l":
 		if m.loggedIn {
-			_ = auth.Logout()
+			_ = auth.LogoutProfile(m.activeProfile)
 			m.loggedIn = false
 			m.authClient = nil
 			m.realSubscriptions = nil
@@ -465,7 +465,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.showLoginHelp = false
 		m.statusMsg = "opening browser to log in with Google…"
 		m.errMsg = ""
-		return m, loginCmd()
+		return m, loginCmd(m.activeProfile)
 
 	case "up", "down", "pgup", "pgdown", "home", "end":
 		// Arrow-family keys always mean "navigate the list" — release the
