@@ -95,3 +95,36 @@ func TestFetchDescriptionWithUsesInjectedLookup(t *testing.T) {
 		t.Fatalf("description result = %#v, called = %v", got, called)
 	}
 }
+
+func TestLoadDirectURLWithPreservesLookupError(t *testing.T) {
+	wantErr := errors.New("metadata unavailable")
+	msg := loadDirectURLWith("https://example.com/watch", func(string) (ytdlp.Video, error) {
+		return ytdlp.Video{}, wantErr
+	})()
+
+	got, ok := msg.(directURLMsg)
+	if !ok {
+		t.Fatalf("message type = %T, want directURLMsg", msg)
+	}
+	if !errors.Is(got.err, wantErr) {
+		t.Fatalf("error = %v, want %v", got.err, wantErr)
+	}
+}
+
+func TestFetchDescriptionWithPreservesLookupError(t *testing.T) {
+	wantErr := errors.New("description unavailable")
+	msg := fetchDescriptionWith("video-id", "https://example.com/watch", func(string) (string, error) {
+		return "", wantErr
+	})()
+
+	got, ok := msg.(videoDescriptionMsg)
+	if !ok {
+		t.Fatalf("message type = %T, want videoDescriptionMsg", msg)
+	}
+	if got.videoID != "video-id" {
+		t.Fatalf("video ID = %q, want video-id", got.videoID)
+	}
+	if !errors.Is(got.err, wantErr) {
+		t.Fatalf("error = %v, want %v", got.err, wantErr)
+	}
+}
