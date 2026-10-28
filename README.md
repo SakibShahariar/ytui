@@ -55,6 +55,10 @@ For development, run `go run .` from the cloned repository.
 
 Tagged versions publish Linux (`amd64`, `arm64`) and macOS (`amd64`, `arm64`) archives with SHA-256 checksums. Download the archive matching your operating system and CPU architecture, extract it, and place `ytui` somewhere on your `PATH`. These binaries do not bundle `mpv` or `yt-dlp`; install both separately. Verify an installed version with `ytui --version` or `ytui -v`.
 
+## Playback autoplay
+
+Autoplay is off by default. Press `Ctrl+N` to toggle it; the preference is saved in `config.json` as `autoplay_next`. When enabled, ytui plays the next Watch Later item first, then advances to the next playable item in the current list. Manually stopping playback with `Ctrl+X` does not trigger autoplay. Local downloaded files do not autoplay into online videos.
+
 ## Essential keys
 
 | Key | Action |
