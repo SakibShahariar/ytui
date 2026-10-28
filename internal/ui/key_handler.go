@@ -56,6 +56,43 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.transcriptViewer {
+		lines := strings.Split(m.transcriptText, "\n")
+		maxOffset := len(lines) - (m.panelHeight() - 5)
+		if maxOffset < 0 { maxOffset = 0 }
+		switch key {
+		case "esc", "q":
+			m.transcriptViewer = false
+			m.transcriptText = ""
+			m.transcriptTitle = ""
+			return m, nil
+		case "ctrl+c":
+			return m, tea.Quit
+		case "up":
+			if m.transcriptOffset > 0 { m.transcriptOffset-- }
+			return m, nil
+		case "down":
+			if m.transcriptOffset < maxOffset { m.transcriptOffset++ }
+			return m, nil
+		case "pgup":
+			m.transcriptOffset -= 8
+			if m.transcriptOffset < 0 { m.transcriptOffset = 0 }
+			return m, nil
+		case "pgdown":
+			m.transcriptOffset += 8
+			if m.transcriptOffset > maxOffset { m.transcriptOffset = maxOffset }
+			return m, nil
+		case "home":
+			m.transcriptOffset = 0
+			return m, nil
+		case "end":
+			m.transcriptOffset = maxOffset
+			return m, nil
+		default:
+			return m, nil
+		}
+	}
+
 	if m.commandPalette {
 		switch key {
 		case "esc":
@@ -599,6 +636,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+s":
 		return m.subscribeToSelected()
+	case "ctrl+e":
+		if v, ok := m.selectedVideo(); ok {
+			m.errMsg = ""
+			m.statusMsg = "loading transcript…"
+			return m, loadTranscriptCmd(v, m.subtitleLanguage)
+		}
+		m.statusMsg = "select a video to view its transcript"
+		return m, nil
+
 	case "ctrl+v":
 		if v, ok := m.selectedVideo(); ok {
 			m.errMsg = ""
