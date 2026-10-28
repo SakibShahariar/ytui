@@ -89,6 +89,19 @@ To use your real YouTube subscriptions, playlists, and liked videos, press `Ctrl
 
 Full setup instructions: [Google login](docs/google-login.md).
 
+Multiple Google accounts are supported through named profiles. The original single-account token remains the `default` profile:
+
+```bash
+ytui profile list
+ytui profile create work
+ytui profile use work
+# Start ytui and press Ctrl+L to sign in to that Google account
+ytui profile use default
+ytui profile remove work  # asks for confirmation
+```
+
+The TUI header shows the active profile. OAuth app credentials (`client_secret.json`) are shared, while each profile has its own token file. Profile directories are owner-only and token/selection files use `0600` permissions.
+
 ### Download queue recovery
 
 The live download queue is saved to `.ytui-queue.json` inside the configured download directory. Pending order and paused items are restored on the next launch; an interrupted active download is returned to the queue so yt-dlp can continue its partial file. The queue state file is written atomically with owner-only permissions.
@@ -180,6 +193,7 @@ The command interface is grouped around a few discoverable subcommands:
 - `ytui paths` — print effective config/data paths
 - `ytui config export PATH` — export settings
 - `ytui config import PATH` — import settings with confirmation; add `--yes` for automation
+- `ytui profile list|create|use|remove` — manage isolated Google login tokens; removal asks for confirmation (`--yes` skips it)
 
 Existing flags such as `--show-paths`, `--export-config`, and `--import-config` remain supported.
 
