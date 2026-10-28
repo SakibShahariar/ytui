@@ -10,6 +10,7 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 |---|---|
 | `Tab` / `Shift+Tab` | Cycle Search → Subs → Watch Later → History |
 | `/` | Jump to the Search tab and start typing |
+| `:` | Open the searchable command palette from a main tab |
 | `Ctrl+S` | Subscribe to the selected video’s channel |
 | `Ctrl+W` | Add the selected video to Watch Later |
 | `Ctrl+P` | Pause or resume current playback |
@@ -24,6 +25,10 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+L` | Log in with Google, or log out if already signed in |
 | `Ctrl+X` | Stop current playback |
 | `Ctrl+C` | Quit ytui and stop playback |
+
+## Command palette
+
+Press `:` from a main tab to open the command palette. Type to filter actions, use `↑` / `↓` to select, press `Enter` to execute, or `Esc` to close and return to the previous tab. The palette includes navigation, Home refresh, playback/display toggles, library filters, and keyboard help.
 
 ## Search tab
 
