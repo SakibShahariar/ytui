@@ -40,6 +40,8 @@ func TestAppendRejectsUnsafeSharedQueueItems(t *testing.T) {
 		{ID: "bad", URL: "file:///etc/passwd"},
 		{ID: "bad", URL: "https://user:pass@example.com/video"},
 		{ID: "../bad", URL: "https://example.com/video"},
+		{ID: "has space", URL: "https://example.com/video"},
+		{ID: "event:1", URL: "https://example.com/video"},
 		{ID: "bad", URL: "https://example.com/video", Mode: "shell"},
 		{ID: "bad", URL: "http://127.0.0.1/admin"},
 		{ID: "bad", URL: "http://localhost:8080/"},
@@ -85,4 +87,11 @@ func TestCustomQueuePathDoesNotChangeExistingParentPermissions(t *testing.T) {
 	info, err = os.Stat(filepath.Join(parent, "inbox.json"))
 	if err != nil { t.Fatal(err) }
 	if got := info.Mode().Perm(); got != 0o600 { t.Fatalf("queue file permissions = %04o, want 0600", got) }
+}
+
+func TestReadRejectsDuplicateIDs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shared-queue.json")
+	t.Setenv("YTUI_SHARED_QUEUE_PATH", path)
+	if err := os.WriteFile(path, []byte(`{"version":1,"items":[{"id":"same","url":"https://example.com/one"},{"id":"same","url":"https://example.com/two"}]}`), 0o600); err != nil { t.Fatal(err) }
+	if _, err := Read(); err == nil { t.Fatal("Read accepted duplicate item IDs") }
 }
