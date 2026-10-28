@@ -175,3 +175,37 @@ func TestRunIncludesStderrInFailure(t *testing.T) {
 		t.Fatalf("error = %v, want stderr diagnostic", d.Err)
 	}
 }
+
+func TestRunDrainsOversizedOutputLine(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	script := "#!/bin/sh\nawk 'BEGIN { for (i=0; i<1100000; i++) printf \"x\"; print \"\" }'\nprintf '%s\\n' 'diagnostic after oversized line' >&2\nexit 1\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	d := &Download{VideoID: "oversized-test", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{"oversized-test": d}, order: []string{"oversized-test"}, destDir: t.TempDir()}
+	done := make(chan struct{})
+	go func() {
+		m.run(d)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		m.Cancel(d.VideoID)
+		t.Fatal("download worker hung while draining oversized yt-dlp output")
+	}
+	if d.Status != StatusError {
+		t.Fatalf("status after failing yt-dlp = %v, want error", d.Status)
+	}
+	if d.Err == nil || !strings.Contains(d.Err.Error(), "diagnostic after oversized line") {
+		t.Fatalf("error = %v, want diagnostic after oversized line", d.Err)
+	}
+}
