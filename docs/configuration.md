@@ -121,6 +121,19 @@ An exported preferences file is therefore **not a complete backup** of ytui's lo
 
 Configuration files are written with owner-only permissions (`0600`).
 
+## Diagnostic log rotation
+
+When file logging is enabled, ytui writes to `$XDG_CACHE_HOME/ytui/ytui.log` (or `~/.cache/ytui/ytui.log` when `XDG_CACHE_HOME` is unset). The active log is rotated before a write would exceed **5 MiB** by default. The three most recent rotated files are retained as `ytui.log.1`, `ytui.log.2`, and `ytui.log.3`.
+
+Advanced users can override the limits with environment variables:
+
+| Variable | Default | Accepted values |
+|---|---:|---|
+| `YTUI_LOG_MAX_BYTES` | `5242880` | Integer of at least `1024` bytes |
+| `YTUI_LOG_BACKUPS` | `3` | Integer from `1` to `10` |
+
+These settings apply when ytui starts. Rotation is serialized with log writes, and log files remain owner-readable only.
+
 ## Related
 
 - [Google login](google-login.md)
