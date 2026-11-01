@@ -2,6 +2,7 @@ package ui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbles/list"
 
 	"github.com/SakibShahariar/ytui/internal/library"
 )
@@ -51,6 +52,28 @@ func (m *Model) restoreListPosition() {
 	m.listPositions[m.activeTab] = index
 }
 
+// sameDownloadRows compares exactly what the Downloads list renders. Progress
+// state remains fresh in the manager; the list widget is only replaced when a
+// visible row changes.
+func sameDownloadRows(current, next []list.Item) bool {
+	if len(current) != len(next) {
+		return false
+	}
+	for index := range current {
+		oldRow, oldOK := current[index].(downloadItem)
+		newRow, newOK := next[index].(downloadItem)
+		if !oldOK || !newOK {
+			return false
+		}
+		if oldRow.Title() != newRow.Title() ||
+			oldRow.Description() != newRow.Description() ||
+			oldRow.FilterValue() != newRow.FilterValue() {
+			return false
+		}
+	}
+	return true
+}
+
 func (m *Model) refreshList() {
 	// The shared list widget still contains items from listTab, even if a
 	// caller already changed activeTab. Save against the tab those items
@@ -75,7 +98,14 @@ func (m *Model) refreshList() {
 	if m.activeTab == tabHistory || m.activeTab == tabDownloads {
 		items = m.filterLibraryItems(items)
 	}
-	m.list.SetItems(items)
+	skipDownloadRebuild := m.activeTab == tabDownloads &&
+		!m.offlineDownloads &&
+		m.listTabReady &&
+		m.listTab == tabDownloads &&
+		sameDownloadRows(m.list.Items(), items)
+	if !skipDownloadRebuild {
+		m.list.SetItems(items)
+	}
 	m.restoreListPosition()
 	m.listTab = m.activeTab
 	m.listTabReady = true
