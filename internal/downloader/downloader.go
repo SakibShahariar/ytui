@@ -48,6 +48,7 @@ type Options struct {
 	EmbedThumbnail     bool   // --embed-thumbnail
 	CookiesFromBrowser string // --cookies-from-browser <name>; empty = don't use cookies
 	QualityLabel       string // display-only, e.g. "1080p" — shown in the Downloads list
+	ForceOverwrite     bool   // re-download changed options over the previous completed output
 }
 
 type Download struct {
@@ -160,8 +161,14 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 	}
 	existing, found := m.byID[videoID]
 	if found && existing.Status != StatusError && existing.Status != StatusResumable && existing.Status != StatusCanceled {
-		m.mu.Unlock()
-		return existing
+		if existing.Status != StatusDone || sameDownloadOptions(existing.Opts, opts) {
+			m.mu.Unlock()
+			return existing
+		}
+		// A completed entry is replaced in place when the user explicitly
+		// chooses different options. Keep its queue position and force yt-dlp
+		// to regenerate an output that would otherwise be treated as complete.
+		opts.ForceOverwrite = true
 	}
 	d := &Download{VideoID: videoID, Title: title, Channel: channel, URL: url, Opts: opts, Status: StatusQueued, AddedAt: time.Now()}
 	m.byID[videoID] = d
@@ -185,6 +192,15 @@ func (m *Manager) QueueCounts() (active, queued, limit int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.activeWorkers, len(m.pending), m.maxConcurrent
+}
+
+
+// sameDownloadOptions compares user-selected options, ignoring the internal
+// overwrite marker added when replacing a completed download.
+func sameDownloadOptions(a, b Options) bool {
+	a.ForceOverwrite = false
+	b.ForceOverwrite = false
+	return a == b
 }
 
 // List returns a stable-ordered snapshot of all downloads (oldest-enqueued
@@ -422,6 +438,9 @@ func buildArgs(destDir string, d *Download) []string {
 	outputTemplate := filepath.Join(destDir, "%(title).100s [%(id)s].%(ext)s")
 	args := []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate}
 
+	if d.Opts.ForceOverwrite {
+		args = append(args, "--force-overwrites")
+	}
 	if d.Opts.ExtractAudio {
 		args = append(args, "-x")
 		if d.Opts.AudioFormat != "" {
