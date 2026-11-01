@@ -39,7 +39,7 @@ func (m Model) contextualHelp() string {
 			if hasItems { parts = append(parts, "enter: play", "delete: remove (confirm with y)") }
 			parts = append(parts, "^o: queue")
 		} else {
-			parts = append(parts, "^o: offline files")
+			parts = append(parts, "^o: offline files", "s: sort", "^g: status filter")
 		}
 	}
 	if hasItems && m.activeTab == tabDownloads && !m.offlineDownloads {
