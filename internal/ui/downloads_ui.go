@@ -221,8 +221,12 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 		QualityLabel:       q.Label,
 	}
 	wasActive := m.downloads.Active()
-	m.downloads.Enqueue(v.ID, v.Title, v.Channel, v.URL, opts)
-	m.statusMsg = "queued (" + q.Label + "): " + v.Title
+	queued := m.downloads.Enqueue(v.ID, v.Title, v.Channel, v.URL, opts)
+	if queued.Opts.ForceOverwrite {
+		m.statusMsg = "re-downloading with new options (previous output may be overwritten): " + v.Title
+	} else {
+		m.statusMsg = "queued (" + q.Label + "): " + v.Title
+	}
 	if !wasActive {
 		return m, downloadsTickCmd() // start the progress-refresh loop
 	}
