@@ -120,6 +120,13 @@ func TestParseTranscriptVTTStripsHeadersTimestampsAndMarkup(t *testing.T) {
 	if got != want { t.Fatalf("parseTranscriptVTT() = %q, want %q", got, want) }
 }
 
+func TestParseTranscriptVTTSkipsNumericCueIdentifiers(t *testing.T) {
+	input := []byte("WEBVTT\n\n42\n00:00:00.000 --> 00:00:01.000\nCaption\n")
+	if got := parseTranscriptVTT(input); got != "Caption" {
+		t.Fatalf("parseTranscriptVTT() = %q, want Caption", got)
+	}
+}
+
 func TestParseTranscriptVTTEmptyInput(t *testing.T) {
 	if got := parseTranscriptVTT([]byte("WEBVTT\n\n")); got != "" { t.Fatalf("empty transcript = %q, want empty", got) }
 }
