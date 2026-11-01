@@ -6,6 +6,7 @@ import (
 
 	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestResumePositionNeedsSaveThresholdAndForcedEvents(t *testing.T) {
@@ -190,7 +191,10 @@ func TestPausePersistsResumePositionImmediately(t *testing.T) {
 		nowPlaying: session,
 		playingVid: &ytdlp.Video{ID: "video-1", Title: "Example", URL: "https://example.test/video"},
 	}
-	model.saveResumePosition(true)
+	updated, _ := model.handleKey(tea.KeyMsg{Type: tea.KeyCtrlP})
+	if updated.(Model).nowPlaying != session {
+		t.Fatal("pause key unexpectedly replaced the playback session")
+	}
 
 	position, ok := saved.FindHistoryPosition("video-1")
 	if !ok || position != 45 {
