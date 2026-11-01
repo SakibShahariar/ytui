@@ -740,7 +740,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "ctrl+e":
+	case "ctrl+alt+e":
 		if m.activeTab == tabDownloads && !m.offlineDownloads {
 			return m.revealSelectedDownload()
 		}
