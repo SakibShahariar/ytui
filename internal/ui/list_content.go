@@ -284,6 +284,10 @@ func (i downloadItem) Description() string {
 		return prefix + "paused — Ctrl+Space to resume"
 	case downloader.StatusDownloading:
 		bar := progressBar(i.d.Progress, 20)
+		details := make([]string, 0, 2)
+		if i.d.Phase != "" { details = append(details, i.d.Phase) }
+		if i.d.FileSize != "" { details = append(details, i.d.FileSize) }
+		if len(details) > 0 { prefix += strings.Join(details, " · ") + " · " }
 		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", prefix, bar, i.d.Progress, i.d.Speed, i.d.ETA)
 	case downloader.StatusDone:
 		return prefix + "✓ done — " + i.d.FilePath
