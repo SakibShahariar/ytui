@@ -49,7 +49,13 @@ func thumbnailFor(videoID, stored string) string {
 // we can offer to resume where you left off. Best-effort: if mpv doesn't
 // respond in time (e.g. it's already exiting), this just silently no-ops
 // rather than blocking the quit/stop action.
-func (m Model) saveResumePosition() {
+const resumePositionSaveThreshold = 30.0
+
+func resumePositionNeedsSave(previous, next float64, force bool) bool {
+	return force || math.Abs(next-previous) >= resumePositionSaveThreshold
+}
+
+func (m Model) saveResumePosition(force bool) {
 	if m.nowPlaying == nil || m.playingVid == nil {
 		return
 	}
@@ -64,6 +70,10 @@ func (m Model) saveResumePosition() {
 		return
 	}
 	v := m.playingVid
+	previous, _ := m.store.FindHistoryPosition(v.ID)
+	if !resumePositionNeedsSave(previous, pos, force) {
+		return
+	}
 	_ = m.store.AddHistory(store.HistoryEntry{
 		VideoID: v.ID, Title: v.Title, Channel: v.Channel, URL: v.URL,
 		Thumbnail: v.Thumbnail, PositionS: pos,
@@ -72,7 +82,7 @@ func (m Model) saveResumePosition() {
 
 func (m Model) playLocalFile(file library.File) (tea.Model, tea.Cmd) {
 	if m.nowPlaying != nil {
-		m.saveResumePosition()
+		m.saveResumePosition(true)
 		_ = m.nowPlaying.Quit()
 	}
 	m.playingLocal = true
@@ -87,7 +97,7 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	if m.nowPlaying != nil {
-		m.saveResumePosition()
+		m.saveResumePosition(true)
 		_ = m.nowPlaying.Quit()
 	}
 	resumePos, resuming := m.store.FindHistoryPosition(v.ID)
