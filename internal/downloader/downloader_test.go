@@ -768,3 +768,37 @@ func TestBuildArgsForReplacementForcesOverwrite(t *testing.T) {
 		t.Fatalf("buildArgs() = %#v, want --force-overwrites", args)
 	}
 }
+
+
+func TestParseProgressSize(t *testing.T) {
+	tests := []struct { line, want string }{
+		{"[download] 42.3% of 123MiB at 5.6MiB/s ETA 00:12", "123MiB"},
+		{"[download] 12.5% of ~8.00MiB at 1.2MiB/s ETA 00:06", "~8.00MiB"},
+		{"[download] 42.3% at 5.6MiB/s ETA 00:12", ""},
+	}
+	for _, tt := range tests {
+		if got := parseProgressSize(tt.line); got != tt.want {
+			t.Errorf("parseProgressSize(%q) = %q, want %q", tt.line, got, tt.want)
+		}
+	}
+}
+
+func TestProgressPhaseForYTDLPOutput(t *testing.T) {
+	tests := []struct { line, want string }{
+		{"[download] Destination: /tmp/video.webm", "Preparing download"},
+		{"[download] 42.3% of 123MiB at 5.6MiB/s ETA 00:12", "Downloading"},
+		{"[Merger] Merging formats into \"/tmp/video.mp4\"", "Merging formats"},
+		{"[VideoRemuxer] Remuxing video from mkv to mp4; Destination: \"/tmp/video.mp4\"", "Remuxing video"},
+		{"[AudioRemuxer] Remuxing audio from webm to mp3", "Remuxing audio"},
+		{"[ExtractAudio] Destination: \"/tmp/audio.mp3\"", "Extracting audio"},
+		{"[Metadata] Adding metadata to \"/tmp/video.mp4\"", "Embedding metadata"},
+		{"[EmbedThumbnail] mutagen: Adding thumbnail to \"/tmp/video.mp4\"", "Embedding thumbnail"},
+		{"[Fixup] Correcting container in \"/tmp/video.mp4\"", "Finalizing media"},
+		{"[debug] unrelated diagnostic", ""},
+	}
+	for _, tt := range tests {
+		if got := progressPhaseForLine(tt.line); got != tt.want {
+			t.Errorf("progressPhaseForLine(%q) = %q, want %q", tt.line, got, tt.want)
+		}
+	}
+}
