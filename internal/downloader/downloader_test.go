@@ -59,14 +59,34 @@ func TestBuildArgs(t *testing.T) {
 	}
 }
 
-func TestProgressRegex(t *testing.T) {
-	line := "[download]  42.3% of  123.45MiB at  5.67MiB/s ETA 00:12"
-	match := progressRe.FindStringSubmatch(line)
-	if len(match) != 4 {
-		t.Fatalf("progress regex did not match sample: %q", line)
+func TestParseProgressLineSupportsOptionalFieldsAndFragments(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		wantProgress float64
+		wantSpeed string
+		wantETA string
+		wantOK bool
+	}{
+		{name: "standard", line: "[download]  42.3% of 123MiB at 5.67MiB/s ETA 00:12", wantProgress: 42.3, wantSpeed: "5.67MiB/s", wantETA: "00:12", wantOK: true},
+		{name: "missing speed and eta", line: "[download]  42.3% of 123MiB", wantProgress: 42.3, wantOK: true},
+		{name: "speed without eta", line: "[download]  42.3% of 123MiB at 5.67MiB/s", wantProgress: 42.3, wantSpeed: "5.67MiB/s", wantOK: true},
+		{name: "eta without speed", line: "[download]  42.3% of 123MiB ETA 00:12", wantProgress: 42.3, wantETA: "00:12", wantOK: true},
+		{name: "fragment download", line: "[download]  12.5% of ~8.00MiB at 1.20MiB/s ETA 00:06 (frag 2/16)", wantProgress: 12.5, wantSpeed: "1.20MiB/s", wantETA: "00:06", wantOK: true},
+		{name: "completed", line: "[download] 100% of 123MiB", wantProgress: 100, wantOK: true},
+		{name: "not a progress line", line: "[Merger] Merging formats into output.mp4", wantOK: false},
+		{name: "malformed percentage", line: "[download] --% of 123MiB", wantOK: false},
+		{name: "out of range", line: "[download] 120% of 123MiB", wantOK: false},
 	}
-	if match[1] != "42.3" || match[2] != "5.67MiB/s" || match[3] != "00:12" {
-		t.Errorf("unexpected progress captures: %#v", match[1:])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			progress, speed, eta, ok := parseProgressLine(tt.line)
+			if ok != tt.wantOK { t.Fatalf("parseProgressLine() ok = %v, want %v", ok, tt.wantOK) }
+			if !ok { return }
+			if progress != tt.wantProgress || speed != tt.wantSpeed || eta != tt.wantETA {
+				t.Fatalf("parseProgressLine() = (%v, %q, %q), want (%v, %q, %q)", progress, speed, eta, tt.wantProgress, tt.wantSpeed, tt.wantETA)
+			}
+		})
 	}
 }
 
