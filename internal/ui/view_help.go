@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/SakibShahariar/ytui/internal/downloader"
@@ -40,6 +41,10 @@ func (m Model) contextualHelp() string {
 			parts = append(parts, "^o: queue")
 		} else {
 			parts = append(parts, "^o: offline files", "s: sort", "^g: status filter")
+			if m.downloads != nil {
+				active, queued, limit := m.downloads.QueueCounts()
+				parts = append(parts, fmt.Sprintf("%d active · %d queued · max %d", active, queued, limit))
+			}
 		}
 	}
 	if hasItems && m.activeTab == tabDownloads && !m.offlineDownloads {
