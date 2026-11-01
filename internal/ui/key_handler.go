@@ -23,6 +23,19 @@ import (
 // query at any moment, all the old single-letter shortcuts (s/w/p/a/t/x/q)
 // live on ctrl+ combos instead, so they never collide with what you're
 // typing and work identically on every tab.
+func clampPaletteCursor(cursor, count int) int {
+	if count <= 0 {
+		return 0
+	}
+	if cursor < 0 {
+		return 0
+	}
+	if cursor >= count {
+		return count - 1
+	}
+	return cursor
+}
+
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -126,32 +139,27 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "up":
-			if m.commandPaletteCursor > 0 { m.commandPaletteCursor-- }
+			m.commandPaletteCursor = clampPaletteCursor(m.commandPaletteCursor-1, len(m.filteredPaletteCommands()))
 			return m, nil
 		case "down":
-			commands := m.filteredPaletteCommands()
-			if m.commandPaletteCursor < len(commands)-1 { m.commandPaletteCursor++ }
+			m.commandPaletteCursor = clampPaletteCursor(m.commandPaletteCursor+1, len(m.filteredPaletteCommands()))
 			return m, nil
 		case "pgup":
-			m.commandPaletteCursor -= 5
-			if m.commandPaletteCursor < 0 { m.commandPaletteCursor = 0 }
+			m.commandPaletteCursor = clampPaletteCursor(m.commandPaletteCursor-5, len(m.filteredPaletteCommands()))
 			return m, nil
 		case "pgdown":
-			commands := m.filteredPaletteCommands()
-			m.commandPaletteCursor += 5
-			if m.commandPaletteCursor >= len(commands) { m.commandPaletteCursor = len(commands)-1 }
+			m.commandPaletteCursor = clampPaletteCursor(m.commandPaletteCursor+5, len(m.filteredPaletteCommands()))
 			return m, nil
 		case "home":
 			m.commandPaletteCursor = 0
 			return m, nil
 		case "end":
-			m.commandPaletteCursor = len(m.filteredPaletteCommands())-1
-			if m.commandPaletteCursor < 0 { m.commandPaletteCursor = 0 }
+			m.commandPaletteCursor = clampPaletteCursor(len(m.filteredPaletteCommands())-1, len(m.filteredPaletteCommands()))
 			return m, nil
 		case "enter":
 			commands := m.filteredPaletteCommands()
-			if len(commands) == 0 { m.statusMsg = "no matching commands"; return m, nil }
-			if m.commandPaletteCursor >= len(commands) { m.commandPaletteCursor = len(commands)-1 }
+			if len(commands) == 0 { m.commandPaletteCursor = 0; m.statusMsg = "no matching commands"; return m, nil }
+			m.commandPaletteCursor = clampPaletteCursor(m.commandPaletteCursor, len(commands))
 			return m.executePaletteCommand(commands[m.commandPaletteCursor].id)
 		case "ctrl+u":
 			m.commandPaletteInput.SetValue("")
@@ -304,7 +312,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.keyboardHelpOffset = 0
 			return m, nil
 		case "end":
-			m.keyboardHelpOffset = len(keyboardHelpLines())
+			m.keyboardHelpOffset = m.keyboardHelpMaxOffset()
 			return m, nil
 		default:
 			return m, nil
