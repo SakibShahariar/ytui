@@ -186,6 +186,14 @@ func TestHasPartialForVideo(t *testing.T) {
 	}
 }
 
+func TestCancelRejectsCompletedAndUnknownDownloads(t *testing.T) {
+	completed := &Download{VideoID: "completed", Status: StatusDone}
+	m := &Manager{byID: map[string]*Download{"completed": completed}, order: []string{"completed"}}
+	if m.Cancel("completed") { t.Fatal("Cancel() accepted a completed download") }
+	if completed.Status != StatusDone { t.Fatalf("completed status changed to %v", completed.Status) }
+	if m.Cancel("missing") { t.Fatal("Cancel() accepted an unknown download") }
+}
+
 func TestCancelQueuedDownloadMarksItCanceled(t *testing.T) {
 	d := &Download{VideoID: "video", Status: StatusQueued}
 	m := &Manager{
