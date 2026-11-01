@@ -39,11 +39,16 @@ jobs:
           VERSION: ${{ github.ref_name }}
         run: |
           set -eu
-          mkdir -p dist
           output="ytui-${VERSION}-${GOOS}-${GOARCH}"
-          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "dist/${output}" .
+          mkdir -p "dist/${output}"
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o "dist/${output}/ytui" .
+          cp README.md LICENSE "dist/${output}/"
+          cp -R docs "dist/${output}/docs"
+          if [ "${GOOS}" = "linux" ] && [ "${GOARCH}" = "amd64" ]; then
+            test "$(dist/${output}/ytui --version)" = "ytui ${VERSION}"
+          fi
           tar -czf "dist/${output}.tar.gz" -C dist "${output}"
-          rm "dist/${output}"
+          rm -rf "dist/${output}"
       - name: Upload build artifact
         uses: actions/upload-artifact@v6
         with:
