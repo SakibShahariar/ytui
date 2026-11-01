@@ -3,6 +3,9 @@ package ui
 import (
 	"errors"
 	"testing"
+
+	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 func TestResumePositionNeedsSaveThresholdAndForcedEvents(t *testing.T) {
@@ -165,5 +168,32 @@ func TestPositionTickStopsWhenNoPlaybackSessionExists(t *testing.T) {
 	}
 	if updated.(Model).nowPlaying != nil {
 		t.Fatal("position tick unexpectedly created a playback session")
+	}
+}
+
+
+func TestPausePersistsResumePositionImmediately(t *testing.T) {
+	t.Setenv("YTUI_DATA_PATH", t.TempDir()+"/data.json")
+	saved, err := store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saved.AddHistory(store.HistoryEntry{
+		VideoID: "video-1", Title: "Example", URL: "https://example.test/video", PositionS: 10,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	session := &fakePlaybackSession{position: 45}
+	model := Model{
+		store: saved,
+		nowPlaying: session,
+		playingVid: &ytdlp.Video{ID: "video-1", Title: "Example", URL: "https://example.test/video"},
+	}
+	model.saveResumePosition(true)
+
+	position, ok := saved.FindHistoryPosition("video-1")
+	if !ok || position != 45 {
+		t.Fatalf("saved resume position = (%v, %v), want (45, true)", position, ok)
 	}
 }
