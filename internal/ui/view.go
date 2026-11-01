@@ -9,6 +9,23 @@ import (
 	"github.com/SakibShahariar/ytui/internal/thumb"
 )
 
+// errorRecoveryHint adds a safe next step for common failures without
+// replacing the original diagnostic or guessing at unknown error causes.
+func errorRecoveryHint(message string) string {
+	message = strings.ToLower(message)
+	switch {
+	case strings.Contains(message, "network"), strings.Contains(message, "connection"), strings.Contains(message, "timeout"), strings.Contains(message, "dns"):
+		return "check your connection; local history and Watch Later remain available"
+	case strings.Contains(message, "yt-dlp"):
+		return "install or update yt-dlp, then retry"
+	case strings.Contains(message, "oauth"), strings.Contains(message, "token"), strings.Contains(message, "unauthorized"):
+		return "press Ctrl+L to sign in again"
+	case strings.Contains(message, "permission denied"), strings.Contains(message, "access is denied"):
+		return "check permissions on the configured data or download directory"
+	}
+	return ""
+}
+
 func audioOnlyLabel(enabled bool) string {
 	if enabled {
 		return "AUDIO"
@@ -199,7 +216,11 @@ func (m Model) View() string {
 	b.WriteString(footerLine)
 
 	if m.errMsg != "" {
-		b.WriteString("\n" + errorStyle.Render("error: "+m.errMsg))
+		errorText := "error: " + m.errMsg
+		if hint := errorRecoveryHint(m.errMsg); hint != "" {
+			errorText += " · " + hint
+		}
+		b.WriteString("\n" + errorStyle.Render(errorText))
 	} else if m.nowPlaying != nil {
 		b.WriteString("\n" + m.nowPlayingBar())
 	} else if m.statusMsg != "" {
