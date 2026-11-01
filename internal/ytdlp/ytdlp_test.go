@@ -3,7 +3,9 @@ package ytdlp
 import (
 	"encoding/json"
 	"os"
+	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -152,5 +154,48 @@ func TestGetTranscriptReportsMissingCaptionFile(t *testing.T) {
 	defer func() { binaryName = old }()
 	if _, err := GetTranscript("https://www.youtube.com/watch?v=example", "en"); err == nil {
 		t.Fatal("GetTranscript() succeeded without producing a caption file")
+	}
+}
+
+
+func TestParsePlaylistReaderEnforcesSafetyLimit(t *testing.T) {
+	input := `{"title":"Large playlist","entries":[{"id":"one"},{"id":"two"},{"id":"three"}]}`
+	_, videos, err := parsePlaylistReader(strings.NewReader(input), 2)
+	if err == nil || !strings.Contains(err.Error(), "2-entry safety limit") {
+		t.Fatalf("parsePlaylistReader() error = %v, want safety-limit error", err)
+	}
+	if videos != nil {
+		t.Fatalf("videos = %#v, want nil when playlist exceeds safety limit", videos)
+	}
+}
+
+func TestParsePlaylistReaderStreamsEntriesAndPreservesOrder(t *testing.T) {
+	var input strings.Builder
+	input.WriteString(`{"entries":[`)
+	for i := 0; i < 1200; i++ {
+		if i > 0 { input.WriteByte(',') }
+		fmt.Fprintf(&input, `{"id":"video-%04d","title":"Video %d","description":"discarded metadata"}`, i, i)
+	}
+	input.WriteString(`],"title":"Large playlist"}`)
+	title, videos, err := parsePlaylistReader(strings.NewReader(input.String()), 1200)
+	if err != nil { t.Fatalf("parsePlaylistReader() error = %v", err) }
+	if title != "Large playlist" { t.Fatalf("title = %q, want Large playlist", title) }
+	if len(videos) != 1200 { t.Fatalf("video count = %d, want 1200", len(videos)) }
+	if videos[0].ID != "video-0000" || videos[1199].ID != "video-1199" {
+		t.Fatalf("playlist order not preserved: first=%q last=%q", videos[0].ID, videos[1199].ID)
+	}
+	if videos[1199].PlaylistIndex != 1200 { t.Fatalf("last playlist index = %d, want 1200", videos[1199].PlaylistIndex) }
+}
+
+func TestPlaylistEntryLimitValidatesEnvironment(t *testing.T) {
+	t.Setenv("YTUI_PLAYLIST_MAX_ENTRIES", "1200")
+	if got, err := playlistEntryLimit(); err != nil || got != 1200 {
+		t.Fatalf("playlistEntryLimit() = (%d, %v), want (1200, nil)", got, err)
+	}
+	for _, value := range []string{"0", "-1", "50001", "invalid"} {
+		t.Setenv("YTUI_PLAYLIST_MAX_ENTRIES", value)
+		if _, err := playlistEntryLimit(); err == nil {
+			t.Errorf("playlistEntryLimit() accepted invalid value %q", value)
+		}
 	}
 }
