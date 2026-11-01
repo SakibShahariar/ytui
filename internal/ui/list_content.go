@@ -294,10 +294,12 @@ func (i downloadItem) Description() string {
 	case downloader.StatusResumable:
 		msg := "partial file available"
 		if i.d.Err != nil { msg = i.d.Err.Error() }
+		if i.d.Phase != "" { return prefix + "↻ resumable after " + i.d.Phase + ": " + msg }
 		return prefix + "↻ resumable: " + msg
 	case downloader.StatusError:
 		msg := "unknown error"
 		if i.d.Err != nil { msg = i.d.Err.Error() }
+		if i.d.Phase != "" { return prefix + "✗ failed during " + i.d.Phase + ": " + msg }
 		return prefix + "✗ error: " + msg
 	case downloader.StatusCanceled:
 		return prefix + "canceled — Ctrl+R to retry/resume"
