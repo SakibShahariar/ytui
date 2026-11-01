@@ -140,3 +140,20 @@ These settings apply when ytui starts. Rotation is serialized with log writes, a
 
 - [Google login](google-login.md)
 - [Keybindings](keybindings.md)
+
+
+## Large playlist handling
+
+Playlist metadata is decoded entry by entry instead of retaining yt-dlp's complete JSON metadata document. ytui keeps only the compact fields needed by the interface and download queue, and stops with a clear error when a playlist exceeds the configured entry limit.
+
+| Environment variable | Default | Accepted values |
+|---|---:|---|
+| `YTUI_PLAYLIST_MAX_ENTRIES` | `5000` | Integer from `1` to `50000` |
+
+For example, allow up to 10,000 entries for one launch:
+
+```sh
+YTUI_PLAYLIST_MAX_ENTRIES=10000 ytui
+```
+
+The limit counts playlist entries, including unavailable entries, so unusually large or partially unavailable playlists cannot bypass the memory bound.
