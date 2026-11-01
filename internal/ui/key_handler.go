@@ -435,6 +435,26 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(tea.ClearScreen, textinput.Blink)
 	}
 
+	if m.activeTab == tabDownloads && !m.offlineDownloads && !m.inputMode && key == "s" {
+		modes := []string{"added", "title", "channel", "progress", "status"}
+		current := 0
+		for i, mode := range modes {
+			if mode == m.cfg.DownloadSort { current = i; break }
+		}
+		previous := m.cfg.DownloadSort
+		m.cfg.DownloadSort = modes[(current+1)%len(modes)]
+		if err := config.Save(m.cfg); err != nil {
+			m.cfg.DownloadSort = previous
+			m.errMsg = "save download sort preference: " + err.Error()
+			return m, nil
+		}
+		m.errMsg = ""
+		labels := []string{"oldest added", "title A–Z", "channel A–Z", "highest progress", "status"}
+		m.statusMsg = "downloads sorted by " + labels[(current+1)%len(modes)]
+		m.refreshList()
+		return m, nil
+	}
+
 	if m.activeTab == tabWatchLater && !m.inputMode {
 		switch key {
 		case " ":
@@ -609,6 +629,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.libraryFilter = ""
 			m.libraryFilterInput.SetValue("")
 			m.downloadStatusFilter = 0
+			if m.activeTab == tabDownloads {
+				m.cfg.DownloadStatusFilter = 0
+				if err := config.Save(m.cfg); err != nil {
+					m.errMsg = "save download filter preference: " + err.Error()
+					return m, nil
+				}
+			}
 			m.libraryDateFilter = 0
 			m.refreshList()
 			m.statusMsg = "library filters cleared"
@@ -645,7 +672,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+g":
 		if m.activeTab == tabDownloads && !m.offlineDownloads {
+			previous := m.downloadStatusFilter
 			m.downloadStatusFilter = (m.downloadStatusFilter + 1) % 4
+			m.cfg.DownloadStatusFilter = m.downloadStatusFilter
+			if err := config.Save(m.cfg); err != nil {
+				m.downloadStatusFilter = previous
+				m.cfg.DownloadStatusFilter = previous
+				m.errMsg = "save download status filter: " + err.Error()
+				return m, nil
+			}
+			m.errMsg = ""
 			m.refreshList()
 			m.statusMsg = "download status filter: " + m.downloadStatusFilterLabel()
 			return m, nil
