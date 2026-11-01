@@ -32,7 +32,7 @@ func (m Model) Cleanup() error {
 	var stopPlayer func() error
 	if m.nowPlaying != nil {
 		stopPlayer = func() error {
-			m.saveResumePosition()
+			m.saveResumePosition(true)
 			return m.nowPlaying.Quit()
 		}
 	}
