@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,5 +165,32 @@ func TestSortDownloadItemsSupportsQueueSortModes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+
+func TestDownloadOptionsSummaryIncludesSelectedOptions(t *testing.T) {
+	got := downloadOptionsSummary(downloader.Options{
+		QualityLabel: "1080p",
+		WriteSubs: true,
+		EmbedThumbnail: true,
+		CookiesFromBrowser: "firefox",
+	})
+	want := "1080p · subtitles · thumbnail · cookies: firefox"
+	if got != want {
+		t.Fatalf("downloadOptionsSummary() = %q, want %q", got, want)
+	}
+}
+
+func TestCompletedDownloadDescriptionShowsOptions(t *testing.T) {
+	item := downloadItem{d: downloader.Download{
+		Title: "Example",
+		Status: downloader.StatusDone,
+		FilePath: "/downloads/example.mp4",
+		Opts: downloader.Options{QualityLabel: "Audio only (mp3)", WriteSubs: true},
+	}}
+	got := item.Description()
+	if !strings.Contains(got, "Audio only (mp3)") || !strings.Contains(got, "subtitles") || !strings.Contains(got, "/downloads/example.mp4") {
+		t.Fatalf("completed download description = %q, want options and output path", got)
 	}
 }
