@@ -83,6 +83,7 @@ func New(s *store.Store) Model {
 	m := Model{
 		store:          s,
 		cfg:            cfg,
+		downloadStatusFilter: cfg.DownloadStatusFilter,
 		activeProfile:  activeProfile,
 		activeTab:      tabSearch,
 		inputMode:      true,
