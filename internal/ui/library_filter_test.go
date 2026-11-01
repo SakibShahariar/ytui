@@ -213,3 +213,16 @@ func TestDownloadingDescriptionShowsPhaseAndFileSize(t *testing.T) {
 		}
 	}
 }
+
+
+func TestFailedDownloadDescriptionShowsLastProcessingPhase(t *testing.T) {
+	item := downloadItem{d: downloader.Download{
+		Status: downloader.StatusError,
+		Phase: "Merging formats",
+		Err: errors.New("yt-dlp failed while merging"),
+	}}
+	got := item.Description()
+	if !strings.Contains(got, "failed during Merging formats") || !strings.Contains(got, "yt-dlp failed while merging") {
+		t.Fatalf("failed download description = %q, want phase and error", got)
+	}
+}
