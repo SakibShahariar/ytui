@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/SakibShahariar/ytui/internal/store"
@@ -227,5 +228,30 @@ func TestExternalPlaybackExitPersistsLastObservedPosition(t *testing.T) {
 	position, ok := saved.FindHistoryPosition("video-exit")
 	if !ok || position != 42 {
 		t.Fatalf("saved resume position = (%v, %v), want (42, true)", position, ok)
+	}
+}
+
+
+func TestResumePositionIsUsefulSkipsCompletedAndInvalidPositions(t *testing.T) {
+	tests := []struct {
+		name string
+		position float64
+		duration float64
+		want bool
+	}{
+		{name: "normal resume", position: 120, duration: 600, want: true},
+		{name: "unknown duration", position: 120, duration: 0, want: true},
+		{name: "completed exact duration", position: 600, duration: 600, want: false},
+		{name: "within completion threshold", position: 575, duration: 600, want: false},
+		{name: "outside completion threshold", position: 569, duration: 600, want: true},
+		{name: "negative position", position: -1, duration: 600, want: false},
+		{name: "nan position", position: math.NaN(), duration: 600, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resumePositionIsUseful(tt.position, tt.duration); got != tt.want {
+				t.Fatalf("resumePositionIsUseful(%v, %v) = %v, want %v", tt.position, tt.duration, got, tt.want)
+			}
+		})
 	}
 }
