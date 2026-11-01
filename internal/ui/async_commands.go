@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"container/list"
 	"context"
+	"strings"
+	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -148,13 +151,92 @@ func downloadsTickCmd() tea.Cmd {
 }
 
 
+const (
+	maxTranscriptCacheEntries = 32
+	maxTranscriptCacheBytes = 4 << 20
+)
+
+type transcriptCacheKey struct {
+	videoID string
+	language string
+}
+
+type transcriptCacheEntry struct {
+	key transcriptCacheKey
+	text string
+}
+
+type transcriptCache struct {
+	mu sync.Mutex
+	entries map[transcriptCacheKey]*list.Element
+	order *list.List
+	bytes int
+	maxEntries int
+	maxBytes int
+}
+
+func newTranscriptCache(maxEntries, maxBytes int) *transcriptCache {
+	return &transcriptCache{
+		entries: make(map[transcriptCacheKey]*list.Element),
+		order: list.New(),
+		maxEntries: maxEntries,
+		maxBytes: maxBytes,
+	}
+}
+
+func (cache *transcriptCache) get(key transcriptCacheKey) (string, bool) {
+	if cache == nil || key.videoID == "" { return "", false }
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	element, ok := cache.entries[key]
+	if !ok { return "", false }
+	cache.order.MoveToFront(element)
+	return element.Value.(transcriptCacheEntry).text, true
+}
+
+func (cache *transcriptCache) put(key transcriptCacheKey, text string) {
+	if cache == nil || key.videoID == "" || text == "" || len(text) > cache.maxBytes || cache.maxEntries < 1 || cache.maxBytes < 1 { return }
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	if old, ok := cache.entries[key]; ok {
+		cache.bytes -= len(old.Value.(transcriptCacheEntry).text)
+		cache.order.Remove(old)
+		delete(cache.entries, key)
+	}
+	element := cache.order.PushFront(transcriptCacheEntry{key: key, text: text})
+	cache.entries[key] = element
+	cache.bytes += len(text)
+	for cache.order.Len() > cache.maxEntries || cache.bytes > cache.maxBytes {
+		oldest := cache.order.Back()
+		entry := oldest.Value.(transcriptCacheEntry)
+		cache.bytes -= len(entry.text)
+		delete(cache.entries, entry.key)
+		cache.order.Remove(oldest)
+	}
+}
+
+var sharedTranscriptCache = newTranscriptCache(maxTranscriptCacheEntries, maxTranscriptCacheBytes)
+
+func transcriptCacheLanguage(language string) string {
+	language = strings.TrimSpace(language)
+	if language == "" { return "en.*,en" }
+	return language
+}
+
 func loadTranscriptCmd(video ytdlp.Video, language string) tea.Cmd {
 	return loadTranscriptWith(video, language, ytdlp.GetTranscript)
 }
 
 func loadTranscriptWith(video ytdlp.Video, language string, getTranscript func(string, string) (string, error)) tea.Cmd {
 	return func() tea.Msg {
+		key := transcriptCacheKey{videoID: video.ID, language: transcriptCacheLanguage(language)}
+		if transcript, ok := sharedTranscriptCache.get(key); ok {
+			return transcriptMsg{video: video, text: transcript}
+		}
 		transcript, err := getTranscript(video.URL, language)
+		if err == nil {
+			sharedTranscriptCache.put(key, transcript)
+		}
 		return transcriptMsg{video: video, text: transcript, err: err}
 	}
 }
