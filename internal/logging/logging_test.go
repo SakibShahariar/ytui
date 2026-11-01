@@ -34,6 +34,23 @@ func TestSetupCreatesPrivateLogAndWritesEntries(t *testing.T) {
 	if !strings.Contains(string(data), "file logging enabled") { t.Fatalf("log missing startup entry: %s", data) }
 }
 
+func TestRotatingWriterRotatesOversizedLogOnStartup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ytui.log")
+	previous := strings.Repeat("x", 11)
+	if err := os.WriteFile(path, []byte(previous), 0o600); err != nil { t.Fatal(err) }
+
+	writer, err := newRotatingWriter(path, 10, 2)
+	if err != nil { t.Fatal(err) }
+	if err := writer.Close(); err != nil { t.Fatal(err) }
+
+	rotated, err := os.ReadFile(path + ".1")
+	if err != nil { t.Fatalf("read rotated log after restart: %v", err) }
+	if string(rotated) != previous { t.Fatalf("rotated log = %q, want previous contents", rotated) }
+	active, err := os.ReadFile(path)
+	if err != nil { t.Fatalf("read fresh active log: %v", err) }
+	if len(active) != 0 { t.Fatalf("fresh active log is not empty: %q", active) }
+}
+
 func TestRotatingWriterRetainsRecentBackups(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ytui.log")
 	writer, err := newRotatingWriter(path, 10, 2)
