@@ -62,6 +62,8 @@ type Download struct {
 	Progress float64 // 0-100
 	Speed    string
 	ETA      string
+	FileSize string // yt-dlp's reported total or estimated size
+	Phase    string // current download or post-processing phase
 	FilePath string
 	Err      error
 
@@ -408,6 +410,40 @@ func hasPartialForVideo(destDir, videoID string) bool {
 var progressPercentRe = regexp.MustCompile(`^\[download\]\s+([0-9]+(?:\.[0-9]+)?)%`)
 var progressSpeedRe = regexp.MustCompile(`\bat\s+(\S+)`)
 var progressETARe = regexp.MustCompile(`\bETA\s+(\S+)`)
+var progressSizeRe = regexp.MustCompile(`\bof\s+(~?\S+)`)
+
+// parseProgressSize extracts yt-dlp's reported total or estimated file size.
+func parseProgressSize(line string) string {
+	match := progressSizeRe.FindStringSubmatch(line)
+	if len(match) != 2 { return "" }
+	return match[1]
+}
+
+// progressPhaseForLine identifies the current yt-dlp operation from its
+// progress output. Unknown lines leave the last known phase unchanged.
+func progressPhaseForLine(line string) string {
+	line = strings.TrimSpace(line)
+	switch {
+	case strings.HasPrefix(line, "[download]"):
+		if strings.Contains(line, "Destination:") { return "Preparing download" }
+		if progressPercentRe.MatchString(line) { return "Downloading" }
+	case strings.HasPrefix(line, "[Merger]"):
+		return "Merging formats"
+	case strings.HasPrefix(line, "[VideoRemuxer]"):
+		return "Remuxing video"
+	case strings.HasPrefix(line, "[AudioRemuxer]"):
+		return "Remuxing audio"
+	case strings.HasPrefix(line, "[ExtractAudio]"):
+		return "Extracting audio"
+	case strings.HasPrefix(line, "[Metadata]"):
+		return "Embedding metadata"
+	case strings.HasPrefix(line, "[EmbedThumbnail]"):
+		return "Embedding thumbnail"
+	case strings.HasPrefix(line, "[Fixup]"):
+		return "Finalizing media"
+	}
+	return ""
+}
 func parseProgressLine(line string) (float64, string, string, bool) {
 	line = strings.TrimSpace(line)
 	match := progressPercentRe.FindStringSubmatch(line)
@@ -474,6 +510,7 @@ func (m *Manager) run(d *Download) {
 		return
 	}
 	d.Status = StatusDownloading
+	d.Phase = "Starting"
 	m.mu.Unlock()
 
 	args := buildArgs(m.destDir, d)
@@ -518,11 +555,18 @@ func (m *Manager) run(d *Download) {
 		line, oversized, readErr := readOutputLine(reader, 1024*1024)
 		if !oversized && line != "" {
 			lastLine = line
+			phase := progressPhaseForLine(line)
 			if pct, speed, eta, ok := parseProgressLine(line); ok {
 				m.mu.Lock()
 				d.Progress = pct
 				d.Speed = speed
 				d.ETA = eta
+				d.FileSize = parseProgressSize(line)
+				if phase != "" { d.Phase = phase }
+				m.mu.Unlock()
+			} else if phase != "" {
+				m.mu.Lock()
+				d.Phase = phase
 				m.mu.Unlock()
 			}
 			if match := destRe.FindStringSubmatch(line); match != nil {
@@ -568,6 +612,7 @@ func (m *Manager) run(d *Download) {
 			msg = err.Error()
 		}
 		slog.Error("download failed", "video_id", d.VideoID, "error", msg)
+		d.Phase = "Failed"
 		if resumable {
 			d.Status = StatusResumable
 			d.Err = fmt.Errorf("%s (partial files retained; press Ctrl+R to resume)", msg)
@@ -590,6 +635,7 @@ func (m *Manager) run(d *Download) {
 		if statErr != nil || info.IsDir() {
 			m.mu.Lock()
 			d.Status = StatusError
+			d.Phase = "Failed"
 			if statErr != nil {
 				d.Err = fmt.Errorf("yt-dlp reported success but final output %q is unavailable: %w", finalPath, statErr)
 			} else {
@@ -604,6 +650,7 @@ func (m *Manager) run(d *Download) {
 
 	m.mu.Lock()
 	d.Status = StatusDone
+	d.Phase = "Complete"
 	d.Progress = 100
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
