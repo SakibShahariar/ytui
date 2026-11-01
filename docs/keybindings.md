@@ -88,3 +88,6 @@ On **History** and **Downloads**, press `Ctrl+F` to search titles and channels (
 
 
 If a video is already completed, choosing different download options with `Ctrl+D` replaces that video's queue entry and downloads it again. Identical options remain a no-op. When the selected options target the same output path, yt-dlp is instructed to overwrite the previous file; keep a separate copy first if you need to retain the older version. The queue row displays the selected quality, subtitle, thumbnail, and browser-cookie options.
+
+
+The live Downloads queue shows the current yt-dlp stage, percentage, reported total size, speed, and ETA when available. Merge, remux, audio extraction, metadata, and thumbnail steps are shown separately from the transfer phase; a failure retains the stage where yt-dlp stopped.
