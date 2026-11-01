@@ -15,6 +15,8 @@ func TestImportExportRoundTrip(t *testing.T) {
 
 	want := Config{
 		DownloadDir:           "/tmp/ytui-downloads",
+		DownloadSort:          "progress",
+		DownloadStatusFilter:  2,
 		DefaultQuality:        "1080p",
 		DefaultCookiesBrowser: "firefox",
 		DefaultAudioOnly:          true,
@@ -95,6 +97,8 @@ func TestImportInvalidFieldDoesNotReplaceConfig(t *testing.T) {
 		{"download path control character", "{\"download_dir\":\"bad\\u0000path\"}", "download_dir"},
 		{"negative thumbnail entry limit", `{"thumbnail_cache_max_entries":-1}`, "thumbnail_cache_max_entries"},
 		{"excessive thumbnail age", `{"thumbnail_cache_max_age_days":3651}`, "thumbnail_cache_max_age_days"},
+		{"unsupported download sort", `{"download_sort":"size"}`, "download_sort"},
+		{"invalid download status filter", `{"download_status_filter":4}`, "download_status_filter"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
