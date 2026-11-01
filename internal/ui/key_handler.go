@@ -183,6 +183,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.logoutPending {
+		m = m.resolveLogoutConfirmation(key, auth.LogoutProfile)
+		if !m.loggedIn { m.refreshList() }
+		return m, nil
+	}
+
 	if m.downloadCancelPending != nil {
 		var cancel func(string) bool
 		if m.downloads != nil {
@@ -492,19 +498,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+l":
 		if m.loggedIn {
-			_ = auth.LogoutProfile(m.activeProfile)
-			m.loggedIn = false
-			m.authClient = nil
-			m.realSubscriptions = nil
-			m.playlists = nil
-			m.playlistVideos = nil
-			m.browsingPlaylistID = ""
-			m.channelVideos = nil
-			m.browsingChannelID = ""
-			m.likedVideos = nil
-			m.homeFeed = nil
-			m.refreshList()
-			m.statusMsg = "logged out"
+			m.logoutPending = true
+			m.statusMsg = fmt.Sprintf("log out of Google profile %q? press y to confirm, any other key to dismiss", m.activeProfile)
 			return m, nil
 		}
 		if !auth.HaveClientSecrets() {
