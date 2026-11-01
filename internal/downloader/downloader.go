@@ -751,6 +751,7 @@ type persistedDownload struct {
 	Opts Options `json:"options"`
 	AddedAt time.Time `json:"added_at,omitempty"`
 	Paused bool `json:"paused,omitempty"`
+	Resumable bool `json:"resumable,omitempty"`
 }
 
 func (m *Manager) loadQueue() error {
@@ -764,7 +765,11 @@ func (m *Manager) loadQueue() error {
 		if item.VideoID == "" || item.URL == "" || seen[item.VideoID] { continue }
 		seen[item.VideoID] = true
 		status := StatusQueued
-		if item.Paused { status = StatusPaused }
+		if item.Resumable {
+			status = StatusResumable
+		} else if item.Paused {
+			status = StatusPaused
+		}
 		d := &Download{VideoID:item.VideoID, Title:item.Title, Channel:item.Channel, URL:item.URL, Opts:item.Opts, AddedAt:item.AddedAt, Status:status}
 		m.byID[item.VideoID] = d
 		m.order = append(m.order, item.VideoID)
@@ -773,15 +778,15 @@ func (m *Manager) loadQueue() error {
 	return nil
 }
 
-// persistQueueLocked atomically stores queued and paused entries with private
+// persistQueueLocked atomically stores queued, paused, and resumable entries with private
 // file permissions. Callers must hold m.mu.
 func (m *Manager) persistQueueLocked() error {
 	if m.queueFile == "" { return nil }
 	saved := make([]persistedDownload, 0, len(m.pending))
 	for _, id := range m.order {
 		d := m.byID[id]
-		if d == nil || (d.Status != StatusQueued && d.Status != StatusPaused) { continue }
-		saved = append(saved, persistedDownload{VideoID:d.VideoID, Title:d.Title, Channel:d.Channel, URL:d.URL, Opts:d.Opts, AddedAt:d.AddedAt, Paused:d.Status == StatusPaused})
+		if d == nil || (d.Status != StatusQueued && d.Status != StatusPaused && d.Status != StatusResumable) { continue }
+		saved = append(saved, persistedDownload{VideoID:d.VideoID, Title:d.Title, Channel:d.Channel, URL:d.URL, Opts:d.Opts, AddedAt:d.AddedAt, Paused:d.Status == StatusPaused, Resumable:d.Status == StatusResumable})
 	}
 	if len(saved) == 0 {
 		err := os.Remove(m.queueFile)
