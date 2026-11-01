@@ -612,7 +612,6 @@ func (m *Manager) run(d *Download) {
 			msg = err.Error()
 		}
 		slog.Error("download failed", "video_id", d.VideoID, "error", msg)
-		d.Phase = "Failed"
 		if resumable {
 			d.Status = StatusResumable
 			d.Err = fmt.Errorf("%s (partial files retained; press Ctrl+R to resume)", msg)
@@ -635,7 +634,6 @@ func (m *Manager) run(d *Download) {
 		if statErr != nil || info.IsDir() {
 			m.mu.Lock()
 			d.Status = StatusError
-			d.Phase = "Failed"
 			if statErr != nil {
 				d.Err = fmt.Errorf("yt-dlp reported success but final output %q is unavailable: %w", finalPath, statErr)
 			} else {
