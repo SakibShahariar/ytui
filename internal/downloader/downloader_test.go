@@ -413,6 +413,15 @@ func TestManagerShutdownPersistsQueueForRestart(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	partialDeadline := time.Now().Add(3 * time.Second)
+	for {
+		if _, err := os.Stat(partialPath); err == nil { break }
+		if time.Now().After(partialDeadline) {
+			manager.Shutdown()
+			t.Fatal("fake yt-dlp did not create its resumable partial file")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	manager.Enqueue("second-id", "Second", "Channel", "https://example.invalid/second", Options{})
 	manager.Shutdown()
 
