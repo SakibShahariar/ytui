@@ -154,6 +154,48 @@ func (m Model) revealSelectedDownload() (tea.Model, tea.Cmd) {
 	return m.revealSelectedDownloadWith(openFileManager)
 }
 
+func (m Model) removeSelectedQueueEntry() (tea.Model, tea.Cmd) {
+	item, ok := m.list.SelectedItem().(downloadItem)
+	if !ok {
+		m.statusMsg = "select a finished queue entry to remove"
+		return m, nil
+	}
+	if !downloaderIsRemovable(item.d.Status) {
+		m.statusMsg = "only completed, failed, resumable, or canceled entries can be removed"
+		return m, nil
+	}
+	m.queueRemovePending = &downloadRemoveRequest{videoID: item.d.VideoID, title: item.d.Title}
+	m.statusMsg = "remove " + item.d.Title + " from the queue? press y to confirm; media files will be kept"
+	return m, nil
+}
+
+func downloaderIsRemovable(status downloader.Status) bool {
+	return status == downloader.StatusDone || status == downloader.StatusError ||
+		status == downloader.StatusResumable || status == downloader.StatusCanceled
+}
+
+func (m Model) resolveQueueEntryRemoval(key string, remove func(string) bool) Model {
+	pending := m.queueRemovePending
+	m.queueRemovePending = nil
+	if pending == nil { return m }
+	if key != "y" {
+		m.statusMsg = "queue entry removal dismissed"
+		return m
+	}
+	if remove == nil {
+		m.statusMsg = "downloads unavailable"
+		return m
+	}
+	if !remove(pending.videoID) {
+		m.statusMsg = "queue entry is no longer removable"
+		return m
+	}
+	m.errMsg = ""
+	m.statusMsg = "removed from queue: " + pending.title
+	m.refreshList()
+	return m
+}
+
 // startPickedDownload enqueues the download with whatever quality/toggle
 // choices are currently set in the picker, then closes it.
 func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
