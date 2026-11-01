@@ -46,6 +46,58 @@ func TestNewWithConcurrencyRejectsOutOfRangeLimits(t *testing.T) {
 	}
 }
 
+func TestYTDLPConcurrencyHelper(t *testing.T) {
+	if os.Getenv("YTUI_TEST_CONCURRENCY_HELPER") != "1" {
+		return
+	}
+	lockPath := os.Getenv("YTUI_TEST_LOCK")
+	activePath := os.Getenv("YTUI_TEST_ACTIVE")
+	peakPath := os.Getenv("YTUI_TEST_PEAK")
+	lock := func(update func()) {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			err := os.Mkdir(lockPath, 0o700)
+			if err == nil { break }
+			if !os.IsExist(err) { t.Fatalf("acquire helper lock: %v", err) }
+			if time.Now().After(deadline) { t.Fatal("timed out acquiring helper lock") }
+			time.Sleep(time.Millisecond)
+		}
+		defer os.Remove(lockPath)
+		update()
+	}
+	lock(func() {
+		active := 0
+		if data, err := os.ReadFile(activePath); err == nil {
+			active, _ = strconv.Atoi(strings.TrimSpace(string(data)))
+		}
+		active++
+		if err := os.WriteFile(activePath, []byte(strconv.Itoa(active)), 0o600); err != nil {
+			t.Fatalf("write active process count: %v", err)
+		}
+		peak := 0
+		if data, err := os.ReadFile(peakPath); err == nil {
+			peak, _ = strconv.Atoi(strings.TrimSpace(string(data)))
+		}
+		if active > peak {
+			if err := os.WriteFile(peakPath, []byte(strconv.Itoa(active)), 0o600); err != nil {
+				t.Fatalf("write peak process count: %v", err)
+			}
+		}
+	})
+	time.Sleep(300 * time.Millisecond)
+	lock(func() {
+		data, err := os.ReadFile(activePath)
+		if err != nil { t.Fatalf("read active process count: %v", err) }
+		active, err := strconv.Atoi(strings.TrimSpace(string(data)))
+		if err != nil { t.Fatalf("parse active process count: %v", err) }
+		active--
+		if err := os.WriteFile(activePath, []byte(strconv.Itoa(active)), 0o600); err != nil {
+			t.Fatalf("write active process count: %v", err)
+		}
+	})
+}
+
 func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
@@ -53,27 +105,17 @@ func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	binDir := t.TempDir()
 	runDir := t.TempDir()
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
-	script := `#!/bin/sh
-set -eu
-while ! mkdir "$YTUI_TEST_LOCK" 2>/dev/null; do sleep 0.01; done
-touch "$YTUI_TEST_RUN_DIR/active-$$"
-set -- "$YTUI_TEST_RUN_DIR"/active-*
-if [ -e "$1" ]; then active=$#; else active=0; fi
-peak=$(cat "$YTUI_TEST_PEAK" 2>/dev/null || printf 0)
-if [ "$active" -gt "$peak" ]; then printf '%s\n' "$active" > "$YTUI_TEST_PEAK"; fi
-rmdir "$YTUI_TEST_LOCK"
-sleep 0.25
-while ! mkdir "$YTUI_TEST_LOCK" 2>/dev/null; do sleep 0.01; done
-rm -f "$YTUI_TEST_RUN_DIR/active-$$"
-rmdir "$YTUI_TEST_LOCK"
-`
+	script := "#!/bin/sh\\nexec \"$YTUI_TEST_BINARY\" -test.run=^TestYTDLPConcurrencyHelper$\\n"
 	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("YTUI_TEST_RUN_DIR", runDir)
+	t.Setenv("YTUI_TEST_BINARY", os.Args[0])
+	t.Setenv("YTUI_TEST_CONCURRENCY_HELPER", "1")
 	t.Setenv("YTUI_TEST_LOCK", filepath.Join(runDir, "lock"))
+	activePath := filepath.Join(runDir, "active")
 	peakPath := filepath.Join(runDir, "peak")
+	t.Setenv("YTUI_TEST_ACTIVE", activePath)
 	t.Setenv("YTUI_TEST_PEAK", peakPath)
 
 	manager, err := NewWithConcurrency(t.TempDir(), 2)
