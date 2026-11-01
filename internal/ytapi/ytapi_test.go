@@ -25,7 +25,7 @@ func apiResponse(request *http.Request, status int, body string) *http.Response 
 }
 
 func TestHomeFeedBatchesVideoDetailsAcrossSubscriptions(t *testing.T) {
-	const subscriptionCount = 8
+	const subscriptionCount = 100
 	var mu sync.Mutex
 	detailCalls := 0
 	playlistCalls := 0
@@ -69,7 +69,7 @@ func TestHomeFeedBatchesVideoDetailsAcrossSubscriptions(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	if playlistCalls != subscriptionCount { t.Fatalf("playlistItems calls = %d, want %d", playlistCalls, subscriptionCount) }
-	if detailCalls != 1 { t.Fatalf("videos.list calls = %d, want one batched request", detailCalls) }
+	if detailCalls != 2 { t.Fatalf("videos.list calls = %d, want two 50-ID batches", detailCalls) }
 	for _, video := range videos {
 		if video.Duration != 120 || video.ViewCount != 123 {
 			t.Errorf("video %q details = duration %v, views %d; want 120 and 123", video.ID, video.Duration, video.ViewCount)
