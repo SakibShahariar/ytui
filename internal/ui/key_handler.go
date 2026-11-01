@@ -785,7 +785,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "ctrl+x":
 		if m.nowPlaying != nil {
-			m.saveResumePosition()
+			m.saveResumePosition(true)
 			_ = m.nowPlaying.Quit()
 			m.statusMsg = "playback stopped"
 			return m.clearNowPlaying()
