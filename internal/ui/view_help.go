@@ -48,7 +48,7 @@ func (m Model) contextualHelp() string {
 				parts = append(parts, "^d: cancel (confirm)")
 			}
 			if item.d.Status == downloader.StatusDone {
-				parts = append(parts, "^e: reveal folder")
+				parts = append(parts, "ctrl+alt+e: reveal folder")
 			}
 			if item.d.Status == downloader.StatusError || item.d.Status == downloader.StatusResumable || item.d.Status == downloader.StatusCanceled {
 				parts = append(parts, "^r: retry/resume")
