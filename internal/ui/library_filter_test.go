@@ -194,3 +194,22 @@ func TestCompletedDownloadDescriptionShowsOptions(t *testing.T) {
 		t.Fatalf("completed download description = %q, want options and output path", got)
 	}
 }
+
+
+func TestDownloadingDescriptionShowsPhaseAndFileSize(t *testing.T) {
+	item := downloadItem{d: downloader.Download{
+		Status: downloader.StatusDownloading,
+		Progress: 42.5,
+		Speed: "5MiB/s",
+		ETA: "00:12",
+		FileSize: "123MiB",
+		Phase: "Merging formats",
+		Opts: downloader.Options{QualityLabel: "1080p"},
+	}}
+	got := item.Description()
+	for _, want := range []string{"1080p", "Merging formats", "123MiB", "42.5%", "5MiB/s", "00:12"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("download description %q does not include %q", got, want)
+		}
+	}
+}
