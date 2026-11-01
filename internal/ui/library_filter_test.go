@@ -2,7 +2,6 @@ package ui
 
 import (
 	"errors"
-	"sort"
 	"testing"
 	"time"
 
