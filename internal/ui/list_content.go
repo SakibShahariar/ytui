@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -48,7 +49,39 @@ func (m Model) filterLibraryItems(items []list.Item) []list.Item {
 		}
 		filtered = append(filtered, item)
 	}
+	if m.activeTab == tabDownloads && !m.offlineDownloads {
+		sortDownloadItems(filtered, m.cfg.DownloadSort)
+	}
 	return filtered
+}
+
+func sortDownloadItems(items []list.Item, mode string) {
+	statusOrder := map[downloader.Status]int{
+		downloader.StatusQueued: 0,
+		downloader.StatusDownloading: 1,
+		downloader.StatusPaused: 2,
+		downloader.StatusResumable: 3,
+		downloader.StatusError: 4,
+		downloader.StatusCanceled: 5,
+		downloader.StatusDone: 6,
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		a, aOK := items[i].(downloadItem)
+		b, bOK := items[j].(downloadItem)
+		if !aOK || !bOK { return false }
+		switch mode {
+		case "title":
+			return strings.ToLower(a.d.Title) < strings.ToLower(b.d.Title)
+		case "channel":
+			return strings.ToLower(a.d.Channel) < strings.ToLower(b.d.Channel)
+		case "progress":
+			return a.d.Progress > b.d.Progress
+		case "status":
+			return statusOrder[a.d.Status] < statusOrder[b.d.Status]
+		default:
+			return a.d.AddedAt.Before(b.d.AddedAt)
+		}
+	})
 }
 
 func downloadMatchesStatus(item list.Item, filter int) bool {
