@@ -802,3 +802,31 @@ func TestProgressPhaseForYTDLPOutput(t *testing.T) {
 		}
 	}
 }
+
+
+func TestRunRetainsPostProcessingPhaseOnFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	outputPath := filepath.Join(t.TempDir(), "failed-merge.mp4")
+	t.Setenv("YTUI_TEST_MERGE_PATH", outputPath)
+	script := "#!/bin/sh\\nprintf '[Merger] Merging formats into \\\"%s\\\"\\n' \\"$YTUI_TEST_MERGE_PATH\\"\\nexit 1\\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	d := &Download{VideoID: "merge-failure", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{d.VideoID: d}, order: []string{d.VideoID}, destDir: t.TempDir()}
+	m.run(d)
+	if d.Status != StatusError {
+		t.Fatalf("status = %v, want error", d.Status)
+	}
+	if d.Phase != "Merging formats" {
+		t.Fatalf("phase = %q, want failing merge phase", d.Phase)
+	}
+	if d.Err == nil || !strings.Contains(d.Err.Error(), "Merging formats into") {
+		t.Fatalf("error = %v, want merger diagnostic", d.Err)
+	}
+}
