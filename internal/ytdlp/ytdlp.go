@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"strings"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -251,36 +253,106 @@ func IsPlaylistURL(raw string) bool {
 	return strings.TrimSpace(u.Query().Get("list")) != ""
 }
 
+const (
+	defaultMaxPlaylistEntries = 5000
+	maxPlaylistEntries = 50000
+)
+
+// playlistEntryLimit returns the configured safety cap for playlist metadata.
+func playlistEntryLimit() (int, error) {
+	limit := defaultMaxPlaylistEntries
+	if raw := strings.TrimSpace(os.Getenv("YTUI_PLAYLIST_MAX_ENTRIES")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 1 || value > maxPlaylistEntries {
+			return 0, fmt.Errorf("YTUI_PLAYLIST_MAX_ENTRIES must be an integer between 1 and %d", maxPlaylistEntries)
+		}
+		limit = value
+	}
+	return limit, nil
+}
+
 func GetPlaylist(playlistURL string) (string, []Video, error) {
 	if !IsPlaylistURL(playlistURL) { return "", nil, fmt.Errorf("not a YouTube playlist URL") }
 	if err := checkInstalled(); err != nil { return "", nil, err }
+	limit, err := playlistEntryLimit()
+	if err != nil { return "", nil, err }
+
 	cmd := exec.Command(binaryName, "--dump-single-json", "--flat-playlist", "--yes-playlist", "--no-warnings", "--skip-download", playlistURL)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
+	stdout, err := cmd.StdoutPipe()
+	if err != nil { return "", nil, fmt.Errorf("read playlist metadata: %w", err) }
+	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		return "", nil, fmt.Errorf("start yt-dlp playlist request: %w", err)
+	}
+
+	title, videos, parseErr := parsePlaylistReader(stdout, limit)
+	if parseErr != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return "", nil, parseErr
+	}
+	if err := cmd.Wait(); err != nil {
 		message := strings.TrimSpace(stderr.String())
 		if message == "" { message = err.Error() }
 		return "", nil, fmt.Errorf("yt-dlp could not load playlist: %s", message)
 	}
-	return parsePlaylistJSON(stdout.Bytes())
+	return title, videos, nil
 }
 
 func parsePlaylistJSON(data []byte) (string, []Video, error) {
-	var raw playlistJSON
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return "", nil, fmt.Errorf("parse playlist metadata: %w", err)
+	return parsePlaylistReader(bytes.NewReader(data), defaultMaxPlaylistEntries)
+}
+
+// parsePlaylistReader decodes playlist entries one at a time. It avoids
+// retaining yt-dlp's full metadata tree and only keeps the compact Video
+// fields needed by the UI and download queue.
+func parsePlaylistReader(reader io.Reader, maxEntries int) (string, []Video, error) {
+	if maxEntries < 1 {
+		return "", nil, fmt.Errorf("playlist entry limit must be positive")
 	}
-	title := strings.TrimSpace(raw.Title)
-	if title == "" { title = "YouTube playlist" }
-	videos := make([]Video, 0, len(raw.Entries))
-	for _, entry := range raw.Entries {
-		if strings.TrimSpace(entry.ID) == "" { continue }
-		video := entry.toVideo()
-		if video.URL == "" { video.URL = "https://www.youtube.com/watch?v=" + video.ID }
-		video.PlaylistIndex = len(videos) + 1
-		videos = append(videos, video)
+	decoder := json.NewDecoder(reader)
+	token, err := decoder.Token()
+	if err != nil { return "", nil, fmt.Errorf("parse playlist metadata: %w", err) }
+	if token != json.Delim('{') { return "", nil, fmt.Errorf("parse playlist metadata: expected JSON object") }
+
+	title := ""
+	videos := make([]Video, 0, min(maxEntries, 256))
+	entryCount := 0
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil { return "", nil, fmt.Errorf("parse playlist metadata: %w", err) }
+		key, ok := keyToken.(string)
+		if !ok { return "", nil, fmt.Errorf("parse playlist metadata: expected object key") }
+
+		switch key {
+		case "title":
+			if err := decoder.Decode(&title); err != nil { return "", nil, fmt.Errorf("parse playlist title: %w", err) }
+		case "entries":
+			arrayToken, err := decoder.Token()
+			if err != nil { return "", nil, fmt.Errorf("parse playlist entries: %w", err) }
+			if arrayToken != json.Delim('[') { return "", nil, fmt.Errorf("parse playlist entries: expected array") }
+			for decoder.More() {
+				if entryCount >= maxEntries {
+					return "", nil, fmt.Errorf("playlist exceeds the %d-entry safety limit; set YTUI_PLAYLIST_MAX_ENTRIES to increase it (maximum %d)", maxEntries, maxPlaylistEntries)
+				}
+				var entry videoJSON
+				if err := decoder.Decode(&entry); err != nil { return "", nil, fmt.Errorf("parse playlist entry %d: %w", entryCount+1, err) }
+				entryCount++
+				if strings.TrimSpace(entry.ID) == "" { continue }
+				video := entry.toVideo()
+				if video.URL == "" { video.URL = "https://www.youtube.com/watch?v=" + video.ID }
+				video.PlaylistIndex = len(videos) + 1
+				videos = append(videos, video)
+			}
+			if _, err := decoder.Token(); err != nil { return "", nil, fmt.Errorf("finish playlist entries: %w", err) }
+		default:
+			var discard json.RawMessage
+			if err := decoder.Decode(&discard); err != nil { return "", nil, fmt.Errorf("parse playlist metadata field %q: %w", key, err) }
+		}
 	}
+	if _, err := decoder.Token(); err != nil { return "", nil, fmt.Errorf("finish playlist metadata: %w", err) }
+	if title = strings.TrimSpace(title); title == "" { title = "YouTube playlist" }
 	if len(videos) == 0 { return title, nil, fmt.Errorf("playlist contains no accessible videos") }
 	return title, videos, nil
 }
