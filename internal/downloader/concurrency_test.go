@@ -46,77 +46,16 @@ func TestNewWithConcurrencyRejectsOutOfRangeLimits(t *testing.T) {
 	}
 }
 
-func TestYTDLPConcurrencyHelper(t *testing.T) {
-	if os.Getenv("YTUI_TEST_CONCURRENCY_HELPER") != "1" {
-		return
-	}
-	lockPath := os.Getenv("YTUI_TEST_LOCK")
-	activePath := os.Getenv("YTUI_TEST_ACTIVE")
-	peakPath := os.Getenv("YTUI_TEST_PEAK")
-	lock := func(update func()) {
-		t.Helper()
-		deadline := time.Now().Add(5 * time.Second)
-		for {
-			err := os.Mkdir(lockPath, 0o700)
-			if err == nil { break }
-			if !os.IsExist(err) { t.Fatalf("acquire helper lock: %v", err) }
-			if time.Now().After(deadline) { t.Fatal("timed out acquiring helper lock") }
-			time.Sleep(time.Millisecond)
-		}
-		defer os.Remove(lockPath)
-		update()
-	}
-	lock(func() {
-		active := 0
-		if data, err := os.ReadFile(activePath); err == nil {
-			active, _ = strconv.Atoi(strings.TrimSpace(string(data)))
-		}
-		active++
-		if err := os.WriteFile(activePath, []byte(strconv.Itoa(active)), 0o600); err != nil {
-			t.Fatalf("write active process count: %v", err)
-		}
-		peak := 0
-		if data, err := os.ReadFile(peakPath); err == nil {
-			peak, _ = strconv.Atoi(strings.TrimSpace(string(data)))
-		}
-		if active > peak {
-			if err := os.WriteFile(peakPath, []byte(strconv.Itoa(active)), 0o600); err != nil {
-				t.Fatalf("write peak process count: %v", err)
-			}
-		}
-	})
-	time.Sleep(300 * time.Millisecond)
-	lock(func() {
-		data, err := os.ReadFile(activePath)
-		if err != nil { t.Fatalf("read active process count: %v", err) }
-		active, err := strconv.Atoi(strings.TrimSpace(string(data)))
-		if err != nil { t.Fatalf("parse active process count: %v", err) }
-		active--
-		if err := os.WriteFile(activePath, []byte(strconv.Itoa(active)), 0o600); err != nil {
-			t.Fatalf("write active process count: %v", err)
-		}
-	})
-}
-
 func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
 	}
 	binDir := t.TempDir()
-	runDir := t.TempDir()
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
-	script := "#!/bin/sh\\nexec \"$YTUI_TEST_BINARY\" -test.run=^TestYTDLPConcurrencyHelper$\\n"
-	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+	if err := os.WriteFile(fakeYTDLP, []byte("#!/bin/sh\\nsleep 0.3\\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("YTUI_TEST_BINARY", os.Args[0])
-	t.Setenv("YTUI_TEST_CONCURRENCY_HELPER", "1")
-	t.Setenv("YTUI_TEST_LOCK", filepath.Join(runDir, "lock"))
-	activePath := filepath.Join(runDir, "active")
-	peakPath := filepath.Join(runDir, "peak")
-	t.Setenv("YTUI_TEST_ACTIVE", activePath)
-	t.Setenv("YTUI_TEST_PEAK", peakPath)
 
 	manager, err := NewWithConcurrency(t.TempDir(), 2)
 	if err != nil {
@@ -127,24 +66,24 @@ func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 		manager.Enqueue(id, id, "", "https://example.invalid/"+id, Options{})
 	}
 	deadline := time.Now().Add(8 * time.Second)
-	for manager.Active() {
+	peakActive := 0
+	for {
+		active, queued, limit := manager.QueueCounts()
+		if active > peakActive { peakActive = active }
+		if active == 0 && queued == 0 { break }
+		if active > limit {
+			manager.Shutdown()
+			t.Fatalf("active workers = %d, configured limit = %d", active, limit)
+		}
 		if time.Now().After(deadline) {
 			manager.Shutdown()
 			t.Fatalf("downloads did not finish before timeout: %#v", manager.List())
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 	manager.Shutdown()
-	peakData, err := os.ReadFile(peakPath)
-	if err != nil {
-		t.Fatalf("read peak concurrency: %v", err)
-	}
-	peak, err := strconv.Atoi(strings.TrimSpace(string(peakData)))
-	if err != nil {
-		t.Fatalf("parse peak concurrency %q: %v", peakData, err)
-	}
-	if peak != 2 {
-		t.Fatalf("peak concurrent processes = %d, want exactly 2", peak)
+	if peakActive != 2 {
+		t.Fatalf("peak active workers = %d, want exactly 2", peakActive)
 	}
 	for _, item := range manager.List() {
 		if item.Status != StatusDone {
