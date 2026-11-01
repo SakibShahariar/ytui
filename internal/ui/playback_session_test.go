@@ -17,12 +17,12 @@ func TestResumePositionNeedsSaveThresholdAndForcedEvents(t *testing.T) {
 		force bool
 		want bool
 	}{
-		{name: "below threshold", previous: 10, next: 39.9, want: false},
-		{name: "at threshold", previous: 10, next: 40, want: true},
-		{name: "backward seek below threshold", previous: 80, next: 50.1, want: false},
-		{name: "backward seek at threshold", previous: 80, next: 50, want: true},
-		{name: "first position below threshold", previous: 0, next: 29.9, want: false},
-		{name: "first position at threshold", previous: 0, next: 30, want: true},
+		{name: "below threshold", previous: 10, next: 19.9, want: false},
+		{name: "at threshold", previous: 10, next: 20, want: true},
+		{name: "backward seek below threshold", previous: 80, next: 70.1, want: false},
+		{name: "backward seek at threshold", previous: 80, next: 70, want: true},
+		{name: "first position below threshold", previous: 0, next: 9.9, want: false},
+		{name: "first position at threshold", previous: 0, next: 10, want: true},
 		{name: "forced pause or exit", previous: 20, next: 21, force: true, want: true},
 	}
 	for _, tt := range tests {
@@ -199,5 +199,33 @@ func TestPausePersistsResumePositionImmediately(t *testing.T) {
 	position, ok := saved.FindHistoryPosition("video-1")
 	if !ok || position != 45 {
 		t.Fatalf("saved resume position = (%v, %v), want (45, true)", position, ok)
+	}
+}
+
+
+func TestExternalPlaybackExitPersistsLastObservedPosition(t *testing.T) {
+	t.Setenv("YTUI_DATA_PATH", t.TempDir()+"/data.json")
+	saved, err := store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saved.AddHistory(store.HistoryEntry{
+		VideoID: "video-exit", Title: "Example", URL: "https://example.test/video", PositionS: 5,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	session := &fakePlaybackSession{position: 42}
+	model := Model{
+		store: saved,
+		nowPlaying: session,
+		playingVid: &ytdlp.Video{ID: "video-exit", Title: "Example", URL: "https://example.test/video"},
+	}
+	updated, _ := model.clearNowPlaying()
+	if updated.(Model).nowPlaying != nil {
+		t.Fatal("playback session was not cleared")
+	}
+	position, ok := saved.FindHistoryPosition("video-exit")
+	if !ok || position != 42 {
+		t.Fatalf("saved resume position = (%v, %v), want (42, true)", position, ok)
 	}
 }
