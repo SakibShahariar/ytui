@@ -20,6 +20,7 @@ func TestImportExportRoundTrip(t *testing.T) {
 		DefaultQuality:        "1080p",
 		DefaultCookiesBrowser: "firefox",
 		DefaultAudioOnly:          true,
+		DisableResumePrompt:      true,
 		DesktopNotifications:      true,
 		AutoplayNext:              true,
 		ThumbnailCacheMaxEntries:  120,
