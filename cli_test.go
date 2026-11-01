@@ -84,6 +84,43 @@ func TestConfigSubcommandsExportAndImport(t *testing.T) {
 	}
 }
 
+func TestConfigImportCancellationLeavesActiveSettingsUnchanged(t *testing.T) {
+	t.Setenv("YTUI_CONFIG_PATH", filepath.Join(t.TempDir(), "active.json"))
+	if err := config.Save(config.Config{DownloadDir: "existing-downloads"}); err != nil { t.Fatal(err) }
+	source := filepath.Join(t.TempDir(), "source.json")
+	if err := os.WriteFile(source, []byte("{\"download_dir\":\"incoming-downloads\"}"), 0o600); err != nil { t.Fatal(err) }
+
+	var output bytes.Buffer
+	if err := runConfigSubcommand([]string{"import", source}, strings.NewReader("n\n"), &output, false); err != nil {
+		t.Fatalf("canceled config import: %v", err)
+	}
+	got, err := config.LoadWithError()
+	if err != nil { t.Fatal(err) }
+	if got.DownloadDir != "existing-downloads" {
+		t.Fatalf("canceled import changed DownloadDir to %q", got.DownloadDir)
+	}
+	if !strings.Contains(output.String(), "Import canceled") {
+		t.Fatalf("cancellation output = %q", output.String())
+	}
+}
+
+func TestConfigImportInvalidFilePreservesActiveSettings(t *testing.T) {
+	t.Setenv("YTUI_CONFIG_PATH", filepath.Join(t.TempDir(), "active.json"))
+	if err := config.Save(config.Config{DownloadDir: "existing-downloads"}); err != nil { t.Fatal(err) }
+	source := filepath.Join(t.TempDir(), "invalid.json")
+	if err := os.WriteFile(source, []byte("{not valid json"), 0o600); err != nil { t.Fatal(err) }
+
+	var output bytes.Buffer
+	if err := runConfigSubcommand([]string{"import", source, "--yes"}, strings.NewReader(""), &output, false); err == nil {
+		t.Fatal("invalid config import unexpectedly succeeded")
+	}
+	got, err := config.LoadWithError()
+	if err != nil { t.Fatal(err) }
+	if got.DownloadDir != "existing-downloads" {
+		t.Fatalf("invalid import changed DownloadDir to %q", got.DownloadDir)
+	}
+}
+
 func TestConfigImportSubcommandHonorsYesFlag(t *testing.T) {
 	activePath := filepath.Join(t.TempDir(), "active.json")
 	t.Setenv("YTUI_CONFIG_PATH", activePath)
