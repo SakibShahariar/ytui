@@ -111,7 +111,7 @@ ytui config export ~/ytui-settings.json
 ytui config import ~/ytui-settings.json
 ```
 
-Config exports contain preferences only — not OAuth tokens, credentials, subscriptions, history, or Watch Later entries. For troubleshooting, logging is off by default; enable it with `--log-level error`, `info`, or `debug`.
+Config exports contain preferences only — not OAuth tokens, credentials, subscriptions, history, or Watch Later entries. For troubleshooting, logging is off by default; enable it with `--log-level error`, `info`, or `debug`. Playlist metadata is streamed and capped at 5,000 entries by default; set `YTUI_PLAYLIST_MAX_ENTRIES` to a value from 1 to 50,000 to change the limit.
 
 ## Documentation
 
