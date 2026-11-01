@@ -173,6 +173,77 @@ func TestLoadTranscriptWithUsesSelectedLanguage(t *testing.T) {
 	}
 }
 
+func TestLoadTranscriptWithCachesSuccessfulResult(t *testing.T) {
+	video := ytdlp.Video{ID: "transcript-cache-repeat-unique", URL: "https://example.invalid/video"}
+	calls := 0
+	loader := func(string, string) (string, error) {
+		calls++
+		return "cached captions", nil
+	}
+	first := loadTranscriptWith(video, "en", loader)().(transcriptMsg)
+	second := loadTranscriptWith(video, "en", func(string, string) (string, error) {
+		calls++
+		return "unexpected refetch", nil
+	})().(transcriptMsg)
+	if first.text != "cached captions" || second.text != first.text || first.err != nil || second.err != nil {
+		t.Fatalf("transcript cache results = (%q, %v), (%q, %v)", first.text, first.err, second.text, second.err)
+	}
+	if calls != 1 { t.Fatalf("transcript fetch calls = %d, want 1", calls) }
+}
+
+func TestLoadTranscriptWithSeparatesLanguages(t *testing.T) {
+	video := ytdlp.Video{ID: "transcript-cache-language-unique", URL: "https://example.invalid/video"}
+	calls := 0
+	fetch := func(_ string, language string) (string, error) {
+		calls++
+		return language + " captions", nil
+	}
+	english := loadTranscriptWith(video, "en", fetch)().(transcriptMsg)
+	french := loadTranscriptWith(video, "fr", fetch)().(transcriptMsg)
+	if english.text != "en captions" || french.text != "fr captions" || calls != 2 {
+		t.Fatalf("language cache results = %q / %q after %d calls", english.text, french.text, calls)
+	}
+}
+
+func TestLoadTranscriptWithDoesNotCacheFailures(t *testing.T) {
+	video := ytdlp.Video{ID: "transcript-cache-retry-unique", URL: "https://example.invalid/video"}
+	calls := 0
+	failed := loadTranscriptWith(video, "en", func(string, string) (string, error) {
+		calls++
+		return "", errors.New("temporary caption failure")
+	})().(transcriptMsg)
+	retried := loadTranscriptWith(video, "en", func(string, string) (string, error) {
+		calls++
+		return "recovered captions", nil
+	})().(transcriptMsg)
+	if failed.err == nil || retried.err != nil || retried.text != "recovered captions" || calls != 2 {
+		t.Fatalf("failure/retry results = (%q, %v), (%q, %v), calls %d", failed.text, failed.err, retried.text, retried.err, calls)
+	}
+}
+
+func TestTranscriptCacheEvictsLeastRecentlyUsedAndBoundsBytes(t *testing.T) {
+	cache := newTranscriptCache(2, 6)
+	a := transcriptCacheKey{videoID: "a", language: "en"}
+	b := transcriptCacheKey{videoID: "b", language: "en"}
+	c := transcriptCacheKey{videoID: "c", language: "en"}
+	d := transcriptCacheKey{videoID: "d", language: "en"}
+	cache.put(a, "aa")
+	cache.put(b, "bb")
+	if _, ok := cache.get(a); !ok { t.Fatal("expected entry a to exist") }
+	cache.put(c, "cc")
+	if _, ok := cache.get(b); ok { t.Fatal("least-recently-used entry b was not evicted") }
+	if _, ok := cache.get(a); !ok { t.Fatal("recently-used entry a was evicted") }
+	cache.put(d, "dddd")
+	if _, ok := cache.get(a); ok { t.Fatal("oldest entry a was not evicted to satisfy byte limit") }
+	if got, ok := cache.get(c); !ok || got != "cc" { t.Fatalf("entry c = %q, %v; want cc, true", got, ok) }
+	if got, ok := cache.get(d); !ok || got != "dddd" { t.Fatalf("entry d = %q, %v; want dddd, true", got, ok) }
+	if cache.bytes > cache.maxBytes { t.Fatalf("cache bytes = %d, exceeds limit %d", cache.bytes, cache.maxBytes) }
+	cache.put(transcriptCacheKey{videoID: "oversized", language: "en"}, "1234567")
+	if _, ok := cache.get(transcriptCacheKey{videoID: "oversized", language: "en"}); ok {
+		t.Fatal("oversized transcript was cached")
+	}
+}
+
 func TestLoadTranscriptWithPreservesError(t *testing.T) {
 	wantErr := errors.New("captions unavailable")
 	msg := loadTranscriptWith(ytdlp.Video{URL: "https://youtube.com/watch?v=video-id"}, "en", func(string, string) (string, error) {
