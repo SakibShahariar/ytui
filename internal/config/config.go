@@ -20,6 +20,12 @@ type Config struct {
 	// downloader package's own default (~/Downloads/ytui).
 	DownloadDir string `json:"download_dir,omitempty"`
 
+	// DownloadSort selects the live download queue ordering.
+	DownloadSort string `json:"download_sort,omitempty"`
+
+	// DownloadStatusFilter selects all, active, finished, or failed downloads.
+	DownloadStatusFilter int `json:"download_status_filter,omitempty"`
+
 	// DefaultQuality pre-selects a row in the ctrl+d download-options
 	// picker by stable identifier or legacy display label. Empty means
 	// "Best quality (video+audio)".
@@ -100,6 +106,14 @@ func Validate(cfg Config) error {
 		default:
 			return fmt.Errorf("default_cookies_browser %q is not supported (use firefox, chrome, chromium, brave, or edge)", cfg.DefaultCookiesBrowser)
 		}
+	}
+	switch cfg.DownloadSort {
+	case "", "added", "title", "channel", "progress", "status":
+	default:
+		return fmt.Errorf("download_sort %q is not supported", cfg.DownloadSort)
+	}
+	if cfg.DownloadStatusFilter < 0 || cfg.DownloadStatusFilter > 3 {
+		return fmt.Errorf("download_status_filter must be between 0 and 3")
 	}
 	if cfg.ThumbnailCacheMaxEntries < 0 || cfg.ThumbnailCacheMaxEntries > 10000 {
 		return fmt.Errorf("thumbnail_cache_max_entries must be between 1 and 10000, or 0 for the default")
