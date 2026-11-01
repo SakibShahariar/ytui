@@ -78,3 +78,19 @@ func TestEmptyStateContentProvidesTabSpecificNextSteps(t *testing.T) {
 		})
 	}
 }
+
+
+func TestErrorRecoveryHintProvidesContextualNextSteps(t *testing.T) {
+	tests := []struct { message, want string }{
+		{"network connection timed out", "check your connection"},
+		{"yt-dlp executable not found", "install or update yt-dlp"},
+		{"OAuth token unauthorized", "Ctrl+L"},
+		{"permission denied while writing download", "check permissions"},
+		{"unexpected parser failure", ""},
+	}
+	for _, tt := range tests {
+		if got := errorRecoveryHint(tt.message); !strings.Contains(got, tt.want) {
+			t.Errorf("errorRecoveryHint(%q) = %q, want it to contain %q", tt.message, got, tt.want)
+		}
+	}
+}
