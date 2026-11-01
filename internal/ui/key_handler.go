@@ -23,6 +23,16 @@ import (
 // query at any moment, all the old single-letter shortcuts (s/w/p/a/t/x/q)
 // live on ctrl+ combos instead, so they never collide with what you're
 // typing and work identically on every tab.
+func clampSponsorBlockCursor(cursor int) int {
+	if cursor < 0 {
+		return 0
+	}
+	if cursor > len(sponsorblock.SkipCategories) {
+		return len(sponsorblock.SkipCategories)
+	}
+	return cursor
+}
+
 func clampPaletteCursor(cursor, count int) int {
 	if count <= 0 {
 		return 0
@@ -78,10 +88,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "up":
-			if m.sponsorBlockCursor > 0 { m.sponsorBlockCursor-- }
+			m.sponsorBlockCursor = clampSponsorBlockCursor(m.sponsorBlockCursor - 1)
 			return m, nil
 		case "down":
-			if m.sponsorBlockCursor < len(sponsorblock.SkipCategories) { m.sponsorBlockCursor++ }
+			m.sponsorBlockCursor = clampSponsorBlockCursor(m.sponsorBlockCursor + 1)
 			return m, nil
 		case " ", "space":
 			return m.toggleSponsorBlockSetting(), nil
