@@ -26,6 +26,9 @@ type Config struct {
 	// DownloadStatusFilter selects all, active, finished, or failed downloads.
 	DownloadStatusFilter int `json:"download_status_filter,omitempty"`
 
+	// MaxConcurrentDownloads bounds simultaneous yt-dlp processes; zero defaults to one.
+	MaxConcurrentDownloads int `json:"max_concurrent_downloads,omitempty"`
+
 	// DefaultQuality pre-selects a row in the ctrl+d download-options
 	// picker by stable identifier or legacy display label. Empty means
 	// "Best quality (video+audio)".
@@ -114,6 +117,9 @@ func Validate(cfg Config) error {
 	case "", "added", "title", "channel", "progress", "status":
 	default:
 		return fmt.Errorf("download_sort %q is not supported", cfg.DownloadSort)
+	}
+	if cfg.MaxConcurrentDownloads < 0 || cfg.MaxConcurrentDownloads > 10 {
+		return fmt.Errorf("max_concurrent_downloads must be between 1 and 10, or 0 for the default")
 	}
 	if cfg.DownloadStatusFilter < 0 || cfg.DownloadStatusFilter > 3 {
 		return fmt.Errorf("download_status_filter must be between 0 and 3")
