@@ -91,6 +91,8 @@ func (m Model) View() string {
 		listContent.WriteString(m.welcomeContent(listWidth-2, panelH-4))
 	case !m.loggedIn && (m.activeTab == tabHome || m.activeTab == tabPlaylists || m.activeTab == tabLiked) && len(m.list.Items()) == 0:
 		listContent.WriteString(m.notLoggedInContent(listWidth - 2))
+	case len(m.list.Items()) == 0:
+		listContent.WriteString(m.emptyStateContent(listWidth-2, panelH-4))
 	default:
 		listContent.WriteString(m.list.View())
 	}
