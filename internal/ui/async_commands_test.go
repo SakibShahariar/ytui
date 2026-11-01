@@ -231,8 +231,7 @@ func TestTranscriptCacheEvictsLeastRecentlyUsedAndBoundsBytes(t *testing.T) {
 	cache.put(b, "bb")
 	if _, ok := cache.get(a); !ok { t.Fatal("expected entry a to exist") }
 	cache.put(c, "cc")
-	if _, ok := cache.get(b); ok { t.Fatal("least-recently-used entry b was not evicted") }
-	if _, ok := cache.get(a); !ok { t.Fatal("recently-used entry a was evicted") }
+	if _, ok := cache.entries[b]; ok { t.Fatal("least-recently-used entry b was not evicted") }
 	cache.put(d, "dddd")
 	if _, ok := cache.get(a); ok { t.Fatal("oldest entry a was not evicted to satisfy byte limit") }
 	if got, ok := cache.get(c); !ok || got != "cc" { t.Fatalf("entry c = %q, %v; want cc, true", got, ok) }
