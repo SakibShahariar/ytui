@@ -2,8 +2,8 @@ package ytdlp
 
 import (
 	"encoding/json"
-	"os"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
