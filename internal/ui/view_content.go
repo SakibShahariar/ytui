@@ -240,6 +240,52 @@ func (m Model) loginHelpContent(width int) string {
 // notLoggedInContent is the empty state for tabs (Playlists, Liked) that
 // have no local-only fallback — instead of a bare "No items.", it explains
 // why and points at the fix.
+// emptyStateContent gives each library tab a next step instead of the list
+// widget's generic blank state. Loading states stay distinct from true empties.
+func (m Model) emptyStateContent(width, height int) string {
+	title, hint := "Nothing to show", "Try another view."
+	switch m.activeTab {
+	case tabSearch:
+		if m.loading {
+			title, hint = "Searching YouTube", "Results will appear here when the search finishes."
+		} else {
+			title, hint = "No videos found", "Try a shorter query or check that yt-dlp is up to date."
+		}
+	case tabHome:
+		if m.ytLoading {
+			title, hint = "Loading your home feed", "Fetching recommendations from YouTube."
+		} else {
+			title, hint = "Your home feed is empty", "Check your connection, then switch tabs and return to retry."
+		}
+	case tabSubscriptions:
+		if !m.loggedIn {
+			title, hint = "Google login required", "Press Ctrl+L to load your subscriptions."
+		} else {
+			title, hint = "No subscriptions yet", "Open a channel and press Ctrl+S to subscribe."
+		}
+	case tabPlaylists:
+		title, hint = "No playlists found", "Sign in with Google and refresh your library."
+	case tabLiked:
+		title, hint = "No liked videos found", "Sign in with Google and refresh your library."
+	case tabWatchLater:
+		title, hint = "Your Watch Later list is empty", "Select a video and press Ctrl+W to save it for later."
+	case tabHistory:
+		title, hint = "No watch history yet", "Videos played through ytui will appear here."
+	case tabDownloads:
+		if m.offlineDownloads {
+			title, hint = "No offline files found", "Download a video with Ctrl+D, then check this folder again."
+		} else {
+			title, hint = "Download queue is empty", "Select a video and press Ctrl+D to add it."
+		}
+	}
+	center := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
+	titleStyle := lipgloss.NewStyle().Foreground(ctpText).Bold(true)
+	hintStyle := lipgloss.NewStyle().Foreground(ctpOverlay1).MaxWidth(width)
+	lines := []string{"", center.Render(titleStyle.Render(title)), center.Render(hintStyle.Render(hint))}
+	if height > 0 && len(lines) > height { lines = lines[:height] }
+	return strings.Join(lines, "\n")
+}
+
 func (m Model) notLoggedInContent(width int) string {
 	center := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
 	msg := center.Render(lipgloss.NewStyle().Foreground(ctpOverlay1).Render("not logged in"))
