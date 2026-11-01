@@ -78,7 +78,7 @@ func New(s *store.Store) Model {
 	if override := os.Getenv("YTUI_DOWNLOAD_DIR"); override != "" {
 		cfg.DownloadDir = override
 	}
-	dl, downloadErr := downloader.New(cfg.DownloadDir)
+	dl, downloadErr := downloader.NewWithConcurrency(cfg.DownloadDir, cfg.MaxConcurrentDownloads)
 
 	m := Model{
 		store:          s,
