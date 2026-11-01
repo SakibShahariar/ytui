@@ -628,14 +628,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.activeTab == tabHistory || m.activeTab == tabDownloads {
 			m.libraryFilter = ""
 			m.libraryFilterInput.SetValue("")
+			previousFilter := m.downloadStatusFilter
 			m.downloadStatusFilter = 0
 			if m.activeTab == tabDownloads {
 				m.cfg.DownloadStatusFilter = 0
 				if err := config.Save(m.cfg); err != nil {
+					m.downloadStatusFilter = previousFilter
+					m.cfg.DownloadStatusFilter = previousFilter
 					m.errMsg = "save download filter preference: " + err.Error()
 					return m, nil
 				}
 			}
+			m.errMsg = ""
 			m.libraryDateFilter = 0
 			m.refreshList()
 			m.statusMsg = "library filters cleared"
