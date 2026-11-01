@@ -1,10 +1,8 @@
 package ui
 
 import (
-	"testing"
 	"errors"
-
-	"github.com/charmbracelet/bubbles/list"
+	"testing"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
