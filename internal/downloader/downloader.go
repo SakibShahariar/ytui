@@ -304,7 +304,29 @@ func hasPartialForVideo(destDir, videoID string) bool {
 	return false
 }
 
-var progressRe = regexp.MustCompile(`\[download\]\s+([\d.]+)%.*?at\s+(\S+)\s+ETA\s+(\S+)`)
+var progressPercentRe = regexp.MustCompile(`^\\[download\\]\\s+([0-9]+(?:\\.[0-9]+)?)%`)
+var progressSpeedRe = regexp.MustCompile(`\\bat\\s+(\\S+)`)
+var progressETARe = regexp.MustCompile(`\\bETA\\s+(\\S+)`)
+
+func parseProgressLine(line string) (float64, string, string, bool) {
+	line = strings.TrimSpace(line)
+	match := progressPercentRe.FindStringSubmatch(line)
+	if len(match) != 2 {
+		return 0, "", "", false
+	}
+	progress, err := strconv.ParseFloat(match[1], 64)
+	if err != nil || progress < 0 || progress > 100 {
+		return 0, "", "", false
+	}
+	var speed, eta string
+	if match := progressSpeedRe.FindStringSubmatch(line); len(match) == 2 {
+		speed = match[1]
+	}
+	if match := progressETARe.FindStringSubmatch(line); len(match) == 2 {
+		eta = match[1]
+	}
+	return progress, speed, eta, true
+}
 var destRe = regexp.MustCompile(`\[download\]\s+Destination:\s+(.+)`)
 var postProcessDestRe = regexp.MustCompile(`^\[(?:Merger|VideoRemuxer|AudioRemuxer|ExtractAudio|Metadata|EmbedThumbnail)\].*?(?:into|Destination:|to)\s+"([^"]+)"\s*$`)
 var alreadyDoneRe = regexp.MustCompile(`has already been downloaded`)
@@ -393,12 +415,11 @@ func (m *Manager) run(d *Download) {
 		line, oversized, readErr := readOutputLine(reader, 1024*1024)
 		if !oversized && line != "" {
 			lastLine = line
-			if match := progressRe.FindStringSubmatch(line); match != nil {
-				pct, _ := strconv.ParseFloat(match[1], 64)
+			if pct, speed, eta, ok := parseProgressLine(line); ok {
 				m.mu.Lock()
 				d.Progress = pct
-				d.Speed = match[2]
-				d.ETA = match[3]
+				d.Speed = speed
+				d.ETA = eta
 				m.mu.Unlock()
 			}
 			if match := destRe.FindStringSubmatch(line); match != nil {
