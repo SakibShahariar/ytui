@@ -180,6 +180,68 @@ func (m *Manager) List() []Download {
 	return out
 }
 
+// Remove deletes a finished queue entry without touching its downloaded or
+// partial files. Active and paused entries must remain under scheduler control.
+func (m *Manager) Remove(videoID string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	download, ok := m.byID[videoID]
+	if !ok || !isRemovableStatus(download.Status) {
+		return false
+	}
+	delete(m.byID, videoID)
+	m.removePendingLocked(videoID)
+	for index, id := range m.order {
+		if id == videoID {
+			copy(m.order[index:], m.order[index+1:])
+			m.order = m.order[:len(m.order)-1]
+			break
+		}
+	}
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+	return true
+}
+
+func isRemovableStatus(status Status) bool {
+	return status == StatusDone || status == StatusError || status == StatusResumable || status == StatusCanceled
+}
+
+// ClearCompleted removes finished entries from the queue but leaves media files
+// untouched. It returns the number of removed entries.
+func (m *Manager) ClearCompleted() int {
+	return m.clearEntries(func(status Status) bool { return status == StatusDone })
+}
+
+// ClearFailed removes failed, resumable, and canceled entries from the queue.
+// It never removes partial files. It returns the number of removed entries.
+func (m *Manager) ClearFailed() int {
+	return m.clearEntries(func(status Status) bool {
+		return status == StatusError || status == StatusResumable || status == StatusCanceled
+	})
+}
+
+func (m *Manager) clearEntries(match func(Status) bool) int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	kept := m.order[:0]
+	removed := 0
+	for _, id := range m.order {
+		download := m.byID[id]
+		if download != nil && match(download.Status) {
+			delete(m.byID, id)
+			m.removePendingLocked(id)
+			removed++
+			continue
+		}
+		kept = append(kept, id)
+	}
+	m.order = kept
+	if removed > 0 {
+		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+	}
+	return removed
+}
+
 // Active reports whether anything is currently queued or downloading —
 // used by the UI to decide whether to keep polling for progress updates.
 func (m *Manager) Active() bool {
