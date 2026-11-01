@@ -85,10 +85,10 @@ Export the effective settings:
 ytui --export-config ~/ytui-settings.json
 ```
 
-Import settings before launching ytui:
+Import settings without opening the TUI:
 
 ```bash
-ytui --import-config ~/ytui-settings.json
+ytui config import ~/ytui-settings.json
 ```
 
 Importing replaces the active settings file. By default, ytui asks for confirmation and displays both the source file and destination config path. Enter `y` or `yes` to proceed; any other response cancels without changing settings.
@@ -96,8 +96,10 @@ Importing replaces the active settings file. By default, ytui asks for confirmat
 For automation, explicitly opt in to the replacement:
 
 ```bash
-ytui --import-config ~/ytui-settings.json --yes
+ytui config import ~/ytui-settings.json --yes
 ```
+
+The legacy `--import-config FILE` flag remains supported. It imports the settings and then continues into the interactive TUI; use the `config import` subcommand when you want the process to exit after importing.
 
 Before importing a file you did not just export, consider backing up your current configuration. For the default location, for example:
 
