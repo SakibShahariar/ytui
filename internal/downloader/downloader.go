@@ -178,6 +178,15 @@ func (m *Manager) Enqueue(videoID, title, channel, url string, opts Options) *Do
 	return d
 }
 
+// QueueCounts reports worker slots in use, pending queue entries, and the
+// configured worker limit. A paused process continues to occupy a worker slot.
+func (m *Manager) QueueCounts() (active, queued, limit int) {
+	if m == nil { return 0, 0, 0 }
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.activeWorkers, len(m.pending), m.maxConcurrent
+}
+
 // List returns a stable-ordered snapshot of all downloads (oldest-enqueued
 // first). Safe to call frequently — it copies values out from under the
 // lock rather than returning live pointers.
