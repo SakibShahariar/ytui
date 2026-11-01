@@ -186,17 +186,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.downloadCancelPending != nil {
 		var cancel func(string) bool
 		if m.downloads != nil {
-			cancel = func(videoID string) bool {
-				for _, download := range m.downloads.List() {
-					if download.VideoID != videoID { continue }
-					if download.Status != downloader.StatusQueued && download.Status != downloader.StatusDownloading {
-						return false
-					}
-					m.downloads.Cancel(videoID)
-					return true
-				}
-				return false
-			}
+			cancel = m.downloads.Cancel
 		}
 		return m.resolveDownloadCancel(key, cancel), nil
 	}
