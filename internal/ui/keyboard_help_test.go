@@ -2,7 +2,7 @@ package ui
 
 import (
 	"strings"
-	"testing"
+	"testing"\n\ttea "github.com/charmbracelet/bubbletea"
 )
 
 func TestKeyboardHelpListsRealControlBindings(t *testing.T) {
@@ -16,6 +16,15 @@ func TestKeyboardHelpListsRealControlBindings(t *testing.T) {
 	}
 	for _, stale := range []string{"press s to subscribe", "press w to watch later", "press p to pause"} {
 		if strings.Contains(strings.ToLower(got), stale) { t.Errorf("keyboard help contains stale binding %q", stale) }
+	}
+}
+
+func TestKeyboardHelpEndUsesLastValidOffset(t *testing.T) {
+	m := Model{keyboardHelp: true}
+	updated, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyEnd})
+	got := updated.(Model)
+	if want := got.keyboardHelpMaxOffset(); got.keyboardHelpOffset != want {
+		t.Fatalf("End offset = %d, want last valid offset %d", got.keyboardHelpOffset, want)
 	}
 }
 
