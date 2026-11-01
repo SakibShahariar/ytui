@@ -2,7 +2,9 @@ package ui
 
 import (
 	"strings"
-	"testing"\n\ttea "github.com/charmbracelet/bubbletea"
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestKeyboardHelpListsRealControlBindings(t *testing.T) {
