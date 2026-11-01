@@ -418,6 +418,7 @@ type Model struct {
 	downloadStatusFilter int
 	libraryDateFilter int
 	watchLaterSortMode int
+	logoutPending bool
 	watchLaterClearPending bool
 	watchLaterBulkPending bool
 	watchLaterSelected map[string]bool
