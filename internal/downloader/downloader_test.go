@@ -602,7 +602,7 @@ func TestRunTracksFinalOutputAfterMerge(t *testing.T) {
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
 	finalPath := filepath.Join(t.TempDir(), "merged video.mp4")
 	t.Setenv("YTUI_TEST_FINAL_PATH", finalPath)
-	script := "#!/bin/sh\nprintf '[Merger] Merging formats into \"%s\"\\n' \"$YTUI_TEST_FINAL_PATH\"\n: > \"$YTUI_TEST_FINAL_PATH\"\n"
+	script := "#!/bin/sh\nprintf '[Merger] Merging formats into %s\\n' " + strconv.Quote(outputPath) + "\nexit 1\n"
 	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
