@@ -183,6 +183,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if m.downloadCancelPending != nil {
+		return m.resolveDownloadCancel(key, func(videoID string) {
+			if m.downloads != nil { m.downloads.Cancel(videoID) }
+		}), nil
+	}
+
 	if m.watchLaterBulkPending {
 		m.watchLaterBulkPending = false
 		switch key {
