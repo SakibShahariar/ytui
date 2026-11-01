@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"strconv"
+	"sync"
 )
 
 var secretPattern = regexp.MustCompile("(?i)(access[_-]?token|refresh[_-]?token|client[_-]?secret|client[_-]?id|authorization|password|api[_-]?key|code)([\"']?\\s*[:=]\\s*[\"']?)[^\\s,\"'&}]+") 
@@ -110,6 +112,9 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	if w.file == nil {
+		return 0, fmt.Errorf("diagnostic log writer is closed")
+	}
 	info, err := w.file.Stat()
 	if err != nil {
 		return 0, err
