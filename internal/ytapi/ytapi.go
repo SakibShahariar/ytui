@@ -125,7 +125,7 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 	sem := make(chan struct{}, maxConcurrent)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	var all []ytdlp.Video
+	var all []playlistItemStub
 	var firstErr error
 	failed := 0
 
@@ -140,36 +140,34 @@ func HomeFeed(client *http.Client, subs []Subscription, perChannelLimit int) ([]
 			if err != nil {
 				mu.Lock()
 				failed++
-				if firstErr == nil {
-					firstErr = err
-				}
+				if firstErr == nil { firstErr = err }
 				mu.Unlock()
-				return // one channel failing (e.g. it has no uploads) shouldn't sink the whole feed
+				return
 			}
-			videos, err := PlaylistVideosLimited(client, playlistID, perChannelLimit)
+			stubs, err := playlistVideoStubs(client, playlistID, perChannelLimit)
 			if err != nil {
 				mu.Lock()
 				failed++
-				if firstErr == nil {
-					firstErr = err
-				}
+				if firstErr == nil { firstErr = err }
 				mu.Unlock()
 				return
 			}
 			mu.Lock()
-			all = append(all, videos...)
+			all = append(all, stubs...)
 			mu.Unlock()
 		}(sub.ChannelID)
 	}
 	wg.Wait()
 
-	sort.Slice(all, func(i, j int) bool {
-		return all[i].PublishedAt.After(all[j].PublishedAt)
+	durations, views, _ := videoDetailsPartial(client, uniquePlaylistVideoIDs(all))
+	videos := videosFromPlaylistStubs(all, durations, views)
+	sort.Slice(videos, func(i, j int) bool {
+		return videos[i].PublishedAt.After(videos[j].PublishedAt)
 	})
-	if len(all) == 0 && firstErr != nil {
-		return nil, failed, firstErr // every channel failed — surface the error
+	if len(videos) == 0 && firstErr != nil {
+		return nil, failed, firstErr
 	}
-	return all, failed, nil
+	return videos, failed, nil
 }
 
 // Subscriptions fetches all of the user's subscriptions, paginating until
@@ -315,6 +313,20 @@ func PlaylistVideosLimited(client *http.Client, playlistID string, limit int) ([
 }
 
 func playlistVideos(client *http.Client, playlistID string, limit int) ([]ytdlp.Video, error) {
+	stubs, err := playlistVideoStubs(client, playlistID, limit)
+	if err != nil {
+		return nil, err
+	}
+	durations, views, err := videoDetails(client, uniquePlaylistVideoIDs(stubs))
+	if err != nil {
+		// Non-fatal — show the list without duration/views rather than
+		// failing the whole playlist load over a secondary call.
+		durations, views = map[string]float64{}, map[string]int64{}
+	}
+	return videosFromPlaylistStubs(stubs, durations, views), nil
+}
+
+func playlistVideoStubs(client *http.Client, playlistID string, limit int) ([]playlistItemStub, error) {
 	var stubs []playlistItemStub
 	pageToken := ""
 	maxResults := "50"
@@ -355,53 +367,52 @@ func playlistVideos(client *http.Client, playlistID string, limit int) ([]ytdlp.
 		if err := json.Unmarshal(raw, &page); err != nil {
 			return nil, fmt.Errorf("parsing playlist items response: %w", err)
 		}
-		for _, it := range page.Items {
-			if it.Snippet.ResourceID.VideoID == "" {
-				continue // deleted/private video still listed as a stub entry
+		for _, item := range page.Items {
+			if item.Snippet.ResourceID.VideoID == "" {
+				continue
 			}
 			stubs = append(stubs, playlistItemStub{
-				videoID:     it.Snippet.ResourceID.VideoID,
-				title:       it.Snippet.Title,
-				channel:     it.Snippet.VideoOwnerChannel,
-				thumb:       it.Snippet.Thumbnails.Medium.URL,
-				publishedAt: it.Snippet.PublishedAt,
+				videoID: item.Snippet.ResourceID.VideoID,
+				title: item.Snippet.Title,
+				channel: item.Snippet.VideoOwnerChannel,
+				thumb: item.Snippet.Thumbnails.Medium.URL,
+				publishedAt: item.Snippet.PublishedAt,
 			})
-			if limit > 0 && len(stubs) >= limit {
-				break
-			}
+			if limit > 0 && len(stubs) >= limit { break }
 		}
-		if page.NextPageToken == "" || (limit > 0 && len(stubs) >= limit) {
-			break
-		}
+		if page.NextPageToken == "" || (limit > 0 && len(stubs) >= limit) { break }
 		pageToken = page.NextPageToken
 	}
+	return stubs, nil
+}
 
-	ids := make([]string, len(stubs))
-	for i, s := range stubs {
-		ids[i] = s.videoID
+func uniquePlaylistVideoIDs(stubs []playlistItemStub) []string {
+	seen := make(map[string]struct{}, len(stubs))
+	ids := make([]string, 0, len(stubs))
+	for _, stub := range stubs {
+		if _, ok := seen[stub.videoID]; ok { continue }
+		seen[stub.videoID] = struct{}{}
+		ids = append(ids, stub.videoID)
 	}
-	durations, views, err := videoDetails(client, ids)
-	if err != nil {
-		// Non-fatal — show the list without duration/views rather than
-		// failing the whole playlist load over a secondary call.
-		durations, views = map[string]float64{}, map[string]int64{}
-	}
+	return ids
+}
 
+func videosFromPlaylistStubs(stubs []playlistItemStub, durations map[string]float64, views map[string]int64) []ytdlp.Video {
 	out := make([]ytdlp.Video, 0, len(stubs))
-	for _, s := range stubs {
-		pub, _ := time.Parse(time.RFC3339, s.publishedAt)
+	for _, stub := range stubs {
+		published, _ := time.Parse(time.RFC3339, stub.publishedAt)
 		out = append(out, ytdlp.Video{
-			ID:          s.videoID,
-			Title:       s.title,
-			Channel:     s.channel,
-			Thumbnail:   s.thumb,
-			URL:         "https://www.youtube.com/watch?v=" + s.videoID,
-			Duration:    durations[s.videoID],
-			ViewCount:   views[s.videoID],
-			PublishedAt: pub,
+			ID: stub.videoID,
+			Title: stub.title,
+			Channel: stub.channel,
+			Thumbnail: stub.thumb,
+			URL: "https://www.youtube.com/watch?v=" + stub.videoID,
+			Duration: durations[stub.videoID],
+			ViewCount: views[stub.videoID],
+			PublishedAt: published,
 		})
 	}
-	return out, nil
+	return out
 }
 
 // LikedVideos fetches videos the user has liked, via the dedicated
