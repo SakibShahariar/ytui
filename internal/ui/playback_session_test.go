@@ -5,6 +5,31 @@ import (
 	"testing"
 )
 
+func TestResumePositionNeedsSaveThresholdAndForcedEvents(t *testing.T) {
+	tests := []struct {
+		name string
+		previous float64
+		next float64
+		force bool
+		want bool
+	}{
+		{name: "below threshold", previous: 10, next: 39.9, want: false},
+		{name: "at threshold", previous: 10, next: 40, want: true},
+		{name: "backward seek below threshold", previous: 80, next: 50.1, want: false},
+		{name: "backward seek at threshold", previous: 80, next: 50, want: true},
+		{name: "first position below threshold", previous: 0, next: 29.9, want: false},
+		{name: "first position at threshold", previous: 0, next: 30, want: true},
+		{name: "forced pause or exit", previous: 20, next: 21, force: true, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resumePositionNeedsSave(tt.previous, tt.next, tt.force); got != tt.want {
+				t.Fatalf("resumePositionNeedsSave(%v, %v, %v) = %v, want %v", tt.previous, tt.next, tt.force, got, tt.want)
+			}
+		})
+	}
+}
+
 type fakePlaybackSession struct {
 	waitCalled bool
 	position float64
