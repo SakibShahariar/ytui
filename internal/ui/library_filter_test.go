@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"sort"
 	"testing"
 	"time"
 
@@ -135,4 +136,34 @@ func TestActiveDownloadFilterIncludesPausedQueueEntries(t *testing.T) {
 	}
 	got := m.filterLibraryItems(items)
 	if len(got) != 2 { t.Fatalf("active filter returned %d items, want queued and paused", len(got)) }
+}
+
+
+func TestSortDownloadItemsSupportsQueueSortModes(t *testing.T) {
+	base := []list.Item{
+		downloadItem{d: downloader.Download{Title: "Beta", Channel: "Zulu", Status: downloader.StatusDone, Progress: 20, AddedAt: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)}},
+		downloadItem{d: downloader.Download{Title: "Alpha", Channel: "Alpha", Status: downloader.StatusQueued, Progress: 50, AddedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}},
+		downloadItem{d: downloader.Download{Title: "Gamma", Channel: "Mike", Status: downloader.StatusPaused, Progress: 10, AddedAt: time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)}},
+	}
+	tests := []struct {
+		mode string
+		want []string
+	}{
+		{mode: "added", want: []string{"Alpha", "Beta", "Gamma"}},
+		{mode: "title", want: []string{"Alpha", "Beta", "Gamma"}},
+		{mode: "channel", want: []string{"Alpha", "Gamma", "Beta"}},
+		{mode: "progress", want: []string{"Alpha", "Beta", "Gamma"}},
+		{mode: "status", want: []string{"Alpha", "Gamma", "Beta"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.mode, func(t *testing.T) {
+			items := append([]list.Item(nil), base...)
+			sortDownloadItems(items, tt.mode)
+			for i, want := range tt.want {
+				if got := items[i].(downloadItem).d.Title; got != want {
+					t.Fatalf("sorted item %d = %q, want %q", i, got, want)
+				}
+			}
+		})
+	}
 }
