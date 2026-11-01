@@ -195,22 +195,23 @@ func (m *Manager) Active() bool {
 }
 
 // Cancel kills an in-progress download, if any.
-func (m *Manager) Cancel(videoID string) {
+func (m *Manager) Cancel(videoID string) bool {
 	m.mu.Lock()
 	d, ok := m.byID[videoID]
-	var cmd *exec.Cmd
-	if ok {
-		d.Status = StatusCanceled
-		m.removePendingLocked(videoID)
-		if d.cmd != nil { cmd = d.cmd }
-		if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
+	if !ok || (d.Status != StatusQueued && d.Status != StatusDownloading) {
+		m.mu.Unlock()
+		return false
 	}
+	d.Status = StatusCanceled
+	m.removePendingLocked(videoID)
+	cmd := d.cmd
+	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
 	if cmd != nil {
 		if err := killProcess(cmd); err != nil { slog.Warn("could not stop canceled download", "error", err) }
 	}
+	return true
 }
-
 // Shutdown prevents new downloads, preserves queued work for the next launch,
 // stops active transfers so their partial files can be resumed, and waits for
 // all workers to finish before the application exits.
