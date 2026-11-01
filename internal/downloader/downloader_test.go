@@ -813,8 +813,9 @@ func TestRunRetainsPostProcessingPhaseOnFailure(t *testing.T) {
 	binDir := t.TempDir()
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
 	outputPath := filepath.Join(t.TempDir(), "failed-merge.mp4")
+	t.Setenv("YTUI_TEST_MERGE_PATH", outputPath)
 	script := `#!/bin/sh
-printf '[Merger] Merging formats into %s\n' strconv.Quote(outputPath) + `
+printf '[Merger] Merging formats into %s\\n' "$YTUI_TEST_MERGE_PATH"
 exit 1
 `
 	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
