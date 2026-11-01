@@ -2,7 +2,9 @@ package ui
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -85,6 +87,71 @@ func (m Model) resolveDownloadCancel(key string, cancel func(string) bool) Model
 	m.statusMsg = "canceled: " + pending.title
 	return m
 }
+func revealDownloadPath(filePath string, open func(string) error) error {
+	if strings.TrimSpace(filePath) == "" {
+		return fmt.Errorf("download has no recorded file path")
+	}
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("download file is unavailable: %w", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("download path is a directory, not a file")
+	}
+	if open == nil {
+		return fmt.Errorf("file manager is unavailable")
+	}
+	return open(filepath.Dir(filePath))
+}
+
+func openFileManager(directory string) error {
+	var name string
+	var args []string
+	switch runtime.GOOS {
+	case "windows":
+		name, args = "explorer", []string{directory}
+	case "darwin":
+		name, args = "open", []string{directory}
+	case "linux", "freebsd", "openbsd", "netbsd", "dragonfly":
+		name, args = "xdg-open", []string{directory}
+	default:
+		return fmt.Errorf("opening folders is unsupported on %s", runtime.GOOS)
+	}
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return fmt.Errorf("file manager command %q is unavailable: %w", name, err)
+	}
+	command := exec.Command(path, args...)
+	if err := command.Start(); err != nil {
+		return fmt.Errorf("start file manager: %w", err)
+	}
+	go func() { _ = command.Wait() }()
+	return nil
+}
+
+func (m Model) revealSelectedDownloadWith(open func(string) error) (Model, tea.Cmd) {
+	item, ok := m.list.SelectedItem().(downloadItem)
+	if !ok {
+		m.statusMsg = "select a completed download to reveal"
+		return m, nil
+	}
+	if item.d.Status != downloader.StatusDone {
+		m.statusMsg = "only completed downloads can be revealed"
+		return m, nil
+	}
+	if err := revealDownloadPath(item.d.FilePath, open); err != nil {
+		m.errMsg = "reveal download: " + err.Error()
+		return m, nil
+	}
+	m.errMsg = ""
+	m.statusMsg = "opened folder for " + item.d.Title
+	return m, nil
+}
+
+func (m Model) revealSelectedDownload() (tea.Model, tea.Cmd) {
+	return m.revealSelectedDownloadWith(openFileManager)
+}
+
 // startPickedDownload enqueues the download with whatever quality/toggle
 // choices are currently set in the picker, then closes it.
 func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
