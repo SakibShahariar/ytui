@@ -83,11 +83,23 @@ type Manager struct {
 
 	stalePartialsRemoved int
 	staleCleanupErr      error
+	maxConcurrent int
+	activeWorkers int
 }
 
 // New creates a Manager that saves into destDir (created if it doesn't
 // exist). Pass "" to use the default (~/Downloads/ytui).
 func New(destDir string) (*Manager, error) {
+	return NewWithConcurrency(destDir, 1)
+}
+
+// NewWithConcurrency creates a download manager with a bounded number of
+// simultaneous yt-dlp processes. A zero limit preserves the single-worker default.
+func NewWithConcurrency(destDir string, maxConcurrent int) (*Manager, error) {
+	if maxConcurrent == 0 { maxConcurrent = 1 }
+	if maxConcurrent < 1 || maxConcurrent > 10 {
+		return nil, fmt.Errorf("concurrent download limit must be between 1 and 10")
+	}
 	if destDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -105,6 +117,7 @@ func New(destDir string) (*Manager, error) {
 		wake:                 make(chan struct{}, 1),
 		queueFile:            filepath.Join(destDir, ".ytui-queue.json"),
 		stalePartialsRemoved: removed,
+		maxConcurrent: maxConcurrent,
 		staleCleanupErr:      cleanupErr,
 	}
 	if err := m.loadQueue(); err != nil {
@@ -613,7 +626,7 @@ func (m *Manager) setError(videoID string, err error) {
 }
 
 
-// signalScheduler wakes the single-download scheduler without blocking callers.
+// signalScheduler wakes the download scheduler without blocking callers.
 func (m *Manager) signalScheduler() {
 	select {
 	case m.wake <- struct{}{}:
@@ -629,13 +642,13 @@ func (m *Manager) removePendingLocked(videoID string) {
 	m.pending = out
 }
 
-// schedule runs at most one yt-dlp process at a time, preserving the explicit
-// pending order and ensuring queue controls affect actual execution order.
+// schedule starts queued downloads in FIFO order while respecting the
+// configured process limit. Workers wake the scheduler when a slot is freed.
 func (m *Manager) schedule() {
 	defer m.wg.Done()
 	for {
 		m.mu.Lock()
-		for !m.closed && len(m.pending) == 0 {
+		for !m.closed && (len(m.pending) == 0 || m.activeWorkers >= m.maxConcurrent) {
 			m.mu.Unlock()
 			<-m.wake
 			m.mu.Lock()
@@ -651,8 +664,18 @@ func (m *Manager) schedule() {
 			m.mu.Unlock()
 			continue
 		}
+		m.activeWorkers++
+		m.wg.Add(1)
 		m.mu.Unlock()
-		m.run(d)
+
+		go func(download *Download) {
+			defer m.wg.Done()
+			m.run(download)
+			m.mu.Lock()
+			m.activeWorkers--
+			m.mu.Unlock()
+			m.signalScheduler()
+		}(d)
 	}
 }
 
