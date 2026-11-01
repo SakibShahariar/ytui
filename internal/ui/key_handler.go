@@ -769,6 +769,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "ctrl+p":
 		if m.nowPlaying != nil {
+			m.saveResumePosition(true)
 			_ = m.nowPlaying.TogglePause()
 		}
 		return m, nil
