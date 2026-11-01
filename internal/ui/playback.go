@@ -49,7 +49,7 @@ func thumbnailFor(videoID, stored string) string {
 // we can offer to resume where you left off. Best-effort: if mpv doesn't
 // respond in time (e.g. it's already exiting), this just silently no-ops
 // rather than blocking the quit/stop action.
-const resumePositionSaveThreshold = 30.0
+const resumePositionSaveThreshold = 10.0
 
 func resumePositionNeedsSave(previous, next float64, force bool) bool {
 	return force || math.IsNaN(previous) || math.IsInf(previous, 0) || math.Abs(next-previous) >= resumePositionSaveThreshold
@@ -130,6 +130,11 @@ func (m Model) startSelectedVideo(v ytdlp.Video, resumePos float64) (tea.Model, 
 // viewing the Now Playing tab, navigates them away from it since it'd
 // otherwise show stale/empty content while still being "selected".
 func (m Model) clearNowPlaying() (tea.Model, tea.Cmd) {
+	// mpv may exit naturally or be closed outside ytui. Persist the last
+	// observed position before dropping the session state.
+	if m.nowPlaying != nil {
+		m.saveResumePosition(true)
+	}
 	endedID := ""
 	if m.playingVid != nil {
 		endedID = m.playingVid.ID
