@@ -54,7 +54,7 @@ func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
 	destDir := t.TempDir()
 	t.Setenv("YTUI_TEST_DEST_DIR", destDir)
-	script := "#!/bin/sh\\nlast=\\nfor arg do last=\\"$arg\\"; done\\nid=\${last##*/}\\nsleep 0.3\\noutput=\\"$YTUI_TEST_DEST_DIR/$id.mp4\\"\\nprintf '[download] Destination: %s\\\\n' \\"$output\\"\\n: > \\"$output\\"\\n"
+	script := "#!/bin/sh\nlast=\nfor arg do last=\"$arg\"; done\nid=${last##*/}\nsleep 0.3\noutput=\"$YTUI_TEST_DEST_DIR/$id.mp4\"\nprintf '[download] Destination: %s\\n' \"$output\"\n: > \"$output\"\n"
 	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
