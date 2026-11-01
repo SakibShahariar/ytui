@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"strings"
 
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 	"github.com/SakibShahariar/ytui/internal/sponsorblock"
@@ -219,6 +220,16 @@ func TestLoadTranscriptWithDoesNotCacheFailures(t *testing.T) {
 	if failed.err == nil || retried.err != nil || retried.text != "recovered captions" || calls != 2 {
 		t.Fatalf("failure/retry results = (%q, %v), (%q, %v), calls %d", failed.text, failed.err, retried.text, retried.err, calls)
 	}
+}
+
+func TestTranscriptCachePreservesLongCaptionContentAndOrder(t *testing.T) {
+	cache := newTranscriptCache(2, 1<<20)
+	key := transcriptCacheKey{videoID: "long-transcript", language: "en"}
+	captions := strings.Repeat("first caption\nsecond caption\nthird caption\n", 20000)
+	cache.put(key, captions)
+	got, ok := cache.get(key)
+	if !ok { t.Fatal("long transcript was not cached") }
+	if got != captions { t.Fatal("cached transcript content or caption order changed") }
 }
 
 func TestTranscriptCacheEvictsLeastRecentlyUsedAndBoundsBytes(t *testing.T) {
