@@ -387,6 +387,53 @@ func TestPauseRejectsActiveDownload(t *testing.T) {
 }
 
 
+func TestManagerShutdownPersistsQueueForRestart(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	destDir := t.TempDir()
+	partialPath := filepath.Join(destDir, "First [first-id].mp4.part")
+	t.Setenv("YTUI_TEST_PARTIAL_PATH", partialPath)
+	script := "#!/bin/sh\n: > \"$YTUI_TEST_PARTIAL_PATH\"\nwhile :; do sleep 1; done\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil { t.Fatal(err) }
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	manager, err := New(destDir)
+	if err != nil { t.Fatalf("New() error = %v", err) }
+	manager.Enqueue("first-id", "First", "Channel", "https://example.invalid/first", Options{})
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		items := manager.List()
+		if len(items) == 1 && items[0].Status == StatusDownloading { break }
+		if time.Now().After(deadline) {
+			manager.Shutdown()
+			t.Fatalf("first download did not start; queue = %#v", items)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	manager.Enqueue("second-id", "Second", "Channel", "https://example.invalid/second", Options{})
+	manager.Shutdown()
+
+	if _, err := os.Stat(partialPath); err != nil { t.Fatalf("shutdown removed resumable partial file: %v", err) }
+	afterShutdown := manager.List()
+	if len(afterShutdown) != 2 || afterShutdown[0].Status != StatusQueued || afterShutdown[1].Status != StatusQueued {
+		t.Fatalf("shutdown queue = %#v, want both entries queued", afterShutdown)
+	}
+
+	restored, err := New(destDir)
+	if err != nil { t.Fatalf("restart New() error = %v", err) }
+	defer restored.Shutdown()
+	restoredItems := restored.List()
+	if len(restoredItems) != 2 {
+		t.Fatalf("restored queue length = %d, want 2", len(restoredItems))
+	}
+	if restoredItems[0].VideoID != "first-id" || restoredItems[1].VideoID != "second-id" {
+		t.Fatalf("restored queue order = [%s %s], want [first-id second-id]", restoredItems[0].VideoID, restoredItems[1].VideoID)
+	}
+}
+
 func TestPersistedQueueRestoresOrderAndPausedState(t *testing.T) {
 	queueFile := filepath.Join(t.TempDir(), ".ytui-queue.json")
 	queued := &Download{VideoID: "queued", Title: "Queued", URL: "https://example.invalid/queued", Status: StatusQueued, Opts: Options{QualityLabel: "1080p"}}
