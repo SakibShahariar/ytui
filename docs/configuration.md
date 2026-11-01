@@ -37,6 +37,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |
+| `disable_resume_prompt` | Start videos from the beginning instead of prompting to resume saved progress. Progress is still saved. | `false` |
 | `desktop_notifications` | Send best-effort Linux desktop notifications when downloads finish or fail. Requires `notify-send`; notifications are disabled if false. | `false` |
 | `autoplay_next` | Automatically play the next Watch Later item, or the next item in the current list, when playback ends. Toggle with `Ctrl+N`. | `false` |
 | `download_sort` | Live Downloads queue order: `added`, `title`, `channel`, `progress`, or `status`. Press `s` on Downloads to cycle. | `added` |
