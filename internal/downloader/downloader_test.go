@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -638,5 +639,71 @@ func TestRunRejectsMissingFinalOutput(t *testing.T) {
 	}
 	if d.Err == nil || !strings.Contains(d.Err.Error(), "final output") {
 		t.Fatalf("error = %v, want a missing final output diagnostic", d.Err)
+	}
+}
+
+
+func TestResumableQueueEntrySurvivesRestart(t *testing.T) {
+	dir := t.TempDir()
+	partial := filepath.Join(dir, "Example [video123].mp4.part")
+	if err := os.WriteFile(partial, []byte("partial data"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	queueFile := filepath.Join(dir, ".ytui-queue.json")
+	entry := &Download{
+		VideoID: "video123", Title: "Example", URL: "https://example.invalid/video",
+		Status: StatusResumable, AddedAt: time.Now(),
+	}
+	manager := &Manager{
+		byID: map[string]*Download{"video123": entry},
+		order: []string{"video123"},
+		queueFile: queueFile,
+	}
+	manager.mu.Lock()
+	err := manager.persistQueueLocked()
+	manager.mu.Unlock()
+	if err != nil {
+		t.Fatalf("persist resumable queue: %v", err)
+	}
+
+	restored := &Manager{byID: make(map[string]*Download), queueFile: queueFile}
+	if err := restored.loadQueue(); err != nil {
+		t.Fatalf("restore queue: %v", err)
+	}
+	items := restored.List()
+	if len(items) != 1 || items[0].Status != StatusResumable {
+		t.Fatalf("restored queue = %#v, want one resumable entry", items)
+	}
+	if len(restored.pending) != 0 {
+		t.Fatalf("restored pending queue = %#v, resumable item must wait for explicit retry", restored.pending)
+	}
+	if data, err := os.ReadFile(partial); err != nil || string(data) != "partial data" {
+		t.Fatalf("partial file changed during restore: data=%q err=%v", data, err)
+	}
+}
+
+func TestPersistQueueRetainsLegacyQueuedAndPausedEntries(t *testing.T) {
+	dir := t.TempDir()
+	queueFile := filepath.Join(dir, ".ytui-queue.json")
+	legacy := []persistedDownload{
+		{VideoID: "queued", URL: "https://example.invalid/queued"},
+		{VideoID: "paused", URL: "https://example.invalid/paused", Paused: true},
+	}
+	data, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(queueFile, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	restored := &Manager{byID: make(map[string]*Download), queueFile: queueFile}
+	if err := restored.loadQueue(); err != nil {
+		t.Fatal(err)
+	}
+	if got := restored.byID["queued"].Status; got != StatusQueued {
+		t.Fatalf("legacy queued status = %v, want queued", got)
+	}
+	if got := restored.byID["paused"].Status; got != StatusPaused {
+		t.Fatalf("legacy paused status = %v, want paused", got)
 	}
 }
