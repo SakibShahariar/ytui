@@ -327,6 +327,11 @@ type playbackStartedMsg struct {
 	err error
 }
 
+type downloadRemoveRequest struct {
+	videoID string
+	title string
+}
+
 type downloadCancelRequest struct {
 	videoID string
 	title string
@@ -419,6 +424,7 @@ type Model struct {
 	libraryDateFilter int
 	watchLaterSortMode int
 	logoutPending bool
+	queueRemovePending *downloadRemoveRequest
 	watchLaterClearPending bool
 	watchLaterBulkPending bool
 	watchLaterSelected map[string]bool
