@@ -66,7 +66,7 @@ func (m Model) cancelSelectedDownload() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) resolveDownloadCancel(key string, cancel func(string)) Model {
+func (m Model) resolveDownloadCancel(key string, cancel func(string) bool) Model {
 	pending := m.downloadCancelPending
 	m.downloadCancelPending = nil
 	if pending == nil { return m }
@@ -78,7 +78,10 @@ func (m Model) resolveDownloadCancel(key string, cancel func(string)) Model {
 		m.statusMsg = "downloads unavailable"
 		return m
 	}
-	cancel(pending.videoID)
+	if !cancel(pending.videoID) {
+		m.statusMsg = "download is no longer active"
+		return m
+	}
 	m.statusMsg = "canceled: " + pending.title
 	return m
 }
