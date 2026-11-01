@@ -14,7 +14,7 @@ import (
 
 func TestSameDownloadRowsSkipsUnchangedVisibleRows(t *testing.T) {
 	current := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "10s"}}}
-	next := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20.4, Speed: "1MiB/s", ETA: "10s"}}}
+	next := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20.04, Speed: "1MiB/s", ETA: "10s"}}}
 	if !sameDownloadRows(current, next) { t.Fatal("same rendered rows were treated as changed") }
 }
 
