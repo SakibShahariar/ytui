@@ -327,6 +327,11 @@ type playbackStartedMsg struct {
 	err error
 }
 
+type downloadCancelRequest struct {
+	videoID string
+	title string
+}
+
 type resumePrompt struct {
 	video ytdlp.Video
 	position float64
@@ -485,6 +490,8 @@ type Model struct {
 	offlineDeletePending *library.File
 
 	resumePrompt *resumePrompt
+
+	downloadCancelPending *downloadCancelRequest
 
 	downloadPicker        bool
 	downloadPickerVideo   *ytdlp.Video
