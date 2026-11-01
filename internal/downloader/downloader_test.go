@@ -707,3 +707,64 @@ func TestPersistQueueRetainsLegacyQueuedAndPausedEntries(t *testing.T) {
 		t.Fatalf("legacy paused status = %v, want paused", got)
 	}
 }
+
+
+func TestEnqueueCompletedVideoWithChangedOptionsReplacesEntry(t *testing.T) {
+	originalOptions := Options{Format: "bestvideo+bestaudio/best", QualityLabel: "Best quality"}
+	original := &Download{
+		VideoID: "same-video", Title: "Example", URL: "https://example.invalid/video",
+		Opts: originalOptions, Status: StatusDone, FilePath: "/downloads/example.mp4",
+	}
+	manager := &Manager{
+		byID: map[string]*Download{"same-video": original},
+		order: []string{"same-video"},
+		wake: make(chan struct{}, 1),
+	}
+	duplicate := manager.Enqueue("same-video", "Example", "", original.URL, originalOptions)
+	if duplicate != original {
+		t.Fatal("identical completed download should not be enqueued again")
+	}
+	changedOptions := Options{ExtractAudio: true, AudioFormat: "mp3", QualityLabel: "Audio only (mp3)"}
+	replacement := manager.Enqueue("same-video", "Example", "", original.URL, changedOptions)
+	if replacement == original {
+		t.Fatal("changed options did not replace the completed entry")
+	}
+	if replacement.Status != StatusQueued {
+		t.Fatalf("replacement status = %v, want queued", replacement.Status)
+	}
+	if !replacement.Opts.ForceOverwrite {
+		t.Fatal("replacement does not force yt-dlp to regenerate the completed output")
+	}
+	if len(manager.order) != 1 || manager.order[0] != "same-video" {
+		t.Fatalf("queue order = %v, want one entry in its original position", manager.order)
+	}
+	if len(manager.pending) != 1 || manager.pending[0] != "same-video" {
+		t.Fatalf("pending queue = %v, want one replacement entry", manager.pending)
+	}
+	if replacement.FilePath != "" {
+		t.Fatalf("replacement retained old output path %q", replacement.FilePath)
+	}
+}
+
+func TestSameDownloadOptionsIgnoresInternalOverwriteMarker(t *testing.T) {
+	selected := Options{ExtractAudio: true, AudioFormat: "mp3", QualityLabel: "Audio only (mp3)"}
+	replacement := selected
+	replacement.ForceOverwrite = true
+	if !sameDownloadOptions(selected, replacement) {
+		t.Fatal("internal overwrite marker should not make selected options different")
+	}
+}
+
+func TestBuildArgsForReplacementForcesOverwrite(t *testing.T) {
+	args := buildArgs(t.TempDir(), &Download{
+		URL: "https://example.invalid/video",
+		Opts: Options{ForceOverwrite: true},
+	})
+	found := false
+	for _, arg := range args {
+		if arg == "--force-overwrites" { found = true; break }
+	}
+	if !found {
+		t.Fatalf("buildArgs() = %#v, want --force-overwrites", args)
+	}
+}
