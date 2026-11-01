@@ -434,3 +434,73 @@ func TestBuildArgsUsesEnglishSubtitleFallback(t *testing.T) {
 		t.Fatalf("buildArgs() = %#v, want subtitle flags %#v", args, want)
 	}
 }
+
+func TestPostProcessDestinationRegex(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want string
+	}{
+		{name: "merge", line: `[Merger] Merging formats into "/tmp/video [abc].mp4"`, want: "/tmp/video [abc].mp4"},
+		{name: "remux", line: `[VideoRemuxer] Remuxing video from mkv to mp4; Destination: "/tmp/video.mp4"`, want: "/tmp/video.mp4"},
+		{name: "audio extraction", line: `[ExtractAudio] Destination: "/tmp/audio.mp3"`, want: "/tmp/audio.mp3"},
+		{name: "metadata", line: `[Metadata] Adding metadata to "/tmp/video.mp4"`, want: "/tmp/video.mp4"},
+		{name: "thumbnail", line: `[EmbedThumbnail] mutagen: Adding thumbnail to "/tmp/video.mp4"`, want: "/tmp/video.mp4"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			match := postProcessDestRe.FindStringSubmatch(tt.line)
+			if len(match) != 2 || match[1] != tt.want {
+				t.Fatalf("postProcessDestRe(%q) = %#v, want path %q", tt.line, match, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunTracksFinalOutputAfterMerge(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	finalPath := filepath.Join(t.TempDir(), "merged video.mp4")
+	t.Setenv("YTUI_TEST_FINAL_PATH", finalPath)
+	script := "#!/bin/sh\nprintf '[Merger] Merging formats into \"%s\"\\n' \"$YTUI_TEST_FINAL_PATH\"\n: > \"$YTUI_TEST_FINAL_PATH\"\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	d := &Download{VideoID: "merge-test", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{d.VideoID: d}, order: []string{d.VideoID}, destDir: t.TempDir()}
+	m.run(d)
+	if d.Status != StatusDone {
+		t.Fatalf("status = %v, want done (error: %v)", d.Status, d.Err)
+	}
+	if d.FilePath != finalPath {
+		t.Fatalf("FilePath = %q, want final merged path %q", d.FilePath, finalPath)
+	}
+}
+
+func TestRunRejectsMissingFinalOutput(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	missingPath := filepath.Join(t.TempDir(), "missing.mp4")
+	t.Setenv("YTUI_TEST_MISSING_PATH", missingPath)
+	script := "#!/bin/sh\nprintf '[ExtractAudio] Destination: \"%s\"\\n' \"$YTUI_TEST_MISSING_PATH\"\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	d := &Download{VideoID: "missing-output-test", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{d.VideoID: d}, order: []string{d.VideoID}, destDir: t.TempDir()}
+	m.run(d)
+	if d.Status != StatusError {
+		t.Fatalf("status = %v, want error for missing output", d.Status)
+	}
+	if d.Err == nil || !strings.Contains(d.Err.Error(), "final output") {
+		t.Fatalf("error = %v, want a missing final output diagnostic", d.Err)
+	}
+}
