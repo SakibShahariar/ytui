@@ -481,28 +481,36 @@ func LikedVideos(client *http.Client) ([]ytdlp.Video, error) {
 // videoDetails batch-fetches duration and view count for up to many video
 // IDs, 50 at a time (the API's per-request limit for the id parameter).
 func videoDetails(client *http.Client, ids []string) (map[string]float64, map[string]int64, error) {
+	durations, views, err := videoDetailsPartial(client, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	return durations, views, nil
+}
+
+// videoDetailsPartial continues after individual batch failures so callers
+// such as HomeFeed can retain details from successful batches.
+func videoDetailsPartial(client *http.Client, ids []string) (map[string]float64, map[string]int64, error) {
 	durations := map[string]float64{}
 	views := map[string]int64{}
+	var firstErr error
 	for i := 0; i < len(ids); i += 50 {
 		end := i + 50
-		if end > len(ids) {
-			end = len(ids)
-		}
+		if end > len(ids) { end = len(ids) }
 		batch := ids[i:end]
-		if len(batch) == 0 {
-			continue
-		}
+		if len(batch) == 0 { continue }
 		params := url.Values{
 			"part": {"contentDetails,statistics"},
-			"id":   {strings.Join(batch, ",")},
+			"id": {strings.Join(batch, ",")},
 		}
 		raw, err := get(client, "videos", params)
 		if err != nil {
-			return nil, nil, err
+			if firstErr == nil { firstErr = err }
+			continue
 		}
 		var page struct {
 			Items []struct {
-				ID             string `json:"id"`
+				ID string `json:"id"`
 				ContentDetails struct {
 					Duration string `json:"duration"`
 				} `json:"contentDetails"`
@@ -512,15 +520,16 @@ func videoDetails(client *http.Client, ids []string) (map[string]float64, map[st
 			} `json:"items"`
 		}
 		if err := json.Unmarshal(raw, &page); err != nil {
-			return nil, nil, fmt.Errorf("parsing video details response: %w", err)
+			if firstErr == nil { firstErr = fmt.Errorf("parsing video details response: %w", err) }
+			continue
 		}
-		for _, it := range page.Items {
-			durations[it.ID] = parseISO8601Duration(it.ContentDetails.Duration)
-			v, _ := strconv.ParseInt(it.Statistics.ViewCount, 10, 64)
-			views[it.ID] = v
+		for _, item := range page.Items {
+			durations[item.ID] = parseISO8601Duration(item.ContentDetails.Duration)
+			count, _ := strconv.ParseInt(item.Statistics.ViewCount, 10, 64)
+			views[item.ID] = count
 		}
 	}
-	return durations, views, nil
+	return durations, views, firstErr
 }
 
 var iso8601DurationRe = regexp.MustCompile(`^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$`)
