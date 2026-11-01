@@ -52,7 +52,7 @@ func thumbnailFor(videoID, stored string) string {
 const resumePositionSaveThreshold = 30.0
 
 func resumePositionNeedsSave(previous, next float64, force bool) bool {
-	return force || math.Abs(next-previous) >= resumePositionSaveThreshold
+	return force || math.IsNaN(previous) || math.IsInf(previous, 0) || math.Abs(next-previous) >= resumePositionSaveThreshold
 }
 
 func (m Model) saveResumePosition(force bool) {
@@ -66,7 +66,7 @@ func (m Model) saveResumePosition(force bool) {
 		// previous periodic save.
 		pos = m.npPos
 	}
-	if pos <= 0 {
+	if pos <= 0 || math.IsNaN(pos) || math.IsInf(pos, 0) {
 		return
 	}
 	v := m.playingVid
