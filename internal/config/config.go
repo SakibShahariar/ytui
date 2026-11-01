@@ -38,6 +38,9 @@ type Config struct {
 	// DefaultAudioOnly sets the initial audio-only playback toggle.
 	DefaultAudioOnly bool `json:"default_audio_only,omitempty"`
 
+	// DisableResumePrompt starts videos from the beginning instead of prompting.
+	DisableResumePrompt bool `json:"disable_resume_prompt,omitempty"`
+
 	// DesktopNotifications enables best-effort desktop notifications for download completion/failure.
 	DesktopNotifications bool `json:"desktop_notifications,omitempty"`
 
