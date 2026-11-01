@@ -12,12 +12,12 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
-	"os/exec"
-	"strings"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
