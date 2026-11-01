@@ -259,35 +259,44 @@ func (i historyItem) FilterValue() string { return i.e.Title }
 type downloadItem struct{ d downloader.Download }
 
 func (i downloadItem) Title() string { return i.d.Title }
-func (i downloadItem) Description() string {
-	q := i.d.Opts.QualityLabel
-	if q != "" {
-		q = q + " · "
+
+func downloadOptionsSummary(opts downloader.Options) string {
+	parts := make([]string, 0, 4)
+	if opts.QualityLabel != "" {
+		parts = append(parts, opts.QualityLabel)
+	} else if opts.ExtractAudio && opts.AudioFormat != "" {
+		parts = append(parts, "Audio only ("+opts.AudioFormat+")")
 	}
+	if opts.WriteSubs { parts = append(parts, "subtitles") }
+	if opts.EmbedThumbnail { parts = append(parts, "thumbnail") }
+	if opts.CookiesFromBrowser != "" { parts = append(parts, "cookies: "+opts.CookiesFromBrowser) }
+	return strings.Join(parts, " · ")
+}
+
+func (i downloadItem) Description() string {
+	options := downloadOptionsSummary(i.d.Opts)
+	prefix := ""
+	if options != "" { prefix = options + " · " }
 	switch i.d.Status {
 	case downloader.StatusQueued:
-		return q + "queued"
+		return prefix + "queued"
 	case downloader.StatusPaused:
-		return q + "paused — Ctrl+Space to resume"
+		return prefix + "paused — Ctrl+Space to resume"
 	case downloader.StatusDownloading:
 		bar := progressBar(i.d.Progress, 20)
-		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", q, bar, i.d.Progress, i.d.Speed, i.d.ETA)
+		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", prefix, bar, i.d.Progress, i.d.Speed, i.d.ETA)
 	case downloader.StatusDone:
-		return "✓ done — " + i.d.FilePath
+		return prefix + "✓ done — " + i.d.FilePath
 	case downloader.StatusResumable:
 		msg := "partial file available"
-		if i.d.Err != nil {
-			msg = i.d.Err.Error()
-		}
-		return "↻ resumable: " + msg
+		if i.d.Err != nil { msg = i.d.Err.Error() }
+		return prefix + "↻ resumable: " + msg
 	case downloader.StatusError:
 		msg := "unknown error"
-		if i.d.Err != nil {
-			msg = i.d.Err.Error()
-		}
-		return "✗ error: " + msg
+		if i.d.Err != nil { msg = i.d.Err.Error() }
+		return prefix + "✗ error: " + msg
 	case downloader.StatusCanceled:
-		return "canceled — Ctrl+R to retry/resume"
+		return prefix + "canceled — Ctrl+R to retry/resume"
 	}
 	return ""
 }
