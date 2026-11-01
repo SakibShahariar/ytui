@@ -339,6 +339,58 @@ func TestCancelActiveDownloadStopsProcess(t *testing.T) {
 }
 
 
+func TestRemoveFinishedQueueEntryPreservesActiveStateAndFiles(t *testing.T) {
+	dir := t.TempDir()
+	queueFile := filepath.Join(dir, ".ytui-queue.json")
+	completedFile := filepath.Join(dir, "completed.mp4")
+	partialFile := filepath.Join(dir, "failed.mp4.part")
+	for _, path := range []string{completedFile, partialFile} {
+		if err := os.WriteFile(path, []byte("keep"), 0o600); err != nil { t.Fatal(err) }
+	}
+	completed := &Download{VideoID: "done", Status: StatusDone, FilePath: completedFile}
+	queued := &Download{VideoID: "queued", Status: StatusQueued, URL: "https://example.invalid/queued"}
+	m := &Manager{
+		byID: map[string]*Download{"done": completed, "queued": queued},
+		order: []string{"done", "queued"},
+		pending: []string{"queued"},
+		queueFile: queueFile,
+	}
+	if m.Remove("queued") { t.Fatal("Remove() accepted a queued download") }
+	if !m.Remove("done") { t.Fatal("Remove() rejected a completed download") }
+	if got := strings.Join(m.ListIDsForTest(), ","); got != "queued" { t.Fatalf("remaining order = %q, want queued", got) }
+	for _, path := range []string{completedFile, partialFile} {
+		if _, err := os.Stat(path); err != nil { t.Errorf("queue removal deleted or lost media file %q: %v", path, err) }
+	}
+	restored := &Manager{byID: make(map[string]*Download), queueFile: queueFile}
+	if err := restored.loadQueue(); err != nil { t.Fatalf("loadQueue() error = %v", err) }
+	if len(restored.order) != 1 || restored.order[0] != "queued" { t.Fatalf("persisted order = %v, want [queued]", restored.order) }
+}
+
+func TestClearCompletedAndFailedQueueEntries(t *testing.T) {
+	dir := t.TempDir()
+	queueFile := filepath.Join(dir, ".ytui-queue.json")
+	m := &Manager{
+		byID: map[string]*Download{
+			"done": {VideoID: "done", Status: StatusDone},
+			"error": {VideoID: "error", Status: StatusError},
+			"resumable": {VideoID: "resumable", Status: StatusResumable},
+			"canceled": {VideoID: "canceled", Status: StatusCanceled},
+			"queued": {VideoID: "queued", Status: StatusQueued, URL: "https://example.invalid/queued"},
+			"paused": {VideoID: "paused", Status: StatusPaused, URL: "https://example.invalid/paused"},
+		},
+		order: []string{"done", "error", "resumable", "canceled", "queued", "paused"},
+		pending: []string{"queued"},
+		queueFile: queueFile,
+	}
+	if got := m.ClearCompleted(); got != 1 { t.Fatalf("ClearCompleted() = %d, want 1", got) }
+	if got := m.ClearFailed(); got != 3 { t.Fatalf("ClearFailed() = %d, want 3", got) }
+	if got := strings.Join(m.ListIDsForTest(), ","); got != "queued,paused" { t.Fatalf("remaining order = %q, want queued,paused", got) }
+	if len(m.pending) != 1 || m.pending[0] != "queued" { t.Fatalf("pending = %v, want [queued]", m.pending) }
+	restored := &Manager{byID: make(map[string]*Download), queueFile: queueFile}
+	if err := restored.loadQueue(); err != nil { t.Fatalf("loadQueue() error = %v", err) }
+	if got := strings.Join(restored.order, ","); got != "queued,paused" { t.Fatalf("persisted order = %q, want queued,paused", got) }
+}
+
 func TestMoveQueuedChangesPendingAndVisibleOrder(t *testing.T) {
 	first := &Download{VideoID: "first", Status: StatusQueued}
 	second := &Download{VideoID: "second", Status: StatusQueued}
