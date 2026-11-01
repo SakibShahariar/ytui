@@ -52,12 +52,15 @@ func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	}
 	binDir := t.TempDir()
 	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
-	if err := os.WriteFile(fakeYTDLP, []byte("#!/bin/sh\\nsleep 0.3\\n"), 0o700); err != nil {
+	destDir := t.TempDir()
+	t.Setenv("YTUI_TEST_DEST_DIR", destDir)
+	script := "#!/bin/sh\\nlast=\\nfor arg do last=\\"$arg\\"; done\\nid=\${last##*/}\\nsleep 0.3\\noutput=\\"$YTUI_TEST_DEST_DIR/$id.mp4\\"\\nprintf '[download] Destination: %s\\\\n' \\"$output\\"\\n: > \\"$output\\"\\n"
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	manager, err := NewWithConcurrency(t.TempDir(), 2)
+	manager, err := NewWithConcurrency(destDir, 2)
 	if err != nil {
 		t.Fatalf("NewWithConcurrency() error = %v", err)
 	}
@@ -87,7 +90,7 @@ func TestConcurrentDownloadsRespectConfiguredLimit(t *testing.T) {
 	}
 	for _, item := range manager.List() {
 		if item.Status != StatusDone {
-			t.Errorf("download %q status = %v, want done", item.VideoID, item.Status)
+			t.Errorf("download %q status = %v, want done (error: %v)", item.VideoID, item.Status, item.Err)
 		}
 	}
 }
