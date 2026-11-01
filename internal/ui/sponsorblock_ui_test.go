@@ -38,6 +38,40 @@ func TestSponsorBlockSettingsDefaultCategoriesAndSave(t *testing.T) {
 	}
 }
 
+func TestSponsorBlockSettingsCursorStaysWithinRows(t *testing.T) {
+	m := Model{sponsorBlockSettings: true, sponsorBlockCursor: 0}
+	updated, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyUp})
+	m = updated.(Model)
+	if m.sponsorBlockCursor != 0 { t.Fatalf("cursor after Up at start = %d, want 0", m.sponsorBlockCursor) }
+
+	for i := 0; i < len(sponsorblock.SkipCategories)+2; i++ {
+		updated, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
+		m = updated.(Model)
+	}
+	if want := len(sponsorblock.SkipCategories); m.sponsorBlockCursor != want {
+		t.Fatalf("cursor at end = %d, want %d", m.sponsorBlockCursor, want)
+	}
+
+	m.sponsorBlockCursor = 999
+	updated, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
+	m = updated.(Model)
+	if want := len(sponsorblock.SkipCategories); m.sponsorBlockCursor != want {
+		t.Fatalf("cursor after invalid high value = %d, want %d", m.sponsorBlockCursor, want)
+	}
+	m.sponsorBlockCursor = -5
+	updated, _ = m.handleKey(tea.KeyMsg{Type: tea.KeyUp})
+	m = updated.(Model)
+	if m.sponsorBlockCursor != 0 { t.Fatalf("cursor after invalid low value = %d, want 0", m.sponsorBlockCursor) }
+}
+
+func TestSponsorBlockToggleIgnoresInvalidCategoryCursor(t *testing.T) {
+	m := Model{sponsorBlockCursor: len(sponsorblock.SkipCategories) + 5, sponsorBlockDraftCategories: []string{"sponsor"}}
+	got := m.toggleSponsorBlockSetting()
+	if len(got.sponsorBlockDraftCategories) != 1 || got.sponsorBlockDraftCategories[0] != "sponsor" {
+		t.Fatalf("invalid cursor changed selected categories: %#v", got.sponsorBlockDraftCategories)
+	}
+}
+
 func TestSponsorBlockViewerCanCancelSettings(t *testing.T) {
 	m := Model{sponsorBlockSettings: true, sponsorBlockDraftEnabled: true, searchInput: textinput.New()}
 	updated, cmd := m.handleKey(tea.KeyMsg{Type: tea.KeyEsc})
