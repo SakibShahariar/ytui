@@ -22,6 +22,7 @@ func paletteCommands() []paletteCommand {
 		{id: "watch_later", label: "Open Watch Later", description: "Open your saved queue"},
 		{id: "history", label: "Open History", description: "Browse watch history"},
 		{id: "downloads", label: "Open Downloads", description: "Show the live download queue"},
+		{id: "reveal_download", label: "Reveal completed download", description: "Open its containing folder from Downloads"},
 		{id: "offline", label: "Open offline files", description: "Browse downloaded media"},
 		{id: "toggle_audio", label: "Toggle audio-only mode", description: "Change playback mode"},
 		{id: "toggle_thumbnails", label: "Toggle thumbnail previews", description: "Enable or disable terminal previews"},
