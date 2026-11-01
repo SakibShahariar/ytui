@@ -42,10 +42,9 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 	case "history":
 		m.activeTab = tabHistory
 	case "reveal_download":
-		if m.activeTab != tabDownloads || m.offlineDownloads {
-			m.statusMsg = "open Downloads and select a completed item first"
-			return m, nil
-		}
+		m.activeTab = tabDownloads
+		m.offlineDownloads = false
+		m.refreshList()
 		return m.revealSelectedDownload()
 	case "downloads":
 		m.activeTab = tabDownloads
