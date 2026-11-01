@@ -55,6 +55,21 @@ func resumePositionNeedsSave(previous, next float64, force bool) bool {
 	return force || math.IsNaN(previous) || math.IsInf(previous, 0) || math.Abs(next-previous) >= resumePositionSaveThreshold
 }
 
+// resumePositionIsUseful avoids prompting for invalid positions and videos
+// that are already effectively complete.
+func resumePositionIsUseful(position, duration float64) bool {
+	if position <= 0 || math.IsNaN(position) || math.IsInf(position, 0) {
+		return false
+	}
+	if duration > 0 && !math.IsNaN(duration) && !math.IsInf(duration, 0) {
+		completionThreshold := math.Min(30, duration*0.05)
+		if duration-position <= completionThreshold {
+			return false
+		}
+	}
+	return true
+}
+
 func (m Model) saveResumePosition(force bool) {
 	if m.nowPlaying == nil || m.playingVid == nil {
 		return
@@ -101,8 +116,7 @@ func (m Model) playSelected() (tea.Model, tea.Cmd) {
 		_ = m.nowPlaying.Quit()
 	}
 	resumePos, resuming := m.store.FindHistoryPosition(v.ID)
-	validPosition := resuming && !math.IsNaN(resumePos) && !math.IsInf(resumePos, 0) && resumePos > 0 &&
-		(v.Duration <= 0 || resumePos < v.Duration)
+	validPosition := resuming && !m.cfg.DisableResumePrompt && resumePositionIsUseful(resumePos, v.Duration)
 	if validPosition {
 		m.resumePrompt = &resumePrompt{video: v, position: resumePos}
 		m.statusMsg = fmt.Sprintf("resume %s or start from beginning: %s", formatDuration(resumePos), v.Title)
