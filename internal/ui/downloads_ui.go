@@ -52,15 +52,36 @@ func (m Model) retrySelectedDownload() (tea.Model, tea.Cmd) {
 }
 
 func (m Model) cancelSelectedDownload() (tea.Model, tea.Cmd) {
-	if item, ok := m.list.SelectedItem().(downloadItem); ok {
-		if m.downloads != nil && (item.d.Status == downloader.StatusQueued || item.d.Status == downloader.StatusDownloading) {
-			m.downloads.Cancel(item.d.VideoID)
-			m.statusMsg = "canceled: " + item.d.Title
-		}
+	item, ok := m.list.SelectedItem().(downloadItem)
+	if !ok {
+		m.statusMsg = "select a queued or active download to cancel"
+		return m, nil
 	}
+	if item.d.Status != downloader.StatusQueued && item.d.Status != downloader.StatusDownloading {
+		m.statusMsg = "only queued or active downloads can be canceled"
+		return m, nil
+	}
+	m.downloadCancelPending = &downloadCancelRequest{videoID: item.d.VideoID, title: item.d.Title}
+	m.statusMsg = "cancel " + item.d.Title + "? press y to confirm, any other key to dismiss"
 	return m, nil
 }
 
+func (m Model) resolveDownloadCancel(key string, cancel func(string)) Model {
+	pending := m.downloadCancelPending
+	m.downloadCancelPending = nil
+	if pending == nil { return m }
+	if key != "y" {
+		m.statusMsg = "download cancellation dismissed"
+		return m
+	}
+	if cancel == nil {
+		m.statusMsg = "downloads unavailable"
+		return m
+	}
+	cancel(pending.videoID)
+	m.statusMsg = "canceled: " + pending.title
+	return m
+}
 // startPickedDownload enqueues the download with whatever quality/toggle
 // choices are currently set in the picker, then closes it.
 func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
