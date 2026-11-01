@@ -31,10 +31,15 @@ jobs:
           set -eu
           version=v0.0.0-test
           output="ytui-${version}-linux-amd64"
-          mkdir -p dist
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.version=${version}" -o "dist/${output}" .
+          mkdir -p "dist/${output}"
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.version=${version}" -o "dist/${output}/ytui" .
+          cp README.md LICENSE "dist/${output}/"
+          cp -R docs "dist/${output}/docs"
+          test "$(dist/${output}/ytui --version)" = "ytui ${version}"
           tar -czf "dist/${output}.tar.gz" -C dist "${output}"
           test -s "dist/${output}.tar.gz"
-          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}"
-          test "$(dist/${output} --version)" = "ytui ${version}"
+          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}/ytui"
+          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}/README.md"
+          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}/LICENSE"
+          tar -tzf "dist/${output}.tar.gz" | grep -Fx "${output}/docs/configuration.md"
           (cd dist && sha256sum "${output}.tar.gz" > SHA256SUMS && sha256sum --check SHA256SUMS)
