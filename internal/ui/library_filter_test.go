@@ -2,6 +2,9 @@ package ui
 
 import (
 	"testing"
+	"errors"
+
+	"github.com/charmbracelet/bubbles/list"
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -10,6 +13,28 @@ import (
 	"github.com/SakibShahariar/ytui/internal/library"
 	"github.com/SakibShahariar/ytui/internal/store"
 )
+
+func TestSameDownloadRowsSkipsUnchangedVisibleRows(t *testing.T) {
+	current := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "10s"}}}
+	next := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20.4, Speed: "1MiB/s", ETA: "10s"}}}
+	if !sameDownloadRows(current, next) { t.Fatal("same rendered rows were treated as changed") }
+}
+
+func TestSameDownloadRowsDetectsVisibleChanges(t *testing.T) {
+	base := []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "10s", Opts: downloader.Options{QualityLabel: "1080p"}}}}
+	tests := []struct { name string; next []list.Item }{
+		{name: "progress", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 30, Speed: "1MiB/s", ETA: "10s", Opts: downloader.Options{QualityLabel: "1080p"}}}}},
+		{name: "speed", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "2MiB/s", ETA: "10s", Opts: downloader.Options{QualityLabel: "1080p"}}}}},
+		{name: "eta", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "5s", Opts: downloader.Options{QualityLabel: "1080p"}}}}},
+		{name: "status", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDone, Progress: 100, FilePath: "/tmp/Lecture.mp4"}}}},
+		{name: "title", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture 2", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "10s", Opts: downloader.Options{QualityLabel: "1080p"}}}}},
+		{name: "quality", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusDownloading, Progress: 20, Speed: "1MiB/s", ETA: "10s", Opts: downloader.Options{QualityLabel: "720p"}}}}},
+		{name: "error", next: []list.Item{downloadItem{d: downloader.Download{Title: "Lecture", Status: downloader.StatusError, Err: errors.New("disk full")}}}},
+		{name: "row count", next: nil},
+		{name: "row type", next: []list.Item{historyItem{}}},
+	}
+	for _, tt := range tests { t.Run(tt.name, func(t *testing.T) { if sameDownloadRows(base, tt.next) { t.Fatal("visibly changed rows were treated as unchanged") } }) }
+}
 
 func TestFilterLibraryItemsMatchesHistoryTitleAndChannelCaseInsensitively(t *testing.T) {
 	m := Model{activeTab: tabHistory, libraryFilter: "jazz"}
