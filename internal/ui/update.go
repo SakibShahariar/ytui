@@ -207,7 +207,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case playbackExitedMsg:
 		if msg.p == m.nowPlaying {
-			m.saveResumePosition()
+			m.saveResumePosition(true)
 			return m.clearNowPlaying()
 		}
 		return m, nil
@@ -230,7 +230,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// other than our own ctrl+x (its own quit key, closing its
 			// window, a crash). Save the last UI-observed position before
 			// clearing playback state; the fresh IPC query has already failed.
-			m.saveResumePosition()
+			m.saveResumePosition(true)
 			return m.clearNowPlaying()
 	}
 		m.npPos = pos
@@ -256,7 +256,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.npVol = vol
 		}
 		if paused, err := m.nowPlaying.IsPaused(); err == nil {
+			wasPaused := m.npPaused
 			m.npPaused = paused
+			if paused && !wasPaused {
+				m.saveResumePosition(true)
+			}
 		}
 		return m, nowPlayingTickCmd()
 
@@ -264,7 +268,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.nowPlaying == nil {
 			return m, nil // playback ended/stopped since the last tick — don't reschedule
 		}
-		m.saveResumePosition()
+		m.saveResumePosition(false)
 		return m, positionTickCmd()
 
 	case downloadsTickMsg:
