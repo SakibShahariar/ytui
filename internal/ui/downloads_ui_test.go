@@ -2,6 +2,8 @@ package ui
 
 import (
 	"testing"
+	"os"
+	"path/filepath"
 
 	"github.com/charmbracelet/bubbles/list"
 
@@ -53,4 +55,49 @@ func TestResolveDownloadCancelHandlesUnavailableManager(t *testing.T) {
 	got := m.resolveDownloadCancel("y", nil)
 	if got.downloadCancelPending != nil { t.Fatal("unavailable manager left cancellation pending") }
 	if got.statusMsg != "downloads unavailable" { t.Fatalf("status = %q", got.statusMsg) }
+}
+
+func TestRevealDownloadPathOpensContainingDirectory(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "completed video.mp4")
+	if err := os.WriteFile(filePath, []byte("video"), 0o600); err != nil { t.Fatal(err) }
+	opened := ""
+	if err := revealDownloadPath(filePath, func(path string) error { opened = path; return nil }); err != nil {
+		t.Fatalf("revealDownloadPath() error = %v", err)
+	}
+	if opened != dir { t.Fatalf("opened path = %q, want containing directory %q", opened, dir) }
+}
+
+func TestRevealDownloadPathRejectsMissingFilesAndDirectories(t *testing.T) {
+	called := false
+	missing := filepath.Join(t.TempDir(), "missing.mp4")
+	if err := revealDownloadPath(missing, func(string) error { called = true; return nil }); err == nil {
+		t.Fatal("missing file was accepted")
+	}
+	dir := t.TempDir()
+	if err := revealDownloadPath(dir, func(string) error { called = true; return nil }); err == nil {
+		t.Fatal("directory path was accepted as a downloaded file")
+	}
+	if err := revealDownloadPath(filepath.Join(dir, "missing.mp4"), nil); err == nil {
+		t.Fatal("missing file with nil opener was accepted")
+	}
+	if called { t.Fatal("file manager was invoked for an invalid path") }
+}
+
+func TestRevealSelectedDownloadRequiresCompletedItem(t *testing.T) {
+	item := downloadItem{d: downloader.Download{VideoID: "queued", Title: "Queued", Status: downloader.StatusQueued}}
+	m := Model{list: list.New([]list.Item{item}, list.NewDefaultDelegate(), 40, 10)}
+	opened := false
+	got, _ := m.revealSelectedDownloadWith(func(string) error { opened = true; return nil })
+	if opened { t.Fatal("file manager opened for a queued download") }
+	if got.statusMsg != "only completed downloads can be revealed" {
+		t.Fatalf("status = %q", got.statusMsg)
+	}
+}
+
+func TestRevealSelectedDownloadReportsMissingCompletedFile(t *testing.T) {
+	item := downloadItem{d: downloader.Download{VideoID: "done", Title: "Missing", Status: downloader.StatusDone, FilePath: filepath.Join(t.TempDir(), "missing.mp4")}}
+	m := Model{list: list.New([]list.Item{item}, list.NewDefaultDelegate(), 40, 10)}
+	got, _ := m.revealSelectedDownloadWith(func(string) error { t.Fatal("file manager should not open"); return nil })
+	if got.errMsg == "" { t.Fatal("missing completed file did not set an error") }
 }
