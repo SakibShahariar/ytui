@@ -19,6 +19,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 ```json
 {
   "download_dir": "/home/you/Videos/ytui",
+  "max_concurrent_downloads": 3,
   "default_quality": "1080p",
   "default_cookies_browser": "firefox",
   "default_audio_only": false,
@@ -34,6 +35,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | Field | Description | Default |
 |---|---|---|
 | `download_dir` | Directory where `Ctrl+D` downloads are saved. `--dir DIR` overrides it for one run. | `~/Downloads/ytui` |
+| `max_concurrent_downloads` | Maximum simultaneous yt-dlp processes. Accepted values are `1`–`10`; `0` keeps the single-download default. | `1` |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |
@@ -163,3 +165,5 @@ The limit counts playlist entries, including unavailable entries, so unusually l
 
 
 Download sorting and status filtering apply to the live queue. File-size sorting is not available because ytui does not currently retain a reliable final size for each queue entry.
+
+The Downloads view shows the number of active workers and pending queue entries. Queue order remains FIFO unless changed manually with the queue movement controls. Paused active processes continue to occupy a worker slot until resumed or canceled.
