@@ -26,7 +26,7 @@ func TestCancelSelectedDownloadRequestsConfirmation(t *testing.T) {
 func TestResolveDownloadCancelDismissesWithoutCanceling(t *testing.T) {
 	called := false
 	m := Model{downloadCancelPending: &downloadCancelRequest{videoID: "cancel-video", title: "A video"}}
-	got := m.resolveDownloadCancel("n", func(string) { called = true })
+	got := m.resolveDownloadCancel("n", func(string) bool { called = true; return true })
 	if called { t.Fatal("dismissal invoked cancellation") }
 	if got.downloadCancelPending != nil { t.Fatal("dismissal left cancellation pending") }
 	if got.statusMsg != "download cancellation dismissed" { t.Fatalf("status = %q", got.statusMsg) }
@@ -35,10 +35,17 @@ func TestResolveDownloadCancelDismissesWithoutCanceling(t *testing.T) {
 func TestResolveDownloadCancelRequiresExplicitConfirmation(t *testing.T) {
 	canceledID := ""
 	m := Model{downloadCancelPending: &downloadCancelRequest{videoID: "cancel-video", title: "A video"}}
-	got := m.resolveDownloadCancel("y", func(videoID string) { canceledID = videoID })
+	got := m.resolveDownloadCancel("y", func(videoID string) bool { canceledID = videoID; return true })
 	if canceledID != "cancel-video" { t.Fatalf("canceled video ID = %q, want cancel-video", canceledID) }
 	if got.downloadCancelPending != nil { t.Fatal("confirmation left cancellation pending") }
 	if got.statusMsg != "canceled: A video" { t.Fatalf("status = %q", got.statusMsg) }
+}
+
+func TestResolveDownloadCancelDoesNotReportCancellationAfterCompletion(t *testing.T) {
+	m := Model{downloadCancelPending: &downloadCancelRequest{videoID: "cancel-video", title: "A video"}}
+	got := m.resolveDownloadCancel("y", func(string) bool { return false })
+	if got.downloadCancelPending != nil { t.Fatal("completed download left cancellation pending") }
+	if got.statusMsg != "download is no longer active" { t.Fatalf("status = %q", got.statusMsg) }
 }
 
 func TestResolveDownloadCancelHandlesUnavailableManager(t *testing.T) {
