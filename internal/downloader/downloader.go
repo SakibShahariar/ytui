@@ -304,10 +304,9 @@ func hasPartialForVideo(destDir, videoID string) bool {
 	return false
 }
 
-var progressPercentRe = regexp.MustCompile(`^\\[download\\]\\s+([0-9]+(?:\\.[0-9]+)?)%`)
-var progressSpeedRe = regexp.MustCompile(`\\bat\\s+(\\S+)`)
-var progressETARe = regexp.MustCompile(`\\bETA\\s+(\\S+)`)
-
+var progressPercentRe = regexp.MustCompile(`^\[download\]\s+([0-9]+(?:\.[0-9]+)?)%`)
+var progressSpeedRe = regexp.MustCompile(`\bat\s+(\S+)`)
+var progressETARe = regexp.MustCompile(`\bETA\s+(\S+)`)
 func parseProgressLine(line string) (float64, string, string, bool) {
 	line = strings.TrimSpace(line)
 	match := progressPercentRe.FindStringSubmatch(line)
