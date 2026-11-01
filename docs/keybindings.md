@@ -85,3 +85,6 @@ SponsorBlock is disabled by default. Press `Ctrl+B` to enable it and choose cate
 ## History and download filters
 
 On **History** and **Downloads**, press `Ctrl+F` to search titles and channels (offline files are searchable by filename). Press `Ctrl+Y` to cycle the date filter between all dates, the last 7 days, 30 days, and 90 days. History uses the watched date; live downloads use their enqueue time; offline files use modification time. Press `Enter` to apply the text filter, `Esc` to cancel editing, or `Ctrl+U` to clear all library filters. On the live Downloads queue, press `s` to cycle sorting by oldest added, title, channel, progress, and status. Press `Ctrl+G` to cycle status filters: all, active, finished, and failed/resumable. Text and status filters combine; changing a filter preserves the current selection where possible. Sort and status-filter choices are saved in `config.json`.
+
+
+If a video is already completed, choosing different download options with `Ctrl+D` replaces that video's queue entry and downloads it again. Identical options remain a no-op. When the selected options target the same output path, yt-dlp is instructed to overwrite the previous file; keep a separate copy first if you need to retain the older version. The queue row displays the selected quality, subtitle, thumbnail, and browser-cookie options.
