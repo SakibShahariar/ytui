@@ -50,7 +50,7 @@ jobs:
           tar -czf "dist/${output}.tar.gz" -C dist "${output}"
           rm -rf "dist/${output}"
       - name: Upload build artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ytui-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*.tar.gz
