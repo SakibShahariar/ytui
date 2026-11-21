@@ -69,7 +69,7 @@ Valid bindings are `ctrl+<letter-or-digit>`, `alt+<letter-or-digit>`, function k
 
 ## Command palette
 
-Press `:` from a main tab to open the command palette. Type to filter actions, use `↑` / `↓` to select, press `Enter` to execute, or `Esc` to close and return to the previous tab. The palette includes navigation, Home refresh, playback/display toggles, library filters, and keyboard help.
+Press `:` from a main tab to open the command palette. Type to filter actions, use `↑` / `↓` to select, press `Enter` to execute, or `Esc` to close and return to the previous tab. The palette includes navigation, Home refresh, playback/display toggles, library filters, keyboard help, and **Settings** for editing common configuration in the TUI. Advanced options remain in `config.json`.
 
 ## Search tab
 

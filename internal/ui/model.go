@@ -455,6 +455,10 @@ type Model struct {
 	transcriptMatchIndex int
 	sponsorBlockSettings bool
 	sponsorBlockStats bool
+	settingsView bool
+	settingsCursor int
+	settingsEditing bool
+	settingsInput textinput.Model
 	sponsorBlockCursor int
 	sponsorBlockDraftEnabled bool
 	sponsorBlockDraftCategories []string

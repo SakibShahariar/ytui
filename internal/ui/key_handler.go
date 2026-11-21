@@ -52,6 +52,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if m.settingsView {
+		return m.handleSettingsKey(key, msg)
+	}
+
 	if m.sponsorBlockStats {
 		switch key {
 		case "esc", "q":

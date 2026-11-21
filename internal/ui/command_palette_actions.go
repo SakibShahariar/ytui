@@ -83,6 +83,8 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 	case "sponsorblock_stats":
 		m.sponsorBlockStats = true
 		return m, nil
+	case "settings":
+		return m.openSettings()
 	case "toggle_autoplay":
 		m.cfg.AutoplayNext = !m.cfg.AutoplayNext
 		if err := config.Save(m.cfg); err != nil {
