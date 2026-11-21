@@ -40,6 +40,8 @@ Run `ytui doctor` to see the cache directory, current image count, and total cac
 
 ## Known limitations
 
+- Thumbnails are disabled inside `tmux`. tmux does not relay the Kitty graphics protocol by default, so raw image escape sequences would appear as garbled text. Run ytui directly in Kitty to see thumbnails; the text preview panel still works inside tmux.
+
 Bubble Tea and Kitty’s image layer are separate rendering systems writing to the same terminal. As a result, thumbnails may occasionally flicker or lag one frame behind selection changes, especially while scrolling quickly.
 
 This is an inherent limitation of combining terminal image protocols with TUI frameworks, rather than a bug that can be completely eliminated.

@@ -24,6 +24,13 @@ import (
 // Kitty-graphics-compatible terminal advertising itself as such via
 // $TERM / $KITTY_WINDOW_ID).
 func Supported() bool {
+	// The multiplexer owns the escape sequences written by the app. tmux does
+	// not relay Kitty graphics by default, so the raw protocol output would be
+	// drawn as mojibake instead of an image, even when the outer terminal is
+	// Kitty and KITTY_WINDOW_ID is inherited.
+	if os.Getenv("TMUX") != "" {
+		return false
+	}
 	if os.Getenv("KITTY_WINDOW_ID") != "" {
 		return true
 	}

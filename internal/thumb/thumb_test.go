@@ -133,6 +133,36 @@ func TestCleanupCacheProtectsRequestedPreviewDuringTransition(t *testing.T) {
 }
 
 
+func TestSupportedDisablesThumbnailsInsideTmux(t *testing.T) {
+	tests := []struct {
+		name        string
+		tmux        string
+		kitty       string
+		term        string
+		termProgram string
+		want        bool
+	}{
+		{name: "kitty window id", kitty: "1", want: true},
+		{name: "kitty term", term: "xterm-kitty", want: true},
+		{name: "wezterm", termProgram: "WezTerm", want: true},
+		{name: "no graphics support", want: false},
+		{name: "tmux hides kitty window id", tmux: "/tmp/tmux-1000/default,123,0", kitty: "1", want: false},
+		{name: "tmux hides kitty term", tmux: "/tmp/tmux-1000/default,123,0", term: "xterm-kitty", want: false},
+		{name: "tmux hides wezterm", tmux: "/tmp/tmux-1000/default,123,0", termProgram: "WezTerm", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TMUX", tt.tmux)
+			t.Setenv("KITTY_WINDOW_ID", tt.kitty)
+			t.Setenv("TERM", tt.term)
+			t.Setenv("TERM_PROGRAM", tt.termProgram)
+			if got := Supported(); got != tt.want {
+				t.Fatalf("Supported() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetCacheStatsReportsCurrentUsage(t *testing.T) {
 	dir := testCacheDir(t)
 	writeCacheFile(t, dir, "one.jpg", 6, time.Hour)
