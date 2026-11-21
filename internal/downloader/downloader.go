@@ -464,8 +464,47 @@ func parseProgressLine(line string) (float64, string, string, bool) {
 	return progress, speed, eta, true
 }
 var destRe = regexp.MustCompile(`\[download\]\s+Destination:\s+(.+)`)
-var postProcessDestRe = regexp.MustCompile(`^\[(?:Merger|VideoRemuxer|AudioRemuxer|ExtractAudio|Metadata|EmbedThumbnail)\].*?(?:into|Destination:|to)\s+"([^"]+)"\s*$`)
 var alreadyDoneRe = regexp.MustCompile(`has already been downloaded`)
+
+// postProcessDestination extracts the final output path from a yt-dlp
+// post-processing line. Older releases quote the path, newer ones do not
+// (for example `[ExtractAudio] Destination: /tmp/audio.mp3`). Taking the value
+// to end of line also preserves spaces in titles. A plain [download]
+// Destination line is deliberately ignored: for audio extraction that path is
+// the intermediate file, which yt-dlp deletes before exiting.
+func postProcessDestination(line string) string {
+	line = strings.TrimSpace(line)
+	postProcessors := []string{
+		"[Merger]", "[VideoRemuxer]", "[AudioRemuxer]",
+		"[ExtractAudio]", "[Metadata]", "[EmbedThumbnail]",
+	}
+	isPostProcess := false
+	for _, prefix := range postProcessors {
+		if strings.HasPrefix(line, prefix) {
+			isPostProcess = true
+			break
+		}
+	}
+	if !isPostProcess {
+		return ""
+	}
+	// Check the unambiguous markers first; " to " alone also appears in
+	// messages such as "Remuxing video from mkv to mp4; Destination: ...".
+	for _, marker := range []string{"Destination:", " into ", " to "} {
+		idx := strings.Index(line, marker)
+		if idx < 0 {
+			continue
+		}
+		value := strings.TrimSpace(line[idx+len(marker):])
+		if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+			return value[1 : len(value)-1]
+		}
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
 
 // buildArgs creates the yt-dlp arguments for a download without starting a
 // process. Keeping option translation pure makes the command contract testable
@@ -574,9 +613,9 @@ func (m *Manager) run(d *Download) {
 				d.FilePath = strings.TrimSpace(match[1])
 				m.mu.Unlock()
 			}
-			if match := postProcessDestRe.FindStringSubmatch(line); match != nil {
+			if dest := postProcessDestination(line); dest != "" {
 				m.mu.Lock()
-				d.FilePath = match[1]
+				d.FilePath = dest
 				m.mu.Unlock()
 			}
 			if alreadyDoneRe.MatchString(line) {

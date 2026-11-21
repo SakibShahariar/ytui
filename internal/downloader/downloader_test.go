@@ -572,7 +572,7 @@ func TestBuildArgsUsesEnglishSubtitleFallback(t *testing.T) {
 	}
 }
 
-func TestPostProcessDestinationRegex(t *testing.T) {
+func TestPostProcessDestination(t *testing.T) {
 	tests := []struct {
 		name string
 		line string
@@ -583,12 +583,17 @@ func TestPostProcessDestinationRegex(t *testing.T) {
 		{name: "audio extraction", line: `[ExtractAudio] Destination: "/tmp/audio.mp3"`, want: "/tmp/audio.mp3"},
 		{name: "metadata", line: `[Metadata] Adding metadata to "/tmp/video.mp4"`, want: "/tmp/video.mp4"},
 		{name: "thumbnail", line: `[EmbedThumbnail] mutagen: Adding thumbnail to "/tmp/video.mp4"`, want: "/tmp/video.mp4"},
+		{name: "unquoted audio extraction", line: `[ExtractAudio] Destination: /tmp/audio.mp3`, want: "/tmp/audio.mp3"},
+		{name: "unquoted path with spaces", line: `[ExtractAudio] Destination: /tmp/Me at the zoo [jNQXAC9IVRw].mp3`, want: "/tmp/Me at the zoo [jNQXAC9IVRw].mp3"},
+		{name: "unquoted remux with destination", line: `[VideoRemuxer] Remuxing video from mkv to mp4; Destination: /tmp/video.mp4`, want: "/tmp/video.mp4"},
+		{name: "unquoted merge", line: `[Merger] Merging formats into /tmp/video.mp4`, want: "/tmp/video.mp4"},
+		{name: "plain download destination is not a final path", line: `[download] Destination: /tmp/intermediate.webm`, want: ""},
+		{name: "unrelated line", line: `[download] 100% of 246.27KiB`, want: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			match := postProcessDestRe.FindStringSubmatch(tt.line)
-			if len(match) != 2 || match[1] != tt.want {
-				t.Fatalf("postProcessDestRe(%q) = %#v, want path %q", tt.line, match, tt.want)
+			if got := postProcessDestination(tt.line); got != tt.want {
+				t.Fatalf("postProcessDestination(%q) = %q, want %q", tt.line, got, tt.want)
 			}
 		})
 	}
@@ -620,6 +625,39 @@ printf '[Merger] Merging formats into "%s"\n' "$YTUI_TEST_FINAL_PATH"
 		t.Fatalf("FilePath = %q, want final merged path %q", d.FilePath, finalPath)
 	}
 }
+func TestRunAcceptsUnquotedExtractAudioDestination(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
+	}
+	binDir := t.TempDir()
+	fakeYTDLP := filepath.Join(binDir, "yt-dlp")
+	outDir := t.TempDir()
+	intermediate := filepath.Join(outDir, "intermediate.webm")
+	finalPath := filepath.Join(outDir, "final audio.mp3")
+	t.Setenv("YTUI_TEST_INTERMEDIATE", intermediate)
+	t.Setenv("YTUI_TEST_FINAL_PATH", finalPath)
+	script := `#!/bin/sh
+printf '[download] Destination: %s\n' "$YTUI_TEST_INTERMEDIATE"
+: > "$YTUI_TEST_INTERMEDIATE"
+printf '[ExtractAudio] Destination: %s\n' "$YTUI_TEST_FINAL_PATH"
+rm -f "$YTUI_TEST_INTERMEDIATE"
+: > "$YTUI_TEST_FINAL_PATH"
+`
+	if err := os.WriteFile(fakeYTDLP, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	d := &Download{VideoID: "audio-test", URL: "https://example.invalid/video", Status: StatusQueued}
+	m := &Manager{byID: map[string]*Download{d.VideoID: d}, order: []string{d.VideoID}, destDir: outDir}
+	m.run(d)
+	if d.Status != StatusDone {
+		t.Fatalf("status = %v, want done (error: %v)", d.Status, d.Err)
+	}
+	if d.FilePath != finalPath {
+		t.Fatalf("FilePath = %q, want final audio path %q", d.FilePath, finalPath)
+	}
+}
+
 func TestRunRejectsMissingFinalOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake yt-dlp fixture uses a POSIX shell script")
