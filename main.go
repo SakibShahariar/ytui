@@ -175,6 +175,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	ui.SetVersion(currentVersion())
 	m := ui.New(s)
 	if directURL != "" {
 		m = ui.NewWithURL(s, directURL)

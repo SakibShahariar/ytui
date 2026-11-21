@@ -48,6 +48,8 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `mouse_enabled` | Opt into mouse wheel scrolling and click-to-select in the TUI. Keyboard controls always work. | `false` |
 | `theme` | Built-in color profile: `default`, `minimal`, `high-contrast`, `light`, or `terminal` (uses your terminal emulator's ANSI palette). Also switchable from the command palette. | `default` |
 | `colors` | Object overriding individual palette roles with `#RGB` or `#RRGGBB` values, e.g. `"mauve": "#ff00ff"`. Roles: base, mantle, text, subtext1, subtext0, overlay1, overlay0, surface2, surface1, mauve, pink, red, peach, yellow, green, blue, lavender. | theme defaults |
+| `update_check_enabled` | Allow automatic checks for newer GitHub releases at startup. Checks never download or install anything. | `false` |
+| `update_check_interval_hours` | Minimum hours between automatic update checks. | `24` |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

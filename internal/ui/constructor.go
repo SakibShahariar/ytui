@@ -157,6 +157,9 @@ func (m Model) Init() tea.Cmd {
 	if m.directURL != "" {
 		cmds = append(cmds, loadDirectURLCmd(m.directURL))
 	}
+	if auto := m.maybeAutoUpdateCmd(); auto != nil {
+		cmds = append(cmds, auto)
+	}
 	return tea.Batch(cmds...)
 }
 

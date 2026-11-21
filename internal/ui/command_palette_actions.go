@@ -85,6 +85,9 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "settings":
 		return m.openSettings()
+	case "check_updates":
+		m.statusMsg = "checking for updates…"
+		return m, checkUpdatesCmd()
 	case "toggle_autoplay":
 		m.cfg.AutoplayNext = !m.cfg.AutoplayNext
 		if err := config.Save(m.cfg); err != nil {

@@ -36,6 +36,7 @@ Commands:
   backup PATH [--yes] [--no-config] [--no-store] [--no-queue]
                                Export settings and library data (no credentials)
   restore PATH [--yes]         Restore a compatible backup
+  update [--check]             Check GitHub for a newer release (no install)
 
 Legacy flags remain supported:
   --version, --show-paths, --export-config FILE, --import-config FILE
@@ -75,6 +76,8 @@ Legacy flags remain supported:
 		return true, runBackupCommand(args[1:], stdout, stderr)
 	case "restore":
 		return true, runRestoreCommand(args[1:], stdout, stderr)
+	case "update":
+		return true, runUpdateCommand(args[1:], stdout, stderr)
 	default:
 		return false, nil
 	}

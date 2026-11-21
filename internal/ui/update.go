@@ -38,6 +38,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
 
+	case updateCheckMsg:
+		return m.handleUpdateCheck(msg)
+
 	case directURLMsg:
 		m.directURL = ""
 		if msg.err != nil {
