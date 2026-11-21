@@ -40,11 +40,9 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Y < row {
 			return m, nil
 		}
-		perPage := m.list.Height() / 3 // delegate height 2 + spacing 1
-		if perPage < 1 {
-			perPage = 1
-		}
-		index := (msg.Y-row)/3 + m.list.Paginator.Page*perPage // delegate height 2 + spacing 1
+		// The list's own paginator knows the real page size (it subtracts
+		// title/pagination rows before dividing by the delegate height).
+		index := (msg.Y-row)/3 + m.list.Paginator.Page*m.list.Paginator.PerPage // delegate height 2 + spacing 1
 		if index < 0 || index >= len(m.list.Items()) {
 			return m, nil
 		}

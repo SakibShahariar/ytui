@@ -80,6 +80,24 @@ func TestListFirstItemRowMatchesRenderedView(t *testing.T) {
 	}
 }
 
+func TestMouseClickAfterWheelUsesPaginatorOffset(t *testing.T) {
+	m := mouseTestModel()
+	m.list.SetSize(60, 6) // small height forces several pages
+	if m.list.Paginator.PerPage < 1 {
+		t.Fatal("expected a positive per-page count")
+	}
+	updated, _ := m.Update(tea.MouseMsg{Button: tea.MouseButtonWheelDown, Action: tea.MouseActionPress})
+	m = updated.(Model)
+	if m.list.Paginator.Page == 0 {
+		t.Fatal("wheel down did not advance the paginator")
+	}
+	want := m.list.Paginator.Page * m.list.Paginator.PerPage
+	updated, _ = m.Update(tea.MouseMsg{Button: tea.MouseButtonLeft, Action: tea.MouseActionPress, Y: m.listFirstItemRow()})
+	if got := updated.(Model).list.Index(); got != want {
+		t.Fatalf("click after scroll index = %d, want %d", got, want)
+	}
+}
+
 func TestMouseClickIgnoredInOverlay(t *testing.T) {
 	m := mouseTestModel()
 	m.helpKeyboardsForTest()
