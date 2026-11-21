@@ -72,6 +72,15 @@ func TestSettingsToggleAndEdit(t *testing.T) {
 	}
 }
 
+func TestSettingsCommandRanksFirst(t *testing.T) {
+	m := settingsTestModel(t)
+	m.commandPaletteInput.SetValue("settings")
+	commands := m.filteredPaletteCommands()
+	if len(commands) == 0 || commands[0].id != "settings" {
+		t.Fatalf("first settings command = %#v, want general Settings", commands)
+	}
+}
+
 func TestSettingsCommandOpensOverlay(t *testing.T) {
 	m := settingsTestModel(t)
 	m.commandPaletteInput.SetValue("settings")

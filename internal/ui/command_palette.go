@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -46,6 +47,16 @@ func filterPaletteCommands(commands []paletteCommand, query string) []paletteCom
 			filtered = append(filtered, command)
 		}
 	}
+	// Commands whose label starts with the query are a better match than
+	// those that merely contain it ("Settings" before "SponsorBlock settings").
+	sort.SliceStable(filtered, func(i, j int) bool {
+		iStarts := strings.HasPrefix(strings.ToLower(filtered[i].label), query)
+		jStarts := strings.HasPrefix(strings.ToLower(filtered[j].label), query)
+		if iStarts != jStarts {
+			return iStarts
+		}
+		return strings.ToLower(filtered[i].label) < strings.ToLower(filtered[j].label)
+	})
 	return filtered
 }
 
