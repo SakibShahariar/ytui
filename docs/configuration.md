@@ -36,6 +36,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 |---|---|---|
 | `download_dir` | Directory where `Ctrl+D` downloads are saved. `--dir DIR` overrides it for one run. | `~/Downloads/ytui` |
 | `max_concurrent_downloads` | Maximum simultaneous yt-dlp processes. Accepted values are `1`–`10`; `0` keeps the single-download default. | `1` |
+| `download_rate_limit` | Global yt-dlp download rate limit, e.g. `500K` or `2M`. A positive number with an optional `K`, `M`, or `G` suffix. The `Ctrl+D` picker can override it per download. | unlimited |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |
@@ -114,7 +115,7 @@ cp ~/.config/ytui/config.json ~/.config/ytui/config.json.bak
 
 If you use `XDG_CONFIG_HOME`, back up the `ytui/config.json` file under that directory instead. Adjust the source path if your configuration file is stored elsewhere.
 
-Imports are validated before the active configuration is replaced. Unsupported `default_quality` or `default_cookies_browser` values, and control characters in `download_dir`, produce field-specific errors; the existing settings remain unchanged. The directory does not have to exist at import time, so portable setups can configure a future path. The current config format has no numeric fields or required fields; omitted values use defaults.
+Imports are validated before the active configuration is replaced. Unsupported `default_quality`, `default_cookies_browser`, or `download_rate_limit` values, and control characters in `download_dir`, produce field-specific errors; the existing settings remain unchanged. The directory does not have to exist at import time, so portable setups can configure a future path. The current config format has no numeric fields or required fields; omitted values use defaults.
 
 Exported files contain preferences only. They do not include:
 

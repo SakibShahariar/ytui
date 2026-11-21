@@ -372,6 +372,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.downloadPickerThumb = !m.downloadPickerThumb
 			case m.downloadPickerCursor == qCount+2:
 				m.downloadPickerCookies = (m.downloadPickerCookies + 1) % len(downloadCookieBrowserValues)
+			case m.downloadPickerCursor == qCount+3:
+				m.downloadPickerRate = (m.downloadPickerRate + 1) % len(downloadRateLimitChoices)
 			default: // "Start Download" row
 				return m.startPickedDownload()
 			}
@@ -794,6 +796,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.downloadPickerSubs = false
 			m.downloadPickerThumb = false
 			m.downloadPickerCookies = m.defaultCookieBrowserIndex()
+			m.downloadPickerRate = 0
 		}
 		return m, nil
 

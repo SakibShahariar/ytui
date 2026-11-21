@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -28,6 +29,10 @@ type Config struct {
 
 	// MaxConcurrentDownloads bounds simultaneous yt-dlp processes; zero defaults to one.
 	MaxConcurrentDownloads int `json:"max_concurrent_downloads,omitempty"`
+
+	// DownloadRateLimit is the global yt-dlp rate limit (for example "500K"
+	// or "2M"). Empty means no limit. Individual downloads can override it.
+	DownloadRateLimit string `json:"download_rate_limit,omitempty"`
 
 	// DefaultQuality pre-selects a row in the ctrl+d download-options
 	// picker by stable identifier or legacy display label. Empty means
@@ -92,6 +97,27 @@ func normalizeQuality(value string) string {
 
 // Validate checks user-provided fields before an imported config can replace
 // the active settings. Empty values mean "use the built-in default".
+// normalizeRateLimit validates a yt-dlp --limit-rate value and returns its
+// canonical form. Accepted values are a positive integer with an optional
+// K, M, or G suffix (case-insensitive), matching yt-dlp's size syntax.
+func normalizeRateLimit(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	digits := value
+	suffix := ""
+	if last := value[len(value)-1]; last == 'K' || last == 'k' || last == 'M' || last == 'm' || last == 'G' || last == 'g' {
+		digits = value[:len(value)-1]
+		suffix = strings.ToUpper(string(last))
+	}
+	n, err := strconv.Atoi(digits)
+	if err != nil || n <= 0 {
+		return "", fmt.Errorf("download_rate_limit %q is not a valid rate (use a positive number with optional K, M, or G suffix)", value)
+	}
+	return strconv.Itoa(n) + suffix, nil
+}
+
 func Validate(cfg Config) error {
 	if strings.TrimSpace(cfg.DownloadDir) != "" {
 		for _, r := range cfg.DownloadDir {
@@ -121,6 +147,9 @@ func Validate(cfg Config) error {
 	if cfg.MaxConcurrentDownloads < 0 || cfg.MaxConcurrentDownloads > 10 {
 		return fmt.Errorf("max_concurrent_downloads must be between 1 and 10, or 0 for the default")
 	}
+	if _, err := normalizeRateLimit(cfg.DownloadRateLimit); err != nil {
+		return err
+	}
 	if cfg.DownloadStatusFilter < 0 || cfg.DownloadStatusFilter > 3 {
 		return fmt.Errorf("download_status_filter must be between 0 and 3")
 	}
@@ -136,6 +165,9 @@ func Validate(cfg Config) error {
 func normalize(cfg Config) Config {
 	cfg.DefaultQuality = normalizeQuality(cfg.DefaultQuality)
 	cfg.DefaultCookiesBrowser = strings.ToLower(strings.TrimSpace(cfg.DefaultCookiesBrowser))
+	if rate, err := normalizeRateLimit(cfg.DownloadRateLimit); err == nil {
+		cfg.DownloadRateLimit = rate
+	}
 	return cfg
 }
 

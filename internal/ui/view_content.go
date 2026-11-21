@@ -141,9 +141,16 @@ func (m Model) downloadPickerContent(width int) string {
 	cookieLabel := "Cookies from browser: " + downloadCookieBrowserLabels(m.defaultCookieBrowserIndex())[m.downloadPickerCookies]
 	lines = append(lines, row(qCount+2, "⟳", cookieLabel))
 
+	rate := m.effectiveDownloadRateLimit()
+	rateLabel := "Rate limit: default (unlimited)"
+	if rate != "" {
+		rateLabel = "Rate limit: " + rate + "/s"
+	}
+	lines = append(lines, row(qCount+3, "⟳", rateLabel))
+
 	lines = append(lines, "")
 	startLabel := "▶ Start Download"
-	if m.downloadPickerCursor == qCount+3 {
+	if m.downloadPickerCursor == qCount+4 {
 		lines = append(lines, cursorStyle.Render("▸ ")+lipgloss.NewStyle().Foreground(ctpGreen).Bold(true).Render(startLabel))
 	} else {
 		lines = append(lines, "  "+lipgloss.NewStyle().Foreground(ctpGreen).Render(startLabel))

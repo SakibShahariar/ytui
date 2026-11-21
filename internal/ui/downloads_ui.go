@@ -218,6 +218,7 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 		SubtitleLang:       m.subtitleLanguage,
 		EmbedThumbnail:     m.downloadPickerThumb,
 		CookiesFromBrowser: downloadCookieBrowserValues[m.downloadPickerCookies],
+		RateLimit:          m.effectiveDownloadRateLimit(),
 		QualityLabel:       q.Label,
 	}
 	wasActive := m.downloads.Active()

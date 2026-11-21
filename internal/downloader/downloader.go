@@ -47,6 +47,7 @@ type Options struct {
 	SubtitleLang       string // selected language code; empty uses English fallback
 	EmbedThumbnail     bool   // --embed-thumbnail
 	CookiesFromBrowser string // --cookies-from-browser <name>; empty = don't use cookies
+	RateLimit          string // --limit-rate <rate>; empty = no limit
 	QualityLabel       string // display-only, e.g. "1080p" — shown in the Downloads list
 	ForceOverwrite     bool   // re-download changed options over the previous completed output
 }
@@ -538,6 +539,9 @@ func buildArgs(destDir string, d *Download) []string {
 	}
 	if d.Opts.CookiesFromBrowser != "" {
 		args = append(args, "--cookies-from-browser", d.Opts.CookiesFromBrowser)
+	}
+	if d.Opts.RateLimit != "" {
+		args = append(args, "--limit-rate", d.Opts.RateLimit)
 	}
 	return append(args, d.URL)
 }

@@ -133,6 +133,23 @@ func TestValidateAcceptsOptionalAndLegacyValues(t *testing.T) {
 	}
 }
 
+func TestDownloadRateLimitValidation(t *testing.T) {
+	for _, rate := range []string{"", "500K", "1M", "2G", "500k", " 1m "} {
+		if err := Validate(Config{DownloadRateLimit: rate}); err != nil {
+			t.Errorf("Validate(DownloadRateLimit=%q) error = %v", rate, err)
+		}
+	}
+	for _, rate := range []string{"abc", "0", "-1M", "1T", "1.5M", "M", "1 M"} {
+		if err := Validate(Config{DownloadRateLimit: rate}); err == nil {
+			t.Errorf("Validate(DownloadRateLimit=%q) unexpectedly succeeded", rate)
+		}
+	}
+	canonical, err := normalizeRateLimit(" 500k ")
+	if err != nil || canonical != "500K" {
+		t.Fatalf("normalizeRateLimit(500k) = %q, %v; want 500K", canonical, err)
+	}
+}
+
 func TestNormalizeQuality(t *testing.T) {
 	tests := []struct {
 		input string

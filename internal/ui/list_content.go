@@ -261,7 +261,7 @@ type downloadItem struct{ d downloader.Download }
 func (i downloadItem) Title() string { return i.d.Title }
 
 func downloadOptionsSummary(opts downloader.Options) string {
-	parts := make([]string, 0, 4)
+	parts := make([]string, 0, 5)
 	if opts.QualityLabel != "" {
 		parts = append(parts, opts.QualityLabel)
 	} else if opts.ExtractAudio && opts.AudioFormat != "" {
@@ -270,6 +270,7 @@ func downloadOptionsSummary(opts downloader.Options) string {
 	if opts.WriteSubs { parts = append(parts, "subtitles") }
 	if opts.EmbedThumbnail { parts = append(parts, "thumbnail") }
 	if opts.CookiesFromBrowser != "" { parts = append(parts, "cookies: "+opts.CookiesFromBrowser) }
+	if opts.RateLimit != "" { parts = append(parts, "limit: "+opts.RateLimit+"/s") }
 	return strings.Join(parts, " · ")
 }
 

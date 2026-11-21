@@ -45,6 +45,15 @@ func TestBuildArgs(t *testing.T) {
 			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate, "-x", "--audio-format", "opus", videoURL},
 		},
 		{
+			name: "rate limit is passed to yt-dlp",
+			download: Download{URL: videoURL, Opts: Options{
+				Format: "bestvideo+bestaudio/best", RateLimit: "500K", CookiesFromBrowser: "firefox",
+			}},
+			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate,
+				"-f", "bestvideo+bestaudio/best", "--cookies-from-browser", "firefox",
+				"--limit-rate", "500K", videoURL},
+		},
+		{
 			name: "audio extraction leaves format to yt-dlp when unspecified",
 			download: Download{URL: videoURL, Opts: Options{ExtractAudio: true}},
 			want: []string{"--continue", "--newline", "--no-warnings", "--no-playlist", "-o", outputTemplate, "-x", videoURL},
