@@ -127,6 +127,7 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 				m.errMsg = "theme: " + err.Error()
 				return m, nil
 			}
+			m.restyleComponents()
 			m.cfg.Theme = name
 			m.cfg.Colors = nil
 			if err := config.Save(m.cfg); err != nil {

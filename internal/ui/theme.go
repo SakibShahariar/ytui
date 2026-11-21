@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/SakibShahariar/ytui/internal/config"
@@ -112,10 +113,31 @@ func applyTheme(name string, overrides map[string]string) error {
 
 var activeTheme = "default"
 
-func (m Model) applyConfiguredTheme() {
+// restyleComponents rebuilds styles that were captured when the text inputs
+// and list were created. Without this, a live theme switch would leave those
+// widgets using the previous palette.
+func (m *Model) restyleComponents() {
+	styleInput := func(input *textinput.Model) {
+		input.PromptStyle = lipgloss.NewStyle().Foreground(ctpMauve)
+		input.TextStyle = lipgloss.NewStyle().Foreground(ctpText)
+		input.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
+		input.Cursor.Style = lipgloss.NewStyle().Foreground(ctpMauve)
+	}
+	styleInput(&m.searchInput)
+	styleInput(&m.commandPaletteInput)
+	styleInput(&m.libraryFilterInput)
+	styleInput(&m.pathInput)
+	styleInput(&m.transcriptSearchInput)
+	styleInput(&m.settingsInput)
+	styleInput(&m.channelGroupInput)
+	m.list.Styles.Title = lipgloss.NewStyle().Background(ctpMauve).Foreground(ctpBase).Bold(true).Padding(0, 1)
+}
+
+func (m *Model) applyConfiguredTheme() {
 	if err := applyTheme(m.cfg.Theme, m.cfg.Colors); err != nil {
 		m.errMsg = "theme: " + err.Error()
 	}
+	m.restyleComponents()
 }
 
 // themeNames returns the selectable themes for the command palette.

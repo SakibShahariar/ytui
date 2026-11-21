@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/SakibShahariar/ytui/internal/config"
 )
 
@@ -20,6 +23,19 @@ func TestApplyThemeChangesPaletteAndStyles(t *testing.T) {
 	}
 	if activeTheme != "high-contrast" {
 		t.Fatalf("activeTheme = %q", activeTheme)
+	}
+}
+
+func TestRestyleComponentsFollowsTheme(t *testing.T) {
+	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	m := Model{searchInput: textinput.New()}
+	if err := applyTheme("high-contrast", nil); err != nil {
+		t.Fatal(err)
+	}
+	m.restyleComponents()
+	want := lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Render("x")
+	if got := m.searchInput.PromptStyle.Render("x"); got != want {
+		t.Fatalf("prompt style = %q, want %q", got, want)
 	}
 }
 
