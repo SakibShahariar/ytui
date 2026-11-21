@@ -23,6 +23,7 @@ import (
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/downloader"
 	"github.com/SakibShahariar/ytui/internal/library"
+	"github.com/SakibShahariar/ytui/internal/rss"
 	"github.com/SakibShahariar/ytui/internal/store"
 	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 	"github.com/SakibShahariar/ytui/internal/sharedqueue"
@@ -455,6 +456,8 @@ type Model struct {
 	transcriptMatchIndex int
 	sponsorBlockSettings bool
 	sponsorBlockStats bool
+	rssViewer bool
+	rssItems []rss.Item
 	settingsView bool
 	settingsCursor int
 	settingsEditing bool

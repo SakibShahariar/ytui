@@ -121,6 +121,12 @@ ytui doctor
 ytui --show-paths
 ytui config export ~/ytui-settings.json
 ytui config import ~/ytui-settings.json
+ytui backup ~/ytui-backup.json
+ytui restore ~/ytui-backup.json --yes
+ytui update --check
+ytui rss add "https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID"
+ytui rss list
+ytui rss refresh
 ```
 
 Downloads can also be started without the TUI (global flags such as `--dir` go before the subcommand):

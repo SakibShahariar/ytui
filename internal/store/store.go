@@ -53,6 +53,8 @@ type Store struct {
 	WatchLater    []WatchLaterEntry `json:"watch_later"`
 
 	SponsorBlockStats []SponsorBlockStat `json:"sponsorblock_stats,omitempty"`
+
+	RSSFeeds []RSSFeed `json:"rss_feeds,omitempty"`
 }
 
 func configDir() (string, error) {

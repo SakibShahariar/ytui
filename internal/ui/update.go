@@ -38,6 +38,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
 
+	case rssRefreshMsg:
+		return m.handleRSSRefresh(msg)
+
 	case updateCheckMsg:
 		return m.handleUpdateCheck(msg)
 

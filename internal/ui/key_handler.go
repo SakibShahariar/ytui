@@ -57,6 +57,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 	}
 
+	if m.rssViewer {
+		if key == "esc" || key == "q" {
+			m.rssViewer = false
+			m.rssItems = nil
+		}
+		return m, nil
+	}
+
 	if m.settingsView {
 		return m.handleSettingsKey(key, msg)
 	}

@@ -86,6 +86,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.rssViewer:
+		listContent.WriteString(m.rssViewerContent(listWidth-4))
 	case m.settingsView:
 		listContent.WriteString(m.settingsContent(listWidth-4))
 	case m.sponsorBlockStats:
@@ -172,7 +174,10 @@ func (m Model) View() string {
 	// --- Footer: solid status bar, like a statusline, not floating text ---
 	modeBar := footerModeNav.Render("BROWSE")
 	help := m.contextualHelp()
-	if m.settingsView {
+	if m.rssViewer {
+		modeBar = footerModeInput.Render("RSS")
+		help = "esc: close"
+	} else if m.settingsView {
 		modeBar = footerModeInput.Render("SETTINGS")
 		help = "↑↓: select · enter: edit/toggle · esc: close"
 	} else if m.sponsorBlockStats {

@@ -104,6 +104,11 @@ type Config struct {
 	// UpdateCheckIntervalHours is the minimum interval between automatic
 	// update checks. Zero uses the built-in default.
 	UpdateCheckIntervalHours int `json:"update_check_interval_hours,omitempty"`
+
+	// RSSRefreshIntervalHours is the minimum hours between automatic RSS
+	// feed refreshes. Zero disables automatic refresh; use the palette or
+	// CLI to refresh on demand.
+	RSSRefreshIntervalHours int `json:"rss_refresh_interval_hours,omitempty"`
 }
 
 // DownloadPreset bundles quality and post-processing choices for quick reuse.
@@ -273,6 +278,9 @@ func Validate(cfg Config) error {
 	}
 	if cfg.UpdateCheckIntervalHours < 0 || cfg.UpdateCheckIntervalHours > 8760 {
 		return fmt.Errorf("update_check_interval_hours must be between 0 and 8760")
+	}
+	if cfg.RSSRefreshIntervalHours < 0 || cfg.RSSRefreshIntervalHours > 8760 {
+		return fmt.Errorf("rss_refresh_interval_hours must be between 0 and 8760")
 	}
 	if cfg.DownloadStatusFilter < 0 || cfg.DownloadStatusFilter > 3 {
 		return fmt.Errorf("download_status_filter must be between 0 and 3")

@@ -160,6 +160,9 @@ func (m Model) Init() tea.Cmd {
 	if auto := m.maybeAutoUpdateCmd(); auto != nil {
 		cmds = append(cmds, auto)
 	}
+	if autoRSS := m.maybeAutoRSSCmd(); autoRSS != nil {
+		cmds = append(cmds, autoRSS)
+	}
 	return tea.Batch(cmds...)
 }
 

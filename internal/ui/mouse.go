@@ -29,7 +29,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if msg.Action != tea.MouseActionPress {
 			return m, nil
 		}
-		if m.settingsView || m.transcriptViewer || m.commandPalette || m.subtitlePicker ||
+		if m.rssViewer || m.settingsView || m.transcriptViewer || m.commandPalette || m.subtitlePicker ||
 			m.sponsorBlockSettings || m.sponsorBlockStats || m.keyboardHelp ||
 			m.downloadPicker || m.resumePrompt != nil || m.showLoginHelp ||
 			m.logoutPending || m.downloadCancelPending != nil ||

@@ -33,6 +33,7 @@ func paletteCommands() []paletteCommand {
 		{id: "sponsorblock_stats", label: "SponsorBlock statistics", description: "View local skip counts and time saved"},
 		{id: "settings", label: "Settings", description: "View and edit common settings in the TUI"},
 		{id: "check_updates", label: "Check for updates", description: "Show the latest GitHub release (never installs)"},
+		{id: "refresh_rss", label: "Refresh RSS feeds", description: "Fetch subscribed channel feeds"},
 		{id: "import_shared_queue", label: "Import shared queue from Ytrawl", description: "Move shared inbox items into Downloads"},
 		{id: "clear_filters", label: "Clear library filters", description: "Clear text, status, and date filters"},
 		{id: "help", label: "Open keyboard help", description: "Show all keybindings"},

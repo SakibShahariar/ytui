@@ -37,6 +37,7 @@ Commands:
                                Export settings and library data (no credentials)
   restore PATH [--yes]         Restore a compatible backup
   update [--check]             Check GitHub for a newer release (no install)
+  rss add|list|remove|refresh  Manage RSS channel feeds
 
 Legacy flags remain supported:
   --version, --show-paths, --export-config FILE, --import-config FILE
@@ -78,6 +79,8 @@ Legacy flags remain supported:
 		return true, runRestoreCommand(args[1:], stdout, stderr)
 	case "update":
 		return true, runUpdateCommand(args[1:], stdout, stderr)
+	case "rss":
+		return true, runRSSCommand(args[1:], stdout, stderr)
 	default:
 		return false, nil
 	}
