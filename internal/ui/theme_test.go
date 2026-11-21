@@ -41,9 +41,13 @@ func TestThemeAvailableInCommandPalette(t *testing.T) {
 	if len(commands) != len(config.BuiltinThemes) {
 		t.Fatalf("theme commands = %d, want %d", len(commands), len(config.BuiltinThemes))
 	}
+	m.cfg.Colors = map[string]string{"mauve": "#ff00ff"}
 	updated, _ := m.executePaletteCommand("theme:light")
 	result := updated.(Model)
 	if result.cfg.Theme != "light" || activeTheme != "light" {
 		t.Fatalf("theme not switched: cfg %q, active %q", result.cfg.Theme, activeTheme)
+	}
+	if len(result.cfg.Colors) != 0 || string(ctpMauve) == "#ff00ff" {
+		t.Fatalf("custom colors survived built-in theme switch: %v, mauve %s", result.cfg.Colors, ctpMauve)
 	}
 }

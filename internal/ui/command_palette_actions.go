@@ -105,13 +105,20 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 	default:
 		if strings.HasPrefix(id, "theme:") {
 			name := strings.TrimPrefix(id, "theme:")
-			if err := applyTheme(name, m.cfg.Colors); err != nil {
+			// Selecting a built-in theme is a request for that theme's pure
+			// palette. Custom role overrides belong to a separate profile and
+			// are cleared so "default" really looks like the default.
+			hadOverrides := len(m.cfg.Colors) > 0
+			if err := applyTheme(name, nil); err != nil {
 				m.errMsg = "theme: " + err.Error()
 				return m, nil
 			}
 			m.cfg.Theme = name
+			m.cfg.Colors = nil
 			if err := config.Save(m.cfg); err != nil {
 				m.errMsg = "save theme: " + err.Error()
+			} else if hadOverrides {
+				m.statusMsg = "theme set to " + name + " (custom colors cleared)"
 			} else {
 				m.statusMsg = "theme set to " + name
 			}
