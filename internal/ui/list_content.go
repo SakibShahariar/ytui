@@ -135,13 +135,13 @@ func (m Model) currentListItems() []list.Item {
 			return m.channelVideos
 		}
 		if m.loggedIn && len(m.realSubscriptions) > 0 {
-			return m.realSubscriptions
+			return m.filterChannels(m.realSubscriptions, channelIDForSubscriptions)
 		}
 		items := make([]list.Item, 0, len(m.store.Subscriptions))
 		for _, c := range m.store.Subscriptions {
-			items = append(items, subItem{c})
+			items = append(items, subItem{c: c, pref: m.store.ChannelPref(c.ID)})
 		}
-		return items
+		return m.filterChannels(items, channelIDForSubscriptions)
 	case tabPlaylists:
 		if m.browsingPlaylistID != "" {
 			return m.playlistVideos
@@ -216,16 +216,29 @@ func (m *Model) maybeFetchForTab() tea.Cmd {
 	return nil
 }
 
-type subItem struct{ c store.Channel }
+type subItem struct {
+	c    store.Channel
+	pref store.ChannelPref
+}
 
-func (i subItem) Title() string       { return i.c.Name }
-func (i subItem) Description() string { return i.c.URL }
+func (i subItem) Title() string { return i.c.Name }
+func (i subItem) Description() string {
+	if markers := channelPrefMarkers(i.pref); markers != "" {
+		return markers
+	}
+	return i.c.URL
+}
 func (i subItem) FilterValue() string { return i.c.Name }
 
-type realSubItem struct{ s ytapi.Subscription }
+type realSubItem struct {
+	s    ytapi.Subscription
+	pref store.ChannelPref
+}
 
-func (i realSubItem) Title() string       { return i.s.Title }
-func (i realSubItem) Description() string { return "" }
+func (i realSubItem) Title() string { return i.s.Title }
+func (i realSubItem) Description() string {
+	return channelPrefMarkers(i.pref)
+}
 func (i realSubItem) FilterValue() string { return i.s.Title }
 
 type playlistItemUI struct{ p ytapi.Playlist }

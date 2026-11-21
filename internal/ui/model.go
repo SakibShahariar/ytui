@@ -456,6 +456,10 @@ type Model struct {
 	transcriptMatchIndex int
 	sponsorBlockSettings bool
 	sponsorBlockStats bool
+	channelManager bool
+	channelCursor int
+	channelGroupEditing bool
+	channelGroupInput textinput.Model
 	rssViewer bool
 	rssItems []rss.Item
 	settingsView bool

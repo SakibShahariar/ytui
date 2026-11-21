@@ -95,6 +95,10 @@ On the **Watch Later** tab, press `s` to cycle through oldest-added, title A–Z
 
 On the Subs, Watch Later, and History tabs, `j` and `k` also move through the list in addition to the arrow keys.
 
+## Local channel organization
+
+The command palette's **Manage channels** action opens a local-only manager for your subscriptions. Use `↑`/`↓` to select a channel, `f` to favorite, `m` to mute, `h` to hide, and `g` to assign a group name. Hidden channels are removed from the Subs list and favorites are sorted first; these preferences stay in local data and never change your YouTube subscriptions. API unsubscribe controls are tracked separately in #112.
+
 ## Live download queue
 
 On the live Downloads tab, `Ctrl+Space` pauses or resumes the selected queued or active transfer on supported Unix systems. `Ctrl+↑` and `Ctrl+↓` reorder pending entries; the queue runs one download at a time in that order. `Ctrl+G` cycles status filters.

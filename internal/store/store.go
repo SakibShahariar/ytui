@@ -55,6 +55,8 @@ type Store struct {
 	SponsorBlockStats []SponsorBlockStat `json:"sponsorblock_stats,omitempty"`
 
 	RSSFeeds []RSSFeed `json:"rss_feeds,omitempty"`
+
+	ChannelPrefs map[string]ChannelPref `json:"channel_prefs,omitempty"`
 }
 
 func configDir() (string, error) {
@@ -182,6 +184,21 @@ func (s *Store) FindHistoryPosition(videoID string) (float64, bool) {
 		}
 	}
 	return 0, false
+}
+
+// AddChannel stores a local subscription, ignoring duplicates by ID.
+func (s *Store) AddChannel(c Channel) error {
+	c.ID = strings.TrimSpace(c.ID)
+	if c.ID == "" {
+		return fmt.Errorf("channel ID is empty")
+	}
+	for _, existing := range s.Subscriptions {
+		if existing.ID == c.ID {
+			return nil
+		}
+	}
+	s.Subscriptions = append(s.Subscriptions, c)
+	return s.Save()
 }
 
 func (s *Store) AddHistory(e HistoryEntry) error {

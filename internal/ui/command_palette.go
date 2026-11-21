@@ -34,6 +34,7 @@ func paletteCommands() []paletteCommand {
 		{id: "settings", label: "Settings", description: "View and edit common settings in the TUI"},
 		{id: "check_updates", label: "Check for updates", description: "Show the latest GitHub release (never installs)"},
 		{id: "refresh_rss", label: "Refresh RSS feeds", description: "Fetch subscribed channel feeds"},
+		{id: "manage_channels", label: "Manage channels", description: "Local groups, favorites, mute and hide"},
 		{id: "import_shared_queue", label: "Import shared queue from Ytrawl", description: "Move shared inbox items into Downloads"},
 		{id: "clear_filters", label: "Clear library filters", description: "Clear text, status, and date filters"},
 		{id: "help", label: "Open keyboard help", description: "Show all keybindings"},

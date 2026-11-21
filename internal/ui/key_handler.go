@@ -57,6 +57,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.errMsg = ""
 	}
 
+	if m.channelManager {
+		return m.handleChannelManagerKey(key, msg)
+	}
+
 	if m.rssViewer {
 		if key == "esc" || key == "q" {
 			m.rssViewer = false

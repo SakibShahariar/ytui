@@ -346,7 +346,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		items := make([]list.Item, 0, len(msg.subs))
 		for _, s := range msg.subs {
-			items = append(items, realSubItem{s})
+			items = append(items, realSubItem{s: s, pref: m.store.ChannelPref(s.ChannelID)})
 		}
 		m.realSubscriptions = items
 		if m.activeTab == tabSubscriptions {

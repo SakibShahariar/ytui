@@ -88,6 +88,8 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 	case "check_updates":
 		m.statusMsg = "checking for updates…"
 		return m, checkUpdatesCmd()
+	case "manage_channels":
+		return m.openChannelManager()
 	case "refresh_rss":
 		if m.store == nil || len(m.store.RSSFeeds) == 0 {
 			m.statusMsg = "no RSS feeds subscribed (use 'ytui rss add URL')"

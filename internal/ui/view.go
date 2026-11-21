@@ -86,6 +86,8 @@ func (m Model) View() string {
 		listContent.WriteString("\n")
 	}
 	switch {
+	case m.channelManager:
+		listContent.WriteString(m.channelManagerContent(listWidth-4))
 	case m.rssViewer:
 		listContent.WriteString(m.rssViewerContent(listWidth-4))
 	case m.settingsView:
@@ -174,7 +176,10 @@ func (m Model) View() string {
 	// --- Footer: solid status bar, like a statusline, not floating text ---
 	modeBar := footerModeNav.Render("BROWSE")
 	help := m.contextualHelp()
-	if m.rssViewer {
+	if m.channelManager {
+		modeBar = footerModeInput.Render("CHANNELS")
+		help = "↑↓: select · f: favorite · m: mute · h: hide · g: group · esc: close"
+	} else if m.rssViewer {
 		modeBar = footerModeInput.Render("RSS")
 		help = "esc: close"
 	} else if m.settingsView {
