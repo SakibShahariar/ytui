@@ -151,7 +151,7 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 }
 
 func TestThemeValidation(t *testing.T) {
-	for _, theme := range []string{"", "default", "minimal", "high-contrast", "light", " LIGHT "} {
+	for _, theme := range []string{"", "default", "minimal", "high-contrast", "light", "terminal", " TERMINAL "} {
 		if err := Validate(Config{Theme: theme}); err != nil {
 			t.Errorf("Validate(Theme=%q) error = %v", theme, err)
 		}

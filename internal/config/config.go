@@ -132,7 +132,7 @@ var DefaultKeybindings = map[string]string{
 }
 
 // BuiltinThemes are the selectable color profiles.
-var BuiltinThemes = []string{"default", "minimal", "high-contrast", "light"}
+var BuiltinThemes = []string{"default", "minimal", "high-contrast", "light", "terminal"}
 
 // ColorRoles are the palette roles that can be overridden in config.json.
 var ColorRoles = []string{
@@ -301,7 +301,7 @@ func Validate(cfg Config) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("theme %q is not supported (use default, minimal, high-contrast, or light)", cfg.Theme)
+			return fmt.Errorf("theme %q is not supported (use default, minimal, high-contrast, light, or terminal)", cfg.Theme)
 		}
 	}
 	validRoles := make(map[string]bool, len(ColorRoles))

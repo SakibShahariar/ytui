@@ -23,6 +23,16 @@ func TestApplyThemeChangesPaletteAndStyles(t *testing.T) {
 	}
 }
 
+func TestTerminalThemeUsesANSIPalette(t *testing.T) {
+	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	if err := applyTheme("terminal", nil); err != nil {
+		t.Fatal(err)
+	}
+	if string(ctpMauve) != "13" || string(ctpBase) != "0" || string(ctpText) != "15" {
+		t.Fatalf("terminal palette = base %s, text %s, mauve %s", ctpBase, ctpText, ctpMauve)
+	}
+}
+
 func TestApplyThemeColorOverrides(t *testing.T) {
 	t.Cleanup(func() { _ = applyTheme("default", nil) })
 	if err := applyTheme("minimal", map[string]string{"mauve": "#ff00ff"}); err != nil {
