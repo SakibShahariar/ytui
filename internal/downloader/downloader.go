@@ -48,6 +48,8 @@ type Options struct {
 	EmbedThumbnail     bool   // --embed-thumbnail
 	CookiesFromBrowser string // --cookies-from-browser <name>; empty = don't use cookies
 	RateLimit          string // --limit-rate <rate>; empty = no limit
+	ChecksumAlgorithm  string // sha256, sha1, or md5; empty disables verification
+	ExpectedChecksum   string // hex digest matched against the completed file
 	RetryAttempts      int           // automatic retries after a transient failure; zero disables
 	RetryBackoff       time.Duration // base delay before the first retry, doubled each attempt
 	QualityLabel       string // display-only, e.g. "1080p" — shown in the Downloads list
@@ -69,8 +71,10 @@ type Download struct {
 	Phase    string // current download or post-processing phase
 	FilePath string
 	Err      error
-	RetryAttempt int      // number of automatic retries already performed
-	RetryAt      time.Time // when the pending retry will start
+	RetryAttempt     int       // number of automatic retries already performed
+	RetryAt          time.Time // when the pending retry will start
+	ChecksumVerified bool      // true when the completed file matched the expected digest
+	ChecksumActual   string    // digest observed during verification
 
 	cmd         *exec.Cmd
 	processDone chan struct{}
@@ -768,6 +772,33 @@ func (m *Manager) run(d *Download) {
 			if notifyEnabled { notifier.Send("Download failed", title) }
 			return
 		}
+	}
+
+	if d.Opts.ExpectedChecksum != "" && finalPath == "" {
+		m.mu.Lock()
+		d.Status = StatusError
+		d.Err = fmt.Errorf("cannot verify checksum: yt-dlp did not report a final output path")
+		if persistErr := m.persistQueueLocked(); persistErr != nil { slog.Error("could not persist checksum failure", "error", persistErr) }
+		m.mu.Unlock()
+		if notifyEnabled { notifier.Send("Download failed checksum verification", title) }
+		return
+	}
+
+	if finalPath != "" && d.Opts.ExpectedChecksum != "" {
+		actual, verifyErr := VerifyFileChecksum(finalPath, d.Opts.ChecksumAlgorithm, d.Opts.ExpectedChecksum)
+		if verifyErr != nil {
+			m.mu.Lock()
+			d.Status = StatusError
+			d.Err = fmt.Errorf("%w (file kept; retry with correct options or delete it from Offline Downloads)", verifyErr)
+			if persistErr := m.persistQueueLocked(); persistErr != nil { slog.Error("could not persist checksum failure", "error", persistErr) }
+			m.mu.Unlock()
+			if notifyEnabled { notifier.Send("Download failed checksum verification", title) }
+			return
+		}
+		m.mu.Lock()
+		d.ChecksumVerified = true
+		d.ChecksumActual = actual
+		m.mu.Unlock()
 	}
 
 	m.mu.Lock()

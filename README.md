@@ -130,7 +130,7 @@ ytui --dir ~/Downloads/ytui download --audio --rate 500K "https://youtube.com/wa
 ytui --dir ~/Downloads/ytui download --queue "https://youtube.com/watch?v=VIDEO_ID"
 ```
 
-The command reuses the same downloader and queue as the TUI. It exits `0` on success, `1` on download failures, and `2` for invalid arguments; `--queue` enqueues and exits, `--quiet` suppresses progress.
+The command reuses the same downloader and queue as the TUI. It exits `0` on success, `1` on download failures, and `2` for invalid arguments; `--queue` enqueues and exits, `--quiet` suppresses progress. Pass `--sha256`, `--sha1`, or `--md5` with a hex digest to verify the completed file; a mismatch is reported as a failure and the file is kept so you can retry or delete it from Offline Downloads.
 
 Config exports contain preferences only — not OAuth tokens, credentials, subscriptions, history, or Watch Later entries. Logging is off by default; enable it with `--log-level error`, `info`, or `debug`. Playlist metadata is streamed and capped at 5,000 entries by default; set `YTUI_PLAYLIST_MAX_ENTRIES` to a value from 1 to 50,000 to change the limit.
 

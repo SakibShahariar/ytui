@@ -291,7 +291,9 @@ func (i downloadItem) Description() string {
 		if len(details) > 0 { prefix += strings.Join(details, " · ") + " · " }
 		return fmt.Sprintf("%s%s %5.1f%%  %s  ETA %s", prefix, bar, i.d.Progress, i.d.Speed, i.d.ETA)
 	case downloader.StatusDone:
-		return prefix + "✓ done — " + i.d.FilePath
+		verified := ""
+		if i.d.ChecksumVerified { verified = " · checksum verified" }
+		return prefix + "✓ done — " + i.d.FilePath + verified
 	case downloader.StatusResumable:
 		msg := "partial file available"
 		if i.d.Err != nil { msg = i.d.Err.Error() }

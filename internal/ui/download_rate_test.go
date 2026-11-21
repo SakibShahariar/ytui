@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -15,6 +16,25 @@ func TestDownloadOptionsSummaryIncludesRateLimit(t *testing.T) {
 	want := "Best quality (video+audio) · limit: 2M/s"
 	if got != want {
 		t.Fatalf("downloadOptionsSummary() = %q, want %q", got, want)
+	}
+}
+
+func TestDownloadItemShowsChecksumVerificationResult(t *testing.T) {
+	item := downloadItem{d: downloader.Download{
+		Status:           downloader.StatusDone,
+		FilePath:         "/tmp/video.mp4",
+		ChecksumVerified: true,
+		ChecksumActual:   strings.Repeat("a", 64),
+	}}
+	if got := item.Description(); !strings.Contains(got, "checksum verified") {
+		t.Fatalf("Description() = %q, want verification result", got)
+	}
+	failed := downloadItem{d: downloader.Download{
+		Status: downloader.StatusError,
+		Err:    fmt.Errorf("checksum mismatch: expected 0, got 1"),
+	}}
+	if got := failed.Description(); !strings.Contains(got, "checksum mismatch") {
+		t.Fatalf("Description() = %q, want mismatch result", got)
 	}
 }
 

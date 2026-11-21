@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
@@ -57,6 +59,46 @@ func TestDownloadCommandQueuesWithoutTUI(t *testing.T) {
 	if !opts.ExtractAudio || opts.AudioFormat != "mp3" || opts.RateLimit != "500K" || !opts.WriteSubs {
 		t.Fatalf("restored options = %#v, want audio/mp3/500K/subs", opts)
 	}
+}
+
+func TestDownloadCommandChecksumFlags(t *testing.T) {
+	t.Run("maps digest to options", func(t *testing.T) {
+		dir := setupDownloadCLI(t, "#!/bin/sh\nexit 1\n")
+		sum := sha256.Sum256([]byte("video"))
+		digest := hex.EncodeToString(sum[:])
+		var out, errOut strings.Builder
+		err := runDownloadCommand([]string{"--sha256", digest, "--queue", "https://example.com/v"}, &out, &errOut)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manager, managerErr := downloader.New(dir)
+		if managerErr != nil {
+			t.Fatal(managerErr)
+		}
+		defer manager.Shutdown()
+		entries := manager.List()
+		if len(entries) != 1 || entries[0].Opts.ChecksumAlgorithm != "sha256" || entries[0].Opts.ExpectedChecksum != digest {
+			t.Fatalf("queued options = %#v, want sha256 digest", entries)
+		}
+	})
+	t.Run("rejects conflicting flags", func(t *testing.T) {
+		setupDownloadCLI(t, "#!/bin/sh\nexit 1\n")
+		var out, errOut strings.Builder
+		err := runDownloadCommand([]string{"--sha256", strings.Repeat("0", 64), "--md5", strings.Repeat("0", 32), "https://example.com/v"}, &out, &errOut)
+		var exitErr *exitError
+		if !errors.As(err, &exitErr) || exitErr.code != 2 {
+			t.Fatalf("error = %v, want exit code 2", err)
+		}
+	})
+	t.Run("rejects malformed digest", func(t *testing.T) {
+		setupDownloadCLI(t, "#!/bin/sh\nexit 1\n")
+		var out, errOut strings.Builder
+		err := runDownloadCommand([]string{"--sha256", "abc", "https://example.com/v"}, &out, &errOut)
+		var exitErr *exitError
+		if !errors.As(err, &exitErr) || exitErr.code != 2 {
+			t.Fatalf("error = %v, want exit code 2", err)
+		}
+	})
 }
 
 func TestDownloadCommandExitCodes(t *testing.T) {

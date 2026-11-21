@@ -40,6 +40,9 @@ func runDownloadCommand(args []string, stdout, stderr io.Writer) error {
 	fs.BoolVar(subs, "s", false, "download subtitle sidecars (shorthand)")
 	subLang := fs.String("sub-lang", "en.*,en", "subtitle language selector")
 	rate := fs.String("rate", "", "rate limit such as 500K or 2M (overrides config)")
+	sha256 := fs.String("sha256", "", "expected SHA-256 hex digest of the completed file")
+	sha1 := fs.String("sha1", "", "expected SHA-1 hex digest of the completed file")
+	md5 := fs.String("md5", "", "expected MD5 hex digest of the completed file")
 	queueOnly := fs.Bool("queue", false, "enqueue and exit without waiting")
 	quiet := fs.Bool("quiet", false, "suppress progress output")
 	fs.BoolVar(quiet, "q", false, "suppress progress output (shorthand)")
@@ -56,6 +59,33 @@ func runDownloadCommand(args []string, stdout, stderr io.Writer) error {
 	audioFormat := strings.ToLower(strings.TrimSpace(*audioFormatFlag))
 	if *audio && audioFormat != "mp3" && audioFormat != "opus" {
 		return &exitError{code: 2, err: fmt.Errorf("--audio-format must be mp3 or opus")}
+	}
+
+	checksumFlags := []struct {
+		algorithm string
+		value     string
+	}{
+		{downloader.ChecksumSHA256, *sha256},
+		{downloader.ChecksumSHA1, *sha1},
+		{downloader.ChecksumMD5, *md5},
+	}
+	checksumAlgorithm, checksum := "", ""
+	for _, flag := range checksumFlags {
+		if strings.TrimSpace(flag.value) == "" {
+			continue
+		}
+		if checksum != "" {
+			return &exitError{code: 2, err: fmt.Errorf("use only one of --sha256, --sha1, or --md5")}
+		}
+		checksum = flag.value
+		checksumAlgorithm = flag.algorithm
+	}
+	if checksum != "" {
+		normalized, err := downloader.ParseChecksum(checksumAlgorithm, checksum)
+		if err != nil {
+			return &exitError{code: 2, err: err}
+		}
+		checksum = normalized
 	}
 
 	cfg := config.Load()
@@ -92,6 +122,8 @@ func runDownloadCommand(args []string, stdout, stderr io.Writer) error {
 		SubtitleLang:       *subLang,
 		CookiesFromBrowser: cfg.DefaultCookiesBrowser,
 		RateLimit:          cfg.DownloadRateLimit,
+		ChecksumAlgorithm:  checksumAlgorithm,
+		ExpectedChecksum:   checksum,
 		RetryAttempts:      cfg.DownloadRetryAttempts,
 		RetryBackoff:       time.Duration(cfg.DownloadRetryBackoffSeconds) * time.Second,
 	}
