@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -219,6 +220,8 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 		EmbedThumbnail:     m.downloadPickerThumb,
 		CookiesFromBrowser: downloadCookieBrowserValues[m.downloadPickerCookies],
 		RateLimit:          m.effectiveDownloadRateLimit(),
+		RetryAttempts:      m.cfg.DownloadRetryAttempts,
+		RetryBackoff:       time.Duration(m.cfg.DownloadRetryBackoffSeconds) * time.Second,
 		QualityLabel:       q.Label,
 	}
 	wasActive := m.downloads.Active()

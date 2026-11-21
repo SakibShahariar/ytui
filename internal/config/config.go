@@ -34,6 +34,14 @@ type Config struct {
 	// or "2M"). Empty means no limit. Individual downloads can override it.
 	DownloadRateLimit string `json:"download_rate_limit,omitempty"`
 
+	// DownloadRetryAttempts is how many times a transient download failure is
+	// retried automatically. Zero disables automatic retries.
+	DownloadRetryAttempts int `json:"download_retry_attempts,omitempty"`
+
+	// DownloadRetryBackoffSeconds is the base delay before the first retry,
+	// doubled on each subsequent attempt. Zero uses the built-in default.
+	DownloadRetryBackoffSeconds int `json:"download_retry_backoff_seconds,omitempty"`
+
 	// DefaultQuality pre-selects a row in the ctrl+d download-options
 	// picker by stable identifier or legacy display label. Empty means
 	// "Best quality (video+audio)".
@@ -155,6 +163,12 @@ func Validate(cfg Config) error {
 	}
 	if _, err := normalizeRateLimit(cfg.DownloadRateLimit); err != nil {
 		return err
+	}
+	if cfg.DownloadRetryAttempts < 0 || cfg.DownloadRetryAttempts > 10 {
+		return fmt.Errorf("download_retry_attempts must be between 0 and 10")
+	}
+	if cfg.DownloadRetryBackoffSeconds < 0 || cfg.DownloadRetryBackoffSeconds > 3600 {
+		return fmt.Errorf("download_retry_backoff_seconds must be between 0 and 3600")
 	}
 	if cfg.DownloadStatusFilter < 0 || cfg.DownloadStatusFilter > 3 {
 		return fmt.Errorf("download_status_filter must be between 0 and 3")

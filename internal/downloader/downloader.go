@@ -48,6 +48,8 @@ type Options struct {
 	EmbedThumbnail     bool   // --embed-thumbnail
 	CookiesFromBrowser string // --cookies-from-browser <name>; empty = don't use cookies
 	RateLimit          string // --limit-rate <rate>; empty = no limit
+	RetryAttempts      int           // automatic retries after a transient failure; zero disables
+	RetryBackoff       time.Duration // base delay before the first retry, doubled each attempt
 	QualityLabel       string // display-only, e.g. "1080p" — shown in the Downloads list
 	ForceOverwrite     bool   // re-download changed options over the previous completed output
 }
@@ -67,9 +69,12 @@ type Download struct {
 	Phase    string // current download or post-processing phase
 	FilePath string
 	Err      error
+	RetryAttempt int      // number of automatic retries already performed
+	RetryAt      time.Time // when the pending retry will start
 
-	cmd *exec.Cmd
+	cmd         *exec.Cmd
 	processDone chan struct{}
+	retryWake   chan struct{} // closed by Cancel/Shutdown to end a backoff early
 }
 
 // Manager owns the download queue. Zero value isn't usable — use New().
@@ -308,8 +313,10 @@ func (m *Manager) Cancel(videoID string) bool {
 	d.Status = StatusCanceled
 	m.removePendingLocked(videoID)
 	cmd := d.cmd
+	wake := d.retryWake
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue", "error", err) }
 	m.mu.Unlock()
+	if wake != nil { close(wake) }
 	if cmd != nil {
 		if err := killProcess(cmd); err != nil { slog.Warn("could not stop canceled download", "error", err) }
 	}
@@ -326,6 +333,7 @@ func (m *Manager) Shutdown() {
 	m.closed = true
 	m.pending = nil
 	processes := make([]*exec.Cmd, 0)
+	wakes := make([]chan struct{}, 0)
 	for _, d := range m.byID {
 		activeProcess := d.cmd != nil && d.cmd.Process != nil && !processFinished(d.processDone)
 		if d.Status == StatusDownloading || (d.Status == StatusPaused && d.cmd != nil) {
@@ -333,9 +341,14 @@ func (m *Manager) Shutdown() {
 			d.Status = StatusQueued
 			if activeProcess { processes = append(processes, d.cmd) }
 		}
+		if d.retryWake != nil {
+			wakes = append(wakes, d.retryWake)
+			d.retryWake = nil
+		}
 	}
 	if err := m.persistQueueLocked(); err != nil { slog.Error("could not persist download queue during shutdown", "error", err) }
 	m.mu.Unlock()
+	for _, wake := range wakes { close(wake) }
 	m.signalScheduler()
 
 	for _, cmd := range processes {
@@ -546,6 +559,57 @@ func buildArgs(destDir string, d *Download) []string {
 	return append(args, d.URL)
 }
 
+// isTransientFailure recognizes yt-dlp errors that are worth retrying. It is
+// deliberately conservative: permanent errors (unsupported URL, private
+// video, bad format) must not burn through the configured retry budget.
+func isTransientFailure(message string) bool {
+	lower := strings.ToLower(message)
+	for _, marker := range []string{
+		"temporary failure in name resolution", "network is unreachable",
+		"connection timed out", "connection refused", "connection reset",
+		"timed out", "timeout", "http error 429", "too many requests",
+		"rate limit", "http error 502", "http error 503", "service unavailable",
+		"unable to download webpage", "couldn't connect", "connection aborted",
+	} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+// startRetryWatcher waits out the backoff and returns the download to the
+// queue. Cancel and Shutdown close the wake channel so a pending retry stops
+// immediately instead of holding a worker or delaying exit.
+func (m *Manager) startRetryWatcher(d *Download, wake <-chan struct{}, delay time.Duration) {
+	m.wg.Add(1)
+	go func() {
+		defer m.wg.Done()
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+		case <-wake:
+			return
+		}
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		if m.closed || d.Status != StatusDownloading {
+			return
+		}
+		d.retryWake = nil
+		d.Status = StatusQueued
+		d.Phase = "Starting"
+		d.Err = nil
+		d.RetryAt = time.Time{}
+		m.pending = append(m.pending, d.VideoID)
+		if err := m.persistQueueLocked(); err != nil {
+			slog.Error("could not persist retry queue", "error", err)
+		}
+		m.signalScheduler()
+	}()
+}
+
 func (m *Manager) run(d *Download) {
 	m.mu.Lock()
 	if d.Status != StatusQueued || m.closed {
@@ -655,6 +719,23 @@ func (m *Manager) run(d *Download) {
 			msg = err.Error()
 		}
 		slog.Error("download failed", "video_id", d.VideoID, "error", msg)
+		if d.RetryAttempt < d.Opts.RetryAttempts && isTransientFailure(msg) {
+			attempt := d.RetryAttempt + 1
+			backoff := d.Opts.RetryBackoff
+			if backoff <= 0 { backoff = 5 * time.Second }
+			delay := backoff * time.Duration(1<<uint(attempt-1))
+			if delay > time.Hour { delay = time.Hour }
+			wake := make(chan struct{})
+			d.RetryAttempt = attempt
+			d.RetryAt = time.Now().Add(delay)
+			d.Phase = fmt.Sprintf("Retrying in %s (%d/%d)", delay.Round(time.Second), attempt, d.Opts.RetryAttempts)
+			d.Err = fmt.Errorf("transient failure, will retry: %s", msg)
+			d.retryWake = wake
+			if persistErr := m.persistQueueLocked(); persistErr != nil { slog.Error("could not persist retry state", "error", persistErr) }
+			m.mu.Unlock()
+			m.startRetryWatcher(d, wake, delay)
+			return
+		}
 		if resumable {
 			d.Status = StatusResumable
 			d.Err = fmt.Errorf("%s (partial files retained; press Ctrl+R to resume)", msg)

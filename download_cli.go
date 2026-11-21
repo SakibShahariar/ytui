@@ -92,6 +92,8 @@ func runDownloadCommand(args []string, stdout, stderr io.Writer) error {
 		SubtitleLang:       *subLang,
 		CookiesFromBrowser: cfg.DefaultCookiesBrowser,
 		RateLimit:          cfg.DownloadRateLimit,
+		RetryAttempts:      cfg.DownloadRetryAttempts,
+		RetryBackoff:       time.Duration(cfg.DownloadRetryBackoffSeconds) * time.Second,
 	}
 	if *audio {
 		opts.AudioFormat = audioFormat

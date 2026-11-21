@@ -150,6 +150,28 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 	}
 }
 
+func TestDownloadRetryValidation(t *testing.T) {
+	for _, cfg := range []Config{
+		{},
+		{DownloadRetryAttempts: 3, DownloadRetryBackoffSeconds: 5},
+		{DownloadRetryAttempts: 10, DownloadRetryBackoffSeconds: 3600},
+	} {
+		if err := Validate(cfg); err != nil {
+			t.Errorf("Validate(%#v) error = %v", cfg, err)
+		}
+	}
+	for _, cfg := range []Config{
+		{DownloadRetryAttempts: -1},
+		{DownloadRetryAttempts: 11},
+		{DownloadRetryBackoffSeconds: -1},
+		{DownloadRetryBackoffSeconds: 3601},
+	} {
+		if err := Validate(cfg); err == nil {
+			t.Errorf("Validate(%#v) unexpectedly succeeded", cfg)
+		}
+	}
+}
+
 func TestNormalizeQuality(t *testing.T) {
 	tests := []struct {
 		input string
