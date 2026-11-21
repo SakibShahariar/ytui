@@ -150,6 +150,40 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 	}
 }
 
+func TestThemeValidation(t *testing.T) {
+	for _, theme := range []string{"", "default", "minimal", "high-contrast", "light", " LIGHT "} {
+		if err := Validate(Config{Theme: theme}); err != nil {
+			t.Errorf("Validate(Theme=%q) error = %v", theme, err)
+		}
+	}
+	for _, theme := range []string{"dark", "solarized"} {
+		if err := Validate(Config{Theme: theme}); err == nil {
+			t.Errorf("Validate(Theme=%q) unexpectedly succeeded", theme)
+		}
+	}
+	for _, colors := range []map[string]string{
+		nil,
+		{"mauve": "#f0f", "green": "#00ff00"},
+	} {
+		if err := Validate(Config{Colors: colors}); err != nil {
+			t.Errorf("Validate(Colors=%v) error = %v", colors, err)
+		}
+	}
+	for _, colors := range []map[string]string{
+		{"unknown": "#fff"},
+		{"mauve": "fff"},
+		{"mauve": "#gggggg"},
+	} {
+		if err := Validate(Config{Colors: colors}); err == nil {
+			t.Errorf("Validate(Colors=%v) unexpectedly succeeded", colors)
+		}
+	}
+	cfg := normalize(Config{Theme: " LIGHT "})
+	if cfg.Theme != "light" {
+		t.Fatalf("normalized theme = %q", cfg.Theme)
+	}
+}
+
 func TestDownloadPresetsValidation(t *testing.T) {
 	valid := []Config{
 		{},

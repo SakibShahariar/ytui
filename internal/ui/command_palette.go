@@ -57,6 +57,13 @@ func (m Model) filteredPaletteCommands() []paletteCommand {
 			description: "Apply this preset to the selected video",
 		})
 	}
+	for _, theme := range themeNames() {
+		commands = append(commands, paletteCommand{
+			id:          "theme:" + theme,
+			label:       "Theme: " + theme,
+			description: "Switch the TUI color profile",
+		})
+	}
 	return filterPaletteCommands(commands, m.commandPaletteInput.Value())
 }
 

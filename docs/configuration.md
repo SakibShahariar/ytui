@@ -46,6 +46,8 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `keybindings` | Object mapping global shortcut actions (for example `quit`, `download`, `search`) to key strings. See [Keybindings](keybindings.md#configurable-shortcuts). | built-in defaults |
 | `download_presets` | List of custom download presets (`name`, `quality`, `write_subs`, `embed_thumbnail`, `rate_limit`) added to the `Ctrl+D` preset row. | built-in presets only |
 | `mouse_enabled` | Opt into mouse wheel scrolling and click-to-select in the TUI. Keyboard controls always work. | `false` |
+| `theme` | Built-in color profile: `default`, `minimal`, `high-contrast`, or `light`. Also switchable from the command palette. | `default` |
+| `colors` | Object overriding individual palette roles with `#RGB` or `#RRGGBB` values, e.g. `"mauve": "#ff00ff"`. Roles: base, mantle, text, subtext1, subtext0, overlay1, overlay0, surface2, surface1, mauve, pink, red, peach, yellow, green, blue, lavender. | theme defaults |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

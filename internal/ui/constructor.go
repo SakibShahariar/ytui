@@ -137,6 +137,7 @@ func New(s *store.Store) Model {
 			m.statusMsg = warning
 		}
 	}
+	m.applyConfiguredTheme()
 	m.applyListSize()
 	return m
 }

@@ -103,6 +103,20 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 		m.keyboardHelpOffset = 0
 		return m, nil
 	default:
+		if strings.HasPrefix(id, "theme:") {
+			name := strings.TrimPrefix(id, "theme:")
+			if err := applyTheme(name, m.cfg.Colors); err != nil {
+				m.errMsg = "theme: " + err.Error()
+				return m, nil
+			}
+			m.cfg.Theme = name
+			if err := config.Save(m.cfg); err != nil {
+				m.errMsg = "save theme: " + err.Error()
+			} else {
+				m.statusMsg = "theme set to " + name
+			}
+			return m, tea.ClearScreen
+		}
 		if !strings.HasPrefix(id, "preset:") {
 			return m, nil
 		}

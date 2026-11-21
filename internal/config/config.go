@@ -88,6 +88,14 @@ type Config struct {
 	// MouseEnabled opts into mouse wheel scrolling and click-to-select in the
 	// TUI. Keyboard controls are unaffected either way.
 	MouseEnabled bool `json:"mouse_enabled,omitempty"`
+
+	// Theme selects a built-in color profile: default, minimal,
+	// high-contrast, or light. Empty uses the default.
+	Theme string `json:"theme,omitempty"`
+
+	// Colors overrides individual palette roles (for example "mauve" or
+	// "green") with #RGB or #RRGGBB values, on top of the selected theme.
+	Colors map[string]string `json:"colors,omitempty"`
 }
 
 // DownloadPreset bundles quality and post-processing choices for quick reuse.
@@ -121,6 +129,16 @@ var DefaultKeybindings = map[string]string{
 	"login":           "ctrl+l",
 	"subscribe":       "ctrl+s",
 	"retry":           "ctrl+r",
+}
+
+// BuiltinThemes are the selectable color profiles.
+var BuiltinThemes = []string{"default", "minimal", "high-contrast", "light"}
+
+// ColorRoles are the palette roles that can be overridden in config.json.
+var ColorRoles = []string{
+	"base", "mantle", "text", "subtext1", "subtext0", "overlay1", "overlay0",
+	"surface2", "surface1", "mauve", "pink", "red", "peach", "yellow",
+	"green", "blue", "lavender",
 }
 
 var namedKeyBindings = map[string]bool{
@@ -274,6 +292,39 @@ func Validate(cfg Config) error {
 		}
 		seen[binding] = action
 	}
+	if theme := strings.ToLower(strings.TrimSpace(cfg.Theme)); theme != "" {
+		found := false
+		for _, builtin := range BuiltinThemes {
+			if theme == builtin {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("theme %q is not supported (use default, minimal, high-contrast, or light)", cfg.Theme)
+		}
+	}
+	validRoles := make(map[string]bool, len(ColorRoles))
+	for _, role := range ColorRoles {
+		validRoles[role] = true
+	}
+	for role, color := range cfg.Colors {
+		if !validRoles[strings.ToLower(strings.TrimSpace(role))] {
+			return fmt.Errorf("colors: unknown palette role %q", role)
+		}
+		value := strings.TrimSpace(color)
+		if len(value) != 4 && len(value) != 7 {
+			return fmt.Errorf("colors: %q must be a #RGB or #RRGGBB hex value", color)
+		}
+		if value[0] != '#' {
+			return fmt.Errorf("colors: %q must start with #", color)
+		}
+		for _, ch := range value[1:] {
+			if !((ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
+				return fmt.Errorf("colors: %q is not a valid hex color", color)
+			}
+		}
+	}
 	presetNames := make(map[string]bool, len(cfg.DownloadPresets))
 	for _, preset := range cfg.DownloadPresets {
 		name := strings.TrimSpace(preset.Name)
@@ -296,6 +347,7 @@ func Validate(cfg Config) error {
 }
 
 func normalize(cfg Config) Config {
+	cfg.Theme = strings.ToLower(strings.TrimSpace(cfg.Theme))
 	cfg.DefaultQuality = normalizeQuality(cfg.DefaultQuality)
 	cfg.DefaultCookiesBrowser = strings.ToLower(strings.TrimSpace(cfg.DefaultCookiesBrowser))
 	if rate, err := normalizeRateLimit(cfg.DownloadRateLimit); err == nil {
