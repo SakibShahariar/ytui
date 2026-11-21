@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -17,6 +18,10 @@ func mouseTestModel() Model {
 	}
 	m := Model{activeTab: tabWatchLater}
 	m.list = list.New(items, ytDelegate{}, 60, 9)
+	m.list.Title = "Results"
+	m.list.SetShowStatusBar(false)
+	m.list.SetShowHelp(false)
+	m.list.DisableQuitKeybindings()
 	m.list.Select(0)
 	return m
 }
@@ -36,7 +41,8 @@ func TestMouseWheelMovesSelection(t *testing.T) {
 func TestMouseClickSelectsItemUnderCursor(t *testing.T) {
 	m := mouseTestModel()
 	row := m.listFirstItemRow()
-	updated, _ := m.Update(tea.MouseMsg{Button: tea.MouseButtonLeft, Action: tea.MouseActionPress, Y: row + 2})
+	// Each item occupies three terminal rows (two content lines + spacing).
+	updated, _ := m.Update(tea.MouseMsg{Button: tea.MouseButtonLeft, Action: tea.MouseActionPress, Y: row + 6})
 	if got := updated.(Model).list.Index(); got != 2 {
 		t.Fatalf("click index = %d, want 2", got)
 	}
@@ -44,6 +50,33 @@ func TestMouseClickSelectsItemUnderCursor(t *testing.T) {
 	updated, _ = m.Update(tea.MouseMsg{Button: tea.MouseButtonLeft, Action: tea.MouseActionPress, Y: row - 1})
 	if got := updated.(Model).list.Index(); got != 0 {
 		t.Fatalf("click above list changed selection to %d", got)
+	}
+}
+
+func TestListFirstItemRowMatchesRenderedView(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		tab  tab
+	}{
+		{name: "watch later", tab: tabWatchLater},
+		{name: "search", tab: tabSearch},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			m := mouseTestModel()
+			m.activeTab = tt.tab
+			m.width, m.height = 100, 30
+			m.applyListSize()
+			view := m.View()
+			for i, line := range strings.Split(view, "\n") {
+				if strings.Contains(line, "First") {
+					if got := m.listFirstItemRow(); got != i {
+						t.Fatalf("listFirstItemRow = %d, rendered first item at row %d", got, i)
+					}
+					return
+				}
+			}
+			t.Fatal("first item not found in rendered view")
+		})
 	}
 }
 

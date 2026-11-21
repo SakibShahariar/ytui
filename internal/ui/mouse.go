@@ -13,7 +13,7 @@ func (m Model) listFirstItemRow() int {
 		(m.libraryFilterMode || m.libraryFilter != "")) {
 		row += 2 // input line + divider
 	}
-	return row + 1 // list title
+	return row + 2 // list title + blank line before the first item
 }
 
 // handleMouse keeps mouse input additive: wheel events reuse the existing
@@ -44,7 +44,7 @@ func (m Model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		if perPage < 1 {
 			perPage = 1
 		}
-		index := msg.Y - row + m.list.Paginator.Page*perPage
+		index := (msg.Y-row)/3 + m.list.Paginator.Page*perPage // delegate height 2 + spacing 1
 		if index < 0 || index >= len(m.list.Items()) {
 			return m, nil
 		}
