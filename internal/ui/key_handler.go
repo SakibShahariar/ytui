@@ -47,7 +47,10 @@ func clampPaletteCursor(cursor, count int) int {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	key := msg.String()
+	key := m.remapKey(msg.String())
+	if key == "\x00" {
+		return m, nil
+	}
 
 	if m.subtitlePicker {
 		switch key {

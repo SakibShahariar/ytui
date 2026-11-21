@@ -39,6 +39,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `download_rate_limit` | Global yt-dlp download rate limit, e.g. `500K` or `2M`. A positive number with an optional `K`, `M`, or `G` suffix. The `Ctrl+D` picker can override it per download. | unlimited |
 | `download_retry_attempts` | Automatic retries after a transient yt-dlp failure (network errors, timeouts, rate limits). `0` disables retries; maximum `10`. Permanent failures are never retried. | `0` |
 | `download_retry_backoff_seconds` | Base delay before the first retry, doubled on each subsequent attempt. `0` uses five seconds. | `5` |
+| `keybindings` | Object mapping global shortcut actions (for example `quit`, `download`, `search`) to key strings. See [Keybindings](keybindings.md#configurable-shortcuts). | built-in defaults |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

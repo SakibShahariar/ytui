@@ -150,6 +150,36 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 	}
 }
 
+func TestKeybindingsValidation(t *testing.T) {
+	valid := []Config{
+		{},
+		{Keybindings: map[string]string{"quit": "ctrl+q"}},
+		{Keybindings: map[string]string{"download": "F5", "search": "*"}},
+	}
+	for _, cfg := range valid {
+		if err := Validate(cfg); err != nil {
+			t.Errorf("Validate(%#v) error = %v", cfg, err)
+		}
+	}
+	invalid := []Config{
+		{Keybindings: map[string]string{"unknown": "ctrl+q"}},
+		{Keybindings: map[string]string{"quit": "q"}}, // bare letter breaks search typing
+		{Keybindings: map[string]string{"quit": ""}},
+		{Keybindings: map[string]string{"quit": "ctrl+q", "stop": "ctrl+q"}},
+		{Keybindings: map[string]string{"quit": "ctrl+d"}}, // collides with download default
+	}
+	for _, cfg := range invalid {
+		if err := Validate(cfg); err == nil {
+			t.Errorf("Validate(%#v) unexpectedly succeeded", cfg)
+		}
+	}
+	cfg := Config{Keybindings: map[string]string{"quit": " CTRL+Q "}}
+	normalized := normalize(cfg)
+	if got := normalized.Keybindings["quit"]; got != "ctrl+q" {
+		t.Fatalf("normalized binding = %q, want ctrl+q", got)
+	}
+}
+
 func TestDownloadRetryValidation(t *testing.T) {
 	for _, cfg := range []Config{
 		{},

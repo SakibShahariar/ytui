@@ -67,30 +67,88 @@ type Config struct {
 	SponsorBlockEnabled bool `json:"sponsorblock_enabled,omitempty"`
 	// SponsorBlockCategories lists categories to skip automatically. When not configured,
 	// ytui defaults to sponsor and selfpromo; an explicit empty list disables auto-skip.
-	SponsorBlockCategories []string `json:"sponsorblock_categories,omitempty"`
-	SponsorBlockCategoriesConfigured bool `json:"sponsorblock_categories_configured,omitempty"`
+	SponsorBlockCategories           []string `json:"sponsorblock_categories,omitempty"`
+	SponsorBlockCategoriesConfigured bool     `json:"sponsorblock_categories_configured,omitempty"`
 
 	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
 	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
 
 	// ThumbnailCacheMaxAgeDays expires cached thumbnails after this many days; zero uses the default.
 	ThumbnailCacheMaxAgeDays int `json:"thumbnail_cache_max_age_days,omitempty"`
+
+	// Keybindings maps action names to key strings, overriding the defaults in
+	// DefaultKeybindings. Only global shortcuts are remappable; typing and
+	// list-navigation keys stay fixed.
+	Keybindings map[string]string `json:"keybindings,omitempty"`
+}
+
+// DefaultKeybindings lists the global shortcuts that can be remapped. Keys
+// used for typing or list navigation (Enter, arrows, Esc) are intentionally
+// absent: the TUI relies on them in many contexts.
+var DefaultKeybindings = map[string]string{
+	"quit":            "ctrl+c",
+	"search":          "/",
+	"command_palette": ":",
+	"help":            "?",
+	"next_tab":        "tab",
+	"prev_tab":        "shift+tab",
+	"audio":           "ctrl+a",
+	"watch_later":     "ctrl+w",
+	"download":        "ctrl+d",
+	"subtitles":       "ctrl+v",
+	"transcript":      "ctrl+e",
+	"sponsorblock":    "ctrl+b",
+	"thumbnails":      "ctrl+t",
+	"pause":           "ctrl+p",
+	"stop":            "ctrl+x",
+	"login":           "ctrl+l",
+	"subscribe":       "ctrl+s",
+	"retry":           "ctrl+r",
+}
+
+var namedKeyBindings = map[string]bool{
+	"enter": true, "tab": true, "shift+tab": true, "esc": true,
+	"space": true, "pgup": true, "pgdown": true, "home": true,
+	"end": true, "delete": true, "backspace": true,
+	"f1": true, "f2": true, "f3": true, "f4": true, "f5": true,
+	"f6": true, "f7": true, "f8": true, "f9": true, "f10": true,
+	"f11": true, "f12": true,
+}
+
+// validKeyBinding rejects bare letters and digits: those are used for typing
+// search queries and list shortcuts, so binding one globally would make the
+// interface unusable while typing.
+func validKeyBinding(value string) bool {
+	v := strings.ToLower(strings.TrimSpace(value))
+	if v == "" {
+		return false
+	}
+	if namedKeyBindings[v] {
+		return true
+	}
+	if strings.HasPrefix(v, "ctrl+") || strings.HasPrefix(v, "alt+") {
+		key := strings.TrimPrefix(strings.TrimPrefix(v, "ctrl+"), "alt+")
+		runes := []rune(key)
+		return len(runes) == 1 && (unicode.IsLetter(runes[0]) || unicode.IsDigit(runes[0]))
+	}
+	runes := []rune(v)
+	return len(runes) == 1 && unicode.IsPrint(runes[0]) && !unicode.IsLetter(runes[0]) && !unicode.IsDigit(runes[0])
 }
 
 var qualityLabels = map[string]string{
-	"best": "Best quality (video+audio)",
-	"best-quality": "Best quality (video+audio)",
-	"best_quality": "Best quality (video+audio)",
+	"best":                       "Best quality (video+audio)",
+	"best-quality":               "Best quality (video+audio)",
+	"best_quality":               "Best quality (video+audio)",
 	"best quality (video+audio)": "Best quality (video+audio)",
-	"1080p": "1080p",
-	"720p": "720p",
-	"480p": "480p",
-	"audio-mp3": "Audio only (mp3)",
-	"audio_mp3": "Audio only (mp3)",
-	"audio only (mp3)": "Audio only (mp3)",
-	"audio-opus": "Audio only (opus)",
-	"audio_opus": "Audio only (opus)",
-	"audio only (opus)": "Audio only (opus)",
+	"1080p":                      "1080p",
+	"720p":                       "720p",
+	"480p":                       "480p",
+	"audio-mp3":                  "Audio only (mp3)",
+	"audio_mp3":                  "Audio only (mp3)",
+	"audio only (mp3)":           "Audio only (mp3)",
+	"audio-opus":                 "Audio only (opus)",
+	"audio_opus":                 "Audio only (opus)",
+	"audio only (opus)":          "Audio only (opus)",
 }
 
 // normalizeQuality converts stable machine-readable identifiers to the
@@ -179,6 +237,26 @@ func Validate(cfg Config) error {
 	if cfg.ThumbnailCacheMaxAgeDays < 0 || cfg.ThumbnailCacheMaxAgeDays > 3650 {
 		return fmt.Errorf("thumbnail_cache_max_age_days must be between 1 and 3650, or 0 for the default")
 	}
+	effective := make(map[string]string, len(DefaultKeybindings))
+	for action, key := range DefaultKeybindings {
+		effective[action] = key
+	}
+	for action, binding := range cfg.Keybindings {
+		if _, ok := DefaultKeybindings[action]; !ok {
+			return fmt.Errorf("keybindings: unknown action %q", action)
+		}
+		if !validKeyBinding(binding) {
+			return fmt.Errorf("keybindings: invalid key %q for action %q", binding, action)
+		}
+		effective[action] = strings.ToLower(strings.TrimSpace(binding))
+	}
+	seen := make(map[string]string, len(effective))
+	for action, binding := range effective {
+		if other, exists := seen[binding]; exists {
+			return fmt.Errorf("keybindings: actions %q and %q both use %q", other, action, binding)
+		}
+		seen[binding] = action
+	}
 	return nil
 }
 
@@ -187,6 +265,13 @@ func normalize(cfg Config) Config {
 	cfg.DefaultCookiesBrowser = strings.ToLower(strings.TrimSpace(cfg.DefaultCookiesBrowser))
 	if rate, err := normalizeRateLimit(cfg.DownloadRateLimit); err == nil {
 		cfg.DownloadRateLimit = rate
+	}
+	if len(cfg.Keybindings) > 0 {
+		bindings := make(map[string]string, len(cfg.Keybindings))
+		for action, binding := range cfg.Keybindings {
+			bindings[action] = strings.ToLower(strings.TrimSpace(binding))
+		}
+		cfg.Keybindings = bindings
 	}
 	return cfg
 }

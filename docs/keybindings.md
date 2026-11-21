@@ -26,6 +26,45 @@ Pressing an arrow key or `Enter` to play returns control to list browsing. Becau
 | `Ctrl+X` | Stop current playback |
 | `Ctrl+C` | Quit ytui and stop playback |
 
+## Configurable shortcuts
+
+Global shortcuts can be remapped through the `keybindings` object in `config.json`. Keys used for typing, list navigation, dialogs, and text input (such as `Enter`, arrows, `Esc`, and ordinary letters/digits) are intentionally fixed.
+
+```json
+{
+  "keybindings": {
+    "quit": "ctrl+q",
+    "download": "f5",
+    "subtitles": "ctrl+u"
+  }
+}
+```
+
+Available action names and their defaults:
+
+| Action | Default |
+|---|---|
+| `quit` | `ctrl+c` |
+| `search` | `/` |
+| `command_palette` | `:` |
+| `help` | `?` |
+| `next_tab` | `tab` |
+| `prev_tab` | `shift+tab` |
+| `audio` | `ctrl+a` |
+| `watch_later` | `ctrl+w` |
+| `download` | `ctrl+d` |
+| `subtitles` | `ctrl+v` |
+| `transcript` | `ctrl+e` |
+| `sponsorblock` | `ctrl+b` |
+| `thumbnails` | `ctrl+t` |
+| `pause` | `ctrl+p` |
+| `stop` | `ctrl+x` |
+| `login` | `ctrl+l` |
+| `subscribe` | `ctrl+s` |
+| `retry` | `ctrl+r` |
+
+Valid bindings are `ctrl+<letter-or-digit>`, `alt+<letter-or-digit>`, function keys `f1`–`f12`, named keys such as `enter`, `tab`, `shift+tab`, `pgup`, and single printable symbols. Unknown actions, invalid keys, and duplicate effective bindings are rejected on config import; existing settings are left unchanged. The old default for a remapped action is unbound.
+
 ## Command palette
 
 Press `:` from a main tab to open the command palette. Type to filter actions, use `↑` / `↓` to select, press `Enter` to execute, or `Esc` to close and return to the previous tab. The palette includes navigation, Home refresh, playback/display toggles, library filters, and keyboard help.
