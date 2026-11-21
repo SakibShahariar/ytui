@@ -150,6 +150,35 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 	}
 }
 
+func TestDownloadPresetsValidation(t *testing.T) {
+	valid := []Config{
+		{},
+		{DownloadPresets: []DownloadPreset{{Name: "Lecture", Quality: "720p", WriteSubs: true}, {Name: "Podcast", Quality: "audio-mp3", RateLimit: "500K"}}},
+	}
+	for _, cfg := range valid {
+		if err := Validate(cfg); err != nil {
+			t.Errorf("Validate(%#v) error = %v", cfg, err)
+		}
+	}
+	invalid := []Config{
+		{DownloadPresets: []DownloadPreset{{Quality: "720p"}}},
+		{DownloadPresets: []DownloadPreset{{Name: "A", Quality: "720p"}, {Name: "a", Quality: "480p"}}},
+		{DownloadPresets: []DownloadPreset{{Name: "A", Quality: "2160p"}}},
+		{DownloadPresets: []DownloadPreset{{Name: "A", Quality: "720p", RateLimit: "1T"}}},
+	}
+	for _, cfg := range invalid {
+		if err := Validate(cfg); err == nil {
+			t.Errorf("Validate(%#v) unexpectedly succeeded", cfg)
+		}
+	}
+	cfg := Config{DownloadPresets: []DownloadPreset{{Name: " Lecture ", Quality: "audio-mp3", RateLimit: "2m"}}}
+	normalized := normalize(cfg)
+	p := normalized.DownloadPresets[0]
+	if p.Name != "Lecture" || p.Quality != "Audio only (mp3)" || p.RateLimit != "2M" {
+		t.Fatalf("normalized preset = %#v", p)
+	}
+}
+
 func TestKeybindingsValidation(t *testing.T) {
 	valid := []Config{
 		{},

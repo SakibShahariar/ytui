@@ -236,9 +236,9 @@ func downloadCookieBrowserLabels(detectedIdx int) []string {
 
 // downloadPickerRows returns the total navigable rows in the ctrl+d picker:
 // one per quality preset, plus subtitles toggle, thumbnail toggle, cookies
-// browser cycle, rate limit cycle, and the final "Start Download" row.
+// browser cycle, rate limit cycle, preset shortcut, and "Start Download".
 func downloadPickerRows() int {
-	return len(downloadQualities) + 5
+	return len(downloadQualities) + 6
 }
 
 // downloadRateLimitChoices starts with "Default", which uses the global
@@ -246,6 +246,9 @@ func downloadPickerRows() int {
 var downloadRateLimitChoices = []string{"", "500K", "1M", "2M", "5M"}
 
 func (m Model) effectiveDownloadRateLimit() string {
+	if m.downloadPickerRateValue != "" {
+		return m.downloadPickerRateValue
+	}
 	if m.downloadPickerRate > 0 && m.downloadPickerRate < len(downloadRateLimitChoices) {
 		return downloadRateLimitChoices[m.downloadPickerRate]
 	}
@@ -549,6 +552,8 @@ type Model struct {
 	downloadPickerThumb   bool
 	downloadPickerCookies int // index into downloadCookieBrowserValues
 	downloadPickerRate    int // index into downloadRateLimitChoices
+	downloadPickerRateValue string // custom limit supplied by a preset
+	downloadPickerPreset int // index into downloadPresets()
 }
 
 // New builds the initial model.

@@ -148,9 +148,17 @@ func (m Model) downloadPickerContent(width int) string {
 	}
 	lines = append(lines, row(qCount+3, "⟳", rateLabel))
 
+	presetLabel := "Preset: choose (enter to cycle)"
+	if m.downloadPickerPreset >= 0 {
+		if presets := m.downloadPresets(); m.downloadPickerPreset < len(presets) {
+			presetLabel = "Preset: " + presets[m.downloadPickerPreset].Name
+		}
+	}
+	lines = append(lines, row(qCount+4, "▸", presetLabel))
+
 	lines = append(lines, "")
 	startLabel := "▶ Start Download"
-	if m.downloadPickerCursor == qCount+4 {
+	if m.downloadPickerCursor == qCount+5 {
 		lines = append(lines, cursorStyle.Render("▸ ")+lipgloss.NewStyle().Foreground(ctpGreen).Bold(true).Render(startLabel))
 	} else {
 		lines = append(lines, "  "+lipgloss.NewStyle().Foreground(ctpGreen).Render(startLabel))

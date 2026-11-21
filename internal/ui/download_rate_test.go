@@ -55,8 +55,8 @@ func TestEffectiveDownloadRateLimit(t *testing.T) {
 }
 
 func TestDownloadPickerShowsRateLimitRow(t *testing.T) {
-	if downloadPickerRows() != len(downloadQualities)+5 {
-		t.Fatalf("downloadPickerRows() = %d, want %d", downloadPickerRows(), len(downloadQualities)+5)
+	if downloadPickerRows() != len(downloadQualities)+6 {
+		t.Fatalf("downloadPickerRows() = %d, want %d", downloadPickerRows(), len(downloadQualities)+6)
 	}
 	m := Model{
 		cfg:                   config.Config{DownloadRateLimit: "1M"},

@@ -80,6 +80,19 @@ type Config struct {
 	// DefaultKeybindings. Only global shortcuts are remappable; typing and
 	// list-navigation keys stay fixed.
 	Keybindings map[string]string `json:"keybindings,omitempty"`
+
+	// DownloadPresets are user-defined download option bundles shown alongside
+	// the built-in presets in the Ctrl+D picker.
+	DownloadPresets []DownloadPreset `json:"download_presets,omitempty"`
+}
+
+// DownloadPreset bundles quality and post-processing choices for quick reuse.
+type DownloadPreset struct {
+	Name           string `json:"name"`
+	Quality        string `json:"quality"`
+	WriteSubs      bool   `json:"write_subs,omitempty"`
+	EmbedThumbnail bool   `json:"embed_thumbnail,omitempty"`
+	RateLimit      string `json:"rate_limit,omitempty"`
 }
 
 // DefaultKeybindings lists the global shortcuts that can be remapped. Keys
@@ -257,6 +270,24 @@ func Validate(cfg Config) error {
 		}
 		seen[binding] = action
 	}
+	presetNames := make(map[string]bool, len(cfg.DownloadPresets))
+	for _, preset := range cfg.DownloadPresets {
+		name := strings.TrimSpace(preset.Name)
+		if name == "" {
+			return fmt.Errorf("download_presets: preset name must not be empty")
+		}
+		lower := strings.ToLower(name)
+		if presetNames[lower] {
+			return fmt.Errorf("download_presets: duplicate preset name %q", name)
+		}
+		presetNames[lower] = true
+		if _, ok := qualityLabels[strings.ToLower(strings.TrimSpace(preset.Quality))]; !ok {
+			return fmt.Errorf("download_presets: preset %q has unsupported quality %q", name, preset.Quality)
+		}
+		if _, err := normalizeRateLimit(preset.RateLimit); err != nil {
+			return fmt.Errorf("download_presets: preset %q: %w", name, err)
+		}
+	}
 	return nil
 }
 
@@ -272,6 +303,18 @@ func normalize(cfg Config) Config {
 			bindings[action] = strings.ToLower(strings.TrimSpace(binding))
 		}
 		cfg.Keybindings = bindings
+	}
+	if len(cfg.DownloadPresets) > 0 {
+		presets := make([]DownloadPreset, len(cfg.DownloadPresets))
+		copy(presets, cfg.DownloadPresets)
+		for i := range presets {
+			presets[i].Name = strings.TrimSpace(presets[i].Name)
+			presets[i].Quality = normalizeQuality(presets[i].Quality)
+			if rate, err := normalizeRateLimit(presets[i].RateLimit); err == nil {
+				presets[i].RateLimit = rate
+			}
+		}
+		cfg.DownloadPresets = presets
 	}
 	return cfg
 }

@@ -26,7 +26,11 @@ All fields are optional. Any unset field uses ytui’s built-in default.
   "desktop_notifications": false,
   "autoplay_next": false,
   "thumbnail_cache_max_entries": 250,
-  "thumbnail_cache_max_age_days": 30
+  "thumbnail_cache_max_age_days": 30,
+  "download_presets": [
+    { "name": "Lecture", "quality": "720p", "write_subs": true },
+    { "name": "Podcast", "quality": "Audio only (mp3)", "rate_limit": "500K" }
+  ]
 }
 ```
 
@@ -40,6 +44,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `download_retry_attempts` | Automatic retries after a transient yt-dlp failure (network errors, timeouts, rate limits). `0` disables retries; maximum `10`. Permanent failures are never retried. | `0` |
 | `download_retry_backoff_seconds` | Base delay before the first retry, doubled on each subsequent attempt. `0` uses five seconds. | `5` |
 | `keybindings` | Object mapping global shortcut actions (for example `quit`, `download`, `search`) to key strings. See [Keybindings](keybindings.md#configurable-shortcuts). | built-in defaults |
+| `download_presets` | List of custom download presets (`name`, `quality`, `write_subs`, `embed_thumbnail`, `rate_limit`) added to the `Ctrl+D` preset row. | built-in presets only |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

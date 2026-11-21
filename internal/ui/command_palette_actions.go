@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"strconv"
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/textinput"
 
@@ -100,6 +103,29 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 		m.keyboardHelpOffset = 0
 		return m, nil
 	default:
+		if !strings.HasPrefix(id, "preset:") {
+			return m, nil
+		}
+		index, err := strconv.Atoi(strings.TrimPrefix(id, "preset:"))
+		if err != nil || index < 0 || index >= len(m.downloadPresets()) {
+			return m, nil
+		}
+		video, ok := m.selectedVideo()
+		if !ok {
+			m.statusMsg = "select a video first to apply a preset"
+			return m, nil
+		}
+		m.downloadPicker = true
+		m.downloadPickerVideo = &video
+		m.downloadPickerCursor = 0
+		m.downloadPickerQuality = 0
+		m.downloadPickerSubs = false
+		m.downloadPickerThumb = false
+		m.downloadPickerCookies = m.defaultCookieBrowserIndex()
+		m.downloadPickerRate = 0
+		m.downloadPickerRateValue = ""
+		m.downloadPickerPreset = index
+		m.applyDownloadPreset(index)
 		return m, nil
 	}
 	m.refreshList()

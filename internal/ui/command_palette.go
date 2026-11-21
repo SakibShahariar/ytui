@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -48,7 +49,15 @@ func filterPaletteCommands(commands []paletteCommand, query string) []paletteCom
 }
 
 func (m Model) filteredPaletteCommands() []paletteCommand {
-	return filterPaletteCommands(paletteCommands(), m.commandPaletteInput.Value())
+	commands := paletteCommands()
+	for i, preset := range m.downloadPresets() {
+		commands = append(commands, paletteCommand{
+			id:          fmt.Sprintf("preset:%d", i),
+			label:       "Download preset: " + preset.Name,
+			description: "Apply this preset to the selected video",
+		})
+	}
+	return filterPaletteCommands(commands, m.commandPaletteInput.Value())
 }
 
 func (m Model) commandPaletteContent(width, height int) string {
