@@ -51,6 +51,8 @@ type Store struct {
 	Subscriptions []Channel         `json:"subscriptions"`
 	History       []HistoryEntry    `json:"history"`
 	WatchLater    []WatchLaterEntry `json:"watch_later"`
+
+	SponsorBlockStats []SponsorBlockStat `json:"sponsorblock_stats,omitempty"`
 }
 
 func configDir() (string, error) {

@@ -128,6 +128,7 @@ func (m Model) skipCurrentSponsorSegment() (tea.Model, tea.Cmd) {
         }
         m.npPos = segment.End
         m.sponsorLastSkipped = sponsorSegmentKey(segment)
+        m.recordSponsorBlockSkip(segment.Category, segment.End-segment.Start)
         m.statusMsg = fmt.Sprintf("manually skipped %s segment (%s-%s)", segment.Category, formatDuration(segment.Start), formatDuration(segment.End))
         return m, nil
     }

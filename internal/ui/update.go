@@ -248,6 +248,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if seekErr := m.nowPlaying.SeekAbsolute(segment.End); seekErr == nil {
 					m.sponsorLastSkipped = key
 					m.npPos = segment.End
+					m.recordSponsorBlockSkip(segment.Category, segment.End-segment.Start)
 					m.statusMsg = fmt.Sprintf("SponsorBlock auto-skipped %s (%s-%s)", segment.Category, formatDuration(segment.Start), formatDuration(segment.End))
 					return m, nowPlayingTickCmd()
 				}

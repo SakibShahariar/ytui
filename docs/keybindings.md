@@ -109,7 +109,7 @@ See [the shared queue format](shared-queue.md) for the versioned JSON schema, pa
 
 ## SponsorBlock
 
-SponsorBlock is disabled by default. Press `Ctrl+B` to enable it and choose categories for automatic skipping. Categories left unchecked are still highlighted when their segments are near or active, and `Ctrl+J` manually skips an active segment. If the API is unavailable or a video has no submitted segments, playback continues normally. The lookup sends only the first four characters of the SHA-256 video-ID hash to SponsorBlock, not the raw video ID.
+SponsorBlock is disabled by default. Press `Ctrl+B` to enable it and choose categories for automatic skipping. Categories left unchecked are still highlighted when their segments are near or active, and `Ctrl+J` manually skips an active segment. Skip counts and estimated time saved are stored locally only; open the command palette and choose **SponsorBlock statistics** to view them, press `r` to reset, and `Esc` to close. If the API is unavailable or a video has no submitted segments, playback continues normally. The lookup sends only the first four characters of the SHA-256 video-ID hash to SponsorBlock, not the raw video ID.
 
 ## Offline downloads
 

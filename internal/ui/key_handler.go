@@ -52,6 +52,18 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if m.sponsorBlockStats {
+		switch key {
+		case "esc", "q":
+			m.sponsorBlockStats = false
+			return m, nil
+		case "r":
+			return m.resetSponsorBlockStats()
+		default:
+			return m, nil
+		}
+	}
+
 	if m.subtitlePicker {
 		switch key {
 		case "esc":

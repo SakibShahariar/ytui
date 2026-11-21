@@ -451,6 +451,7 @@ type Model struct {
 	transcriptMatches []int
 	transcriptMatchIndex int
 	sponsorBlockSettings bool
+	sponsorBlockStats bool
 	sponsorBlockCursor int
 	sponsorBlockDraftEnabled bool
 	sponsorBlockDraftCategories []string
