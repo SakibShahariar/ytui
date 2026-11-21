@@ -33,6 +33,9 @@ Commands:
   config export PATH           Export effective settings
   config import PATH [--yes]   Import settings with confirmation
   download [flags] URL         Download without starting the TUI
+  backup PATH [--yes] [--no-config] [--no-store] [--no-queue]
+                               Export settings and library data (no credentials)
+  restore PATH [--yes]         Restore a compatible backup
 
 Legacy flags remain supported:
   --version, --show-paths, --export-config FILE, --import-config FILE
@@ -68,6 +71,10 @@ Legacy flags remain supported:
 		return true, runConfigSubcommand(args[1:], stdin, stdout, assumeYes)
 	case "download":
 		return true, runDownloadCommand(args[1:], stdout, stderr)
+	case "backup":
+		return true, runBackupCommand(args[1:], stdout, stderr)
+	case "restore":
+		return true, runRestoreCommand(args[1:], stdout, stderr)
 	default:
 		return false, nil
 	}
