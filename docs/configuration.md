@@ -45,6 +45,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `download_retry_backoff_seconds` | Base delay before the first retry, doubled on each subsequent attempt. `0` uses five seconds. | `5` |
 | `keybindings` | Object mapping global shortcut actions (for example `quit`, `download`, `search`) to key strings. See [Keybindings](keybindings.md#configurable-shortcuts). | built-in defaults |
 | `download_presets` | List of custom download presets (`name`, `quality`, `write_subs`, `embed_thumbnail`, `rate_limit`) added to the `Ctrl+D` preset row. | built-in presets only |
+| `mouse_enabled` | Opt into mouse wheel scrolling and click-to-select in the TUI. Keyboard controls always work. | `false` |
 | `default_quality` | Preselected row in the download-options picker. | Best quality |
 | `default_cookies_browser` | Overrides browser auto-detection for cookies. | Auto-detected |
 | `default_audio_only` | Initial audio-only playback state. | `false` |

@@ -179,7 +179,11 @@ func main() {
 	if directURL != "" {
 		m = ui.NewWithURL(s, directURL)
 	}
-	p := tea.NewProgram(m, tea.WithAltScreen())
+	programOptions := []tea.ProgramOption{tea.WithAltScreen()}
+	if config.Load().MouseEnabled {
+		programOptions = append(programOptions, tea.WithMouseCellMotion())
+	}
+	p := tea.NewProgram(m, programOptions...)
 	finalModel, runErr := p.Run()
 	if final, ok := finalModel.(ui.Model); ok {
 		if cleanupErr := final.Cleanup(); cleanupErr != nil {

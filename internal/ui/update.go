@@ -35,6 +35,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 
+	case tea.MouseMsg:
+		return m.handleMouse(msg)
+
 	case directURLMsg:
 		m.directURL = ""
 		if msg.err != nil {

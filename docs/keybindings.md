@@ -2,6 +2,8 @@
 
 ytui uses a modeless interaction model: on the **Search** tab, typing any letter or digit automatically starts or continues editing the search query.
 
+Mouse support is opt-in with `"mouse_enabled": true` in `config.json`. When enabled, the wheel scrolls lists and the transcript viewer, and a left click selects the item under the cursor. All mouse actions are also available from the keyboard.
+
 Pressing an arrow key or `Enter` to play returns control to list browsing. Because ordinary letters can appear in a query, most global shortcuts use `Ctrl` combinations and work on every tab.
 
 ## Global keys

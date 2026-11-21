@@ -84,6 +84,10 @@ type Config struct {
 	// DownloadPresets are user-defined download option bundles shown alongside
 	// the built-in presets in the Ctrl+D picker.
 	DownloadPresets []DownloadPreset `json:"download_presets,omitempty"`
+
+	// MouseEnabled opts into mouse wheel scrolling and click-to-select in the
+	// TUI. Keyboard controls are unaffected either way.
+	MouseEnabled bool `json:"mouse_enabled,omitempty"`
 }
 
 // DownloadPreset bundles quality and post-processing choices for quick reuse.
