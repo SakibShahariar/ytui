@@ -26,8 +26,8 @@ import (
 // content. This delegate does its own truncation via uniseg instead.
 type ytDelegate struct{}
 
-func (ytDelegate) Height() int                       { return 2 }
-func (ytDelegate) Spacing() int                       { return 1 }
+func (ytDelegate) Height() int                         { return 2 }
+func (ytDelegate) Spacing() int                        { return 1 }
 func (ytDelegate) Update(tea.Msg, *list.Model) tea.Cmd { return nil }
 
 func (ytDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -79,9 +79,14 @@ func (i localDownloadItem) FilterValue() string { return i.file.Name }
 
 func formatBytes(n int64) string {
 	const unit = 1024
-	if n < unit { return fmt.Sprintf("%d B", n) }
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
 	div, exp := int64(unit), 0
-	for v := n / unit; v >= unit; v /= unit { div *= unit; exp++ }
+	for v := n / unit; v >= unit; v /= unit {
+		div *= unit
+		exp++
+	}
 	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
@@ -90,8 +95,16 @@ func (i videoItem) Title() string {
 }
 func (i videoItem) Description() string {
 	prefix := ""
-	if i.v.PlaylistIndex > 0 { prefix = fmt.Sprintf("#%d · ", i.v.PlaylistIndex) }
-	return fmt.Sprintf("%s%s · %s views", prefix, i.v.Channel, formatViews(i.v.ViewCount))
+	if i.v.PlaylistIndex > 0 {
+		prefix = fmt.Sprintf("#%d · ", i.v.PlaylistIndex)
+	}
+	description := prefix + i.v.Channel
+	// Search/API responses sometimes omit view counts entirely; do not
+	// present an unknown count as a real "0 views" value.
+	if i.v.ViewCount > 0 {
+		description += " · " + formatViews(i.v.ViewCount) + " views"
+	}
+	return description
 }
 func (i videoItem) FilterValue() string { return i.v.Title }
 
@@ -166,4 +179,3 @@ func wrapTwoLines(s string, width int) (line1, line2 string) {
 	}
 	return line1, line2
 }
-
