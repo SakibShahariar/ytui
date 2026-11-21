@@ -20,6 +20,23 @@ func TestUpdateCheckStatus(t *testing.T) {
 	}
 }
 
+func TestTerminalPaletteChangeRepaintsOnlyTerminalTheme(t *testing.T) {
+	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	m := Model{}
+	if err := applyTheme("light", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := m.Update(TerminalPaletteChangedMsg{}); cmd != nil {
+		t.Fatal("fixed-color theme should ignore palette changes")
+	}
+	if err := applyTheme("terminal", nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := m.Update(TerminalPaletteChangedMsg{}); cmd == nil {
+		t.Fatal("terminal theme should repaint on palette change")
+	}
+}
+
 func TestAutoUpdateRespectsConfig(t *testing.T) {
 	m := Model{cfg: configForUpdateTest(false, 0)}
 	if cmd := m.maybeAutoUpdateCmd(); cmd != nil {

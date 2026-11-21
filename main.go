@@ -8,9 +8,11 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"syscall"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -185,7 +187,24 @@ func main() {
 		programOptions = append(programOptions, tea.WithMouseCellMotion())
 	}
 	p := tea.NewProgram(m, programOptions...)
+	// Theme generators such as matugen can ask ytui to repaint after changing
+	// the terminal palette: `pkill -USR1 -x ytui`.
+	paletteSignals := make(chan os.Signal, 1)
+	signal.Notify(paletteSignals, syscall.SIGUSR1)
+	stopPaletteSignals := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-paletteSignals:
+				p.Send(ui.TerminalPaletteChangedMsg{})
+			case <-stopPaletteSignals:
+				return
+			}
+		}
+	}()
 	finalModel, runErr := p.Run()
+	close(stopPaletteSignals)
+	signal.Stop(paletteSignals)
 	if final, ok := finalModel.(ui.Model); ok {
 		if cleanupErr := final.Cleanup(); cleanupErr != nil {
 			fmt.Fprintln(os.Stderr, "cleanup warning:", cleanupErr)
@@ -203,7 +222,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
 
 // prepareDownloadDir validates a CLI download root and creates it if needed.
 func prepareDownloadDir(path string) (string, error) {

@@ -17,6 +17,11 @@ var appVersion = "dev"
 
 func SetVersion(version string) { appVersion = version }
 
+// TerminalPaletteChangedMsg asks the UI to repaint using the terminal's
+// current ANSI palette. Send it after a theme generator (e.g. matugen)
+// changes the terminal colors; it is a no-op for fixed-color themes.
+type TerminalPaletteChangedMsg struct{}
+
 type updateCheckMsg struct {
 	release update.Release
 	err     error

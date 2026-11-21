@@ -38,6 +38,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseMsg:
 		return m.handleMouse(msg)
 
+	case TerminalPaletteChangedMsg:
+		if activeTheme != "terminal" {
+			return m, nil
+		}
+		if err := applyTheme("terminal", nil); err != nil {
+			return m, nil
+		}
+		m.restyleComponents()
+		return m, tea.ClearScreen
+
 	case rssRefreshMsg:
 		return m.handleRSSRefresh(msg)
 
@@ -95,7 +105,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.inputMode = false
 		m.searchInput.Blur()
 		for i, track := range msg.tracks {
-			if track.Language == m.subtitleLanguage { m.subtitlePickerCursor = i + 1; break }
+			if track.Language == m.subtitleLanguage {
+				m.subtitlePickerCursor = i + 1
+				break
+			}
 		}
 		m.statusMsg = fmt.Sprintf("%d subtitle tracks available", len(msg.tracks))
 		return m, tea.ClearScreen
@@ -144,11 +157,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sharedQueueMsg:
 		if msg.err != nil {
 			logging.Error("shared queue read failed", msg.err)
-			if msg.manual || m.statusMsg == "" { m.statusMsg = "shared queue unavailable; local downloads still work" }
+			if msg.manual || m.statusMsg == "" {
+				m.statusMsg = "shared queue unavailable; local downloads still work"
+			}
 			return m, nil
 		}
 		if len(msg.items) == 0 {
-			if msg.manual { m.statusMsg = "shared queue is empty" }
+			if msg.manual {
+				m.statusMsg = "shared queue is empty"
+			}
 			return m, nil
 		}
 		return m.importSharedQueueItems(msg.items)
@@ -160,7 +177,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.statusMsg = fmt.Sprintf("imported %d item(s) from Ytrawl into Downloads", msg.count)
-		if m.activeTab == tabDownloads { m.refreshList() }
+		if m.activeTab == tabDownloads {
+			m.refreshList()
+		}
 		return m, nil
 
 	case sponsorSegmentsMsg:
@@ -245,7 +264,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// clearing playback state; the fresh IPC query has already failed.
 			m.saveResumePosition(true)
 			return m.clearNowPlaying()
-	}
+		}
 		m.npPos = pos
 		if m.cfg.SponsorBlockEnabled && m.playingVid != nil && !m.playingLocal && m.sponsorSegmentVideoID == m.playingVid.ID {
 			for _, segment := range m.sponsorSegments {
@@ -253,7 +272,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					continue
 				}
 				key := sponsorSegmentKey(segment)
-				if key == m.sponsorLastSkipped { continue }
+				if key == m.sponsorLastSkipped {
+					continue
+				}
 				if seekErr := m.nowPlaying.SeekAbsolute(segment.End); seekErr == nil {
 					m.sponsorLastSkipped = key
 					m.npPos = segment.End
@@ -476,4 +497,3 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
-
