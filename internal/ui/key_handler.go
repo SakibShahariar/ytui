@@ -51,6 +51,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key == "\x00" {
 		return m, nil
 	}
+	// A diagnostic stays visible until the next interaction, then clears so
+	// stale errors do not linger in the footer indefinitely.
+	if m.errMsg != "" {
+		m.errMsg = ""
+	}
 
 	if m.settingsView {
 		return m.handleSettingsKey(key, msg)

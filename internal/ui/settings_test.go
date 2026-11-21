@@ -85,6 +85,16 @@ func TestSettingsCommandOpensOverlay(t *testing.T) {
 	}
 }
 
+func TestErrorMessageClearsOnNextKey(t *testing.T) {
+	m := settingsTestModel(t)
+	m.settingsView = true
+	m.errMsg = "setting not saved: invalid value"
+	updated, _ := m.handleKey(tea.KeyMsg{Type: tea.KeyDown})
+	if updated.(Model).errMsg != "" {
+		t.Fatalf("error message persisted after next key: %q", updated.(Model).errMsg)
+	}
+}
+
 func TestSettingsContentShowsConfigPath(t *testing.T) {
 	m := settingsTestModel(t)
 	view := m.settingsContent(80)
