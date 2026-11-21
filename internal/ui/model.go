@@ -10,10 +10,10 @@ package ui
 import (
 	"net/http"
 	"os"
+	"time"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -23,9 +23,9 @@ import (
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/downloader"
 	"github.com/SakibShahariar/ytui/internal/library"
-	"github.com/SakibShahariar/ytui/internal/sharedqueue"
-	"github.com/SakibShahariar/ytui/internal/sponsorblock"
 	"github.com/SakibShahariar/ytui/internal/store"
+	"github.com/SakibShahariar/ytui/internal/sponsorblock"
+	"github.com/SakibShahariar/ytui/internal/sharedqueue"
 	"github.com/SakibShahariar/ytui/internal/ytapi"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
@@ -332,38 +332,31 @@ type playbackSession interface {
 
 // messages
 type searchResultsMsg struct {
-	results       []ytdlp.Video
-	err           error
+	results []ytdlp.Video
+	err error
 	playlistTitle string
 }
-type sharedQueueMsg struct {
-	items  []sharedqueue.Item
-	err    error
-	manual bool
-}
-type sharedQueueAckMsg struct {
-	count int
-	err   error
-}
+type sharedQueueMsg struct { items []sharedqueue.Item; err error; manual bool }
+type sharedQueueAckMsg struct { count int; err error }
 
 type sponsorSegmentsMsg struct {
-	videoID  string
+	videoID string
 	segments []sponsorblock.Segment
-	err      error
+	err error
 }
 type subtitleTracksMsg struct {
-	video  ytdlp.Video
+	video ytdlp.Video
 	tracks []ytdlp.SubtitleTrack
-	err    error
+	err error
 }
 type transcriptMsg struct {
 	video ytdlp.Video
-	text  string
-	err   error
+	text string
+	err error
 }
 type directURLMsg struct {
 	video ytdlp.Video
-	err   error
+	err error
 }
 type playbackStartedMsg struct {
 	p   playbackSession
@@ -372,16 +365,16 @@ type playbackStartedMsg struct {
 
 type downloadRemoveRequest struct {
 	videoID string
-	title   string
+	title string
 }
 
 type downloadCancelRequest struct {
 	videoID string
-	title   string
+	title string
 }
 
 type resumePrompt struct {
-	video    ytdlp.Video
+	video ytdlp.Video
 	position float64
 }
 type thumbShownMsg struct{ id string }
@@ -418,12 +411,12 @@ type channelVideosLoadedMsg struct {
 	err    error
 }
 type homeFeedLoadedMsg struct {
-	videos        []ytdlp.Video
-	failed        int
-	err           error
-	fromCache     bool
-	cacheAge      time.Duration
-	refresh       bool
+	videos []ytdlp.Video
+	failed int
+	err error
+	fromCache bool
+	cacheAge time.Duration
+	refresh bool
 	subscriptions []ytapi.Subscription
 }
 type likedLoadedMsg struct {
@@ -433,61 +426,61 @@ type likedLoadedMsg struct {
 
 // Model is the top-level Bubbletea model.
 type Model struct {
-	store         *store.Store
-	cfg           config.Config
+	store *store.Store
+	cfg   config.Config
 	activeProfile string
-	directURL     string
+	directURL string
 
-	activeTab                   tab
-	inputMode                   bool // true = typing in the search box; false = list navigation
-	searchInput                 textinput.Model
-	commandPalette              bool
-	commandPaletteInput         textinput.Model
-	commandPaletteCursor        int
-	subtitlePicker              bool
-	subtitlePickerVideo         *ytdlp.Video
-	subtitleTracks              []ytdlp.SubtitleTrack
-	subtitlePickerCursor        int
-	subtitleLanguage            string
-	transcriptViewer            bool
-	transcriptTitle             string
-	transcriptText              string
-	transcriptOffset            int
-	sponsorBlockSettings        bool
-	sponsorBlockCursor          int
-	sponsorBlockDraftEnabled    bool
+	activeTab   tab
+	inputMode   bool // true = typing in the search box; false = list navigation
+	searchInput textinput.Model
+	commandPalette bool
+	commandPaletteInput textinput.Model
+	commandPaletteCursor int
+	subtitlePicker bool
+	subtitlePickerVideo *ytdlp.Video
+	subtitleTracks []ytdlp.SubtitleTrack
+	subtitlePickerCursor int
+	subtitleLanguage string
+	transcriptViewer bool
+	transcriptTitle string
+	transcriptText string
+	transcriptOffset int
+	sponsorBlockSettings bool
+	sponsorBlockCursor int
+	sponsorBlockDraftEnabled bool
 	sponsorBlockDraftCategories []string
-	sponsorSegments             []sponsorblock.Segment
-	sponsorSegmentVideoID       string
-	sponsorLastSkipped          string
-	libraryFilterInput          textinput.Model
-	libraryFilter               string
-	libraryFilterMode           bool
-	downloadStatusFilter        int
-	libraryDateFilter           int
-	watchLaterSortMode          int
-	logoutPending               bool
-	queueRemovePending          *downloadRemoveRequest
-	watchLaterClearPending      bool
-	watchLaterBulkPending       bool
-	watchLaterSelected          map[string]bool
-	list                        list.Model
-	listPositions               map[tab]int
-	listTab                     tab
-	listTabReady                bool
-	spin                        spinner.Model
-	loading                     bool
-	everSearched                bool
+	sponsorSegments []sponsorblock.Segment
+	sponsorSegmentVideoID string
+	sponsorLastSkipped string
+	libraryFilterInput textinput.Model
+	libraryFilter string
+	libraryFilterMode bool
+	downloadStatusFilter int
+	libraryDateFilter int
+	watchLaterSortMode int
+	logoutPending bool
+	queueRemovePending *downloadRemoveRequest
+	watchLaterClearPending bool
+	watchLaterBulkPending bool
+	watchLaterSelected map[string]bool
+	list        list.Model
+	listPositions map[tab]int
+	listTab tab
+	listTabReady bool
+	spin        spinner.Model
+	loading      bool
+	everSearched bool
 
 	width, height int
 
 	statusMsg string
 	errMsg    string
 
-	nowPlaying   playbackSession
-	playingVid   *ytdlp.Video
+	nowPlaying playbackSession
+	playingVid *ytdlp.Video
 	playingLocal bool
-	audioOnly    bool
+	audioOnly  bool
 
 	npPos    float64
 	npDur    float64
@@ -505,25 +498,25 @@ type Model struct {
 	// repoints the widget at that tab's items) and back would show
 	// whatever tab you last visited instead of your search results —
 	// there was nowhere else the results were being kept.
-	searchResults       []list.Item
+	searchResults []list.Item
 	searchPlaylistTitle string
 
 	// --- Google login + real YouTube data (all optional; app works
 	// entirely without login using the local store) ---
-	loggedIn           bool
-	authClient         *http.Client
-	ytLoading          bool
-	showLoginHelp      bool
-	keyboardHelp       bool
+	loggedIn         bool
+	authClient       *http.Client
+	ytLoading        bool
+	showLoginHelp    bool
+	keyboardHelp     bool
 	keyboardHelpOffset int
-	credentialStep     int // 0 = inactive, 1 = collecting Client ID, 2 = collecting Client Secret
-	pendingClientID    string
-	pathInput          textinput.Model
+	credentialStep   int // 0 = inactive, 1 = collecting Client ID, 2 = collecting Client Secret
+	pendingClientID  string
+	pathInput        textinput.Model
 
-	realSubscriptions    []list.Item // populated from the API once logged in
-	browsingChannelID    string      // "" = showing the subscriptions list; else viewing this channel's uploads
+	realSubscriptions []list.Item // populated from the API once logged in
+	browsingChannelID    string  // "" = showing the subscriptions list; else viewing this channel's uploads
 	browsingChannelTitle string
-	channelVideos        []list.Item
+	channelVideos         []list.Item
 
 	playlists             []list.Item // top-level: the user's playlists
 	browsingPlaylistID    string      // "" = showing the playlist list; else viewing this playlist's videos
@@ -534,9 +527,9 @@ type Model struct {
 
 	homeFeed []list.Item
 
-	downloads            *downloader.Manager
-	offlineDownloads     bool
-	offlineFiles         []library.File
+	downloads *downloader.Manager
+	offlineDownloads bool
+	offlineFiles []library.File
 	offlineDeletePending *library.File
 
 	resumePrompt *resumePrompt
@@ -554,3 +547,4 @@ type Model struct {
 }
 
 // New builds the initial model.
+
