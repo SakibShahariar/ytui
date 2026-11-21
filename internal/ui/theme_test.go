@@ -28,7 +28,7 @@ func TestTerminalThemeUsesANSIPalette(t *testing.T) {
 	if err := applyTheme("terminal", nil); err != nil {
 		t.Fatal(err)
 	}
-	if string(ctpMauve) != "13" || string(ctpBase) != "0" || string(ctpText) != "15" {
+	if string(ctpMauve) != "5" || string(ctpBase) != "0" || string(ctpText) != "7" {
 		t.Fatalf("terminal palette = base %s, text %s, mauve %s", ctpBase, ctpText, ctpMauve)
 	}
 }

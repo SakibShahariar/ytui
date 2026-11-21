@@ -44,15 +44,15 @@ var builtinPalettes = map[string]palette{
 		pink: "#d33682", red: "#dc322f", peach: "#cb4b16", yellow: "#b58900",
 		green: "#859900", blue: "#268bd2", lavender: "#6c71c4",
 	},
-	// terminal defers to the terminal emulator's own ANSI palette: indices
-	// 0-7 are the normal colors and 8-15 the bright ones. Changing your
-	// terminal color scheme changes ytui without touching config.json.
+	// terminal defers to the terminal emulator's own ANSI palette. Use the
+	// normal colors (0-7) rather than bright variants: they follow the
+	// terminal's color scheme without the garish look of indices 8-15.
 	"terminal": {
-		base: "0", mantle: "8", text: "15", subtext1: "7",
-		subtext0: "8", overlay1: "8", overlay0: "8",
-		surface2: "8", surface1: "8", mauve: "13",
-		pink: "13", red: "9", peach: "11", yellow: "11",
-		green: "10", blue: "12", lavender: "13",
+		base: "0", mantle: "0", text: "7", subtext1: "7",
+		subtext0: "7", overlay1: "8", overlay0: "8",
+		surface2: "8", surface1: "8", mauve: "5",
+		pink: "5", red: "1", peach: "3", yellow: "3",
+		green: "2", blue: "4", lavender: "5",
 	},
 }
 
