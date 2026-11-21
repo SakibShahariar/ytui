@@ -122,13 +122,24 @@ func (m Model) previewVisible() bool {
 	return true
 }
 
+// minPanelContentWidth is the smallest inner width allowed for the main
+// panel. Terminals can transiently report zero or one column (for example
+// during a resize or in an embedded PTY), and View() subtracts borders and
+// padding from this width before building divider strings. Without a floor,
+// those string.Repeat counts go negative and the renderer panics.
+const minPanelContentWidth = 8
+
 // paneWidths returns (listWidth, previewWidth) in terminal columns. The
 // preview panel has a fixed width (like a lazygit side panel); the list
 // panel takes all remaining width, so it fills the screen on wide
 // terminals instead of leaving dead space.
 func (m Model) paneWidths() (listWidth, previewWidth int) {
 	if !m.previewVisible() {
-		return m.width - 2, 0
+		listWidth = m.width - 2
+		if listWidth < minPanelContentWidth {
+			listWidth = minPanelContentWidth
+		}
+		return listWidth, 0
 	}
 	previewWidth = int(float64(m.width) * previewWidthFraction)
 	if previewWidth > maxPreviewPanelWidth {
@@ -143,4 +154,3 @@ func (m Model) paneWidths() (listWidth, previewWidth int) {
 	}
 	return
 }
-
