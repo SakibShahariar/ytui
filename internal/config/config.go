@@ -97,6 +97,12 @@ func normalizeQuality(value string) string {
 
 // Validate checks user-provided fields before an imported config can replace
 // the active settings. Empty values mean "use the built-in default".
+// NormalizeRateLimit validates and canonicalizes a yt-dlp --limit-rate value
+// for callers outside the config package (for example the headless CLI).
+func NormalizeRateLimit(value string) (string, error) {
+	return normalizeRateLimit(value)
+}
+
 // normalizeRateLimit validates a yt-dlp --limit-rate value and returns its
 // canonical form. Accepted values are a positive integer with an optional
 // K, M, or G suffix (case-insensitive), matching yt-dlp's size syntax.

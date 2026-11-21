@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -101,6 +102,11 @@ func main() {
 
 	if handled, err := runSubcommand(flag.Args(), os.Stdin, os.Stdout, os.Stderr, *yes); handled {
 		if err != nil {
+			var exitErr *exitError
+			if errors.As(err, &exitErr) {
+				fmt.Fprintln(os.Stderr, "ytui:", exitErr)
+				os.Exit(exitErr.code)
+			}
 			fmt.Fprintln(os.Stderr, "ytui:", err)
 			os.Exit(2)
 		}

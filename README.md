@@ -123,6 +123,15 @@ ytui config export ~/ytui-settings.json
 ytui config import ~/ytui-settings.json
 ```
 
+Downloads can also be started without the TUI (global flags such as `--dir` go before the subcommand):
+
+```bash
+ytui --dir ~/Downloads/ytui download --audio --rate 500K "https://youtube.com/watch?v=VIDEO_ID"
+ytui --dir ~/Downloads/ytui download --queue "https://youtube.com/watch?v=VIDEO_ID"
+```
+
+The command reuses the same downloader and queue as the TUI. It exits `0` on success, `1` on download failures, and `2` for invalid arguments; `--queue` enqueues and exits, `--quiet` suppresses progress.
+
 Config exports contain preferences only — not OAuth tokens, credentials, subscriptions, history, or Watch Later entries. Logging is off by default; enable it with `--log-level error`, `info`, or `debug`. Playlist metadata is streamed and capped at 5,000 entries by default; set `YTUI_PLAYLIST_MAX_ENTRIES` to a value from 1 to 50,000 to change the limit.
 
 ## Documentation

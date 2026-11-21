@@ -32,6 +32,7 @@ Commands:
   profile remove NAME          Remove a named profile (asks for confirmation)
   config export PATH           Export effective settings
   config import PATH [--yes]   Import settings with confirmation
+  download [flags] URL         Download without starting the TUI
 
 Legacy flags remain supported:
   --version, --show-paths, --export-config FILE, --import-config FILE
@@ -65,6 +66,8 @@ Legacy flags remain supported:
 		return true, runProfileSubcommand(args[1:], stdin, stdout, assumeYes)
 	case "config":
 		return true, runConfigSubcommand(args[1:], stdin, stdout, assumeYes)
+	case "download":
+		return true, runDownloadCommand(args[1:], stdout, stderr)
 	default:
 		return false, nil
 	}
