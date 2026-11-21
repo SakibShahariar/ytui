@@ -118,13 +118,13 @@ func TestGetSubtitleTracksReportsNoCaptions(t *testing.T) {
 func TestParseTranscriptVTTStripsHeadersTimestampsAndMarkup(t *testing.T) {
 	input := []byte("WEBVTT\r\n\r\n00:00:00.000 --> 00:00:01.000\r\n<v Speaker>Hello &amp; welcome</v>\r\n\r\n00:00:01.000 --> 00:00:02.000\r\nHello &amp; welcome\r\n\r\n00:00:02.000 --> 00:00:03.000\r\n<c.green>Next line</c>\r\n")
 	got := parseTranscriptVTT(input)
-	want := "Hello & welcome\nNext line"
+	want := "[00:00:00] Hello & welcome\n[00:00:02] Next line"
 	if got != want { t.Fatalf("parseTranscriptVTT() = %q, want %q", got, want) }
 }
 
 func TestParseTranscriptVTTSkipsNumericCueIdentifiers(t *testing.T) {
 	input := []byte("WEBVTT\n\n42\n00:00:00.000 --> 00:00:01.000\nCaption\n")
-	if got := parseTranscriptVTT(input); got != "Caption" {
+	if got := parseTranscriptVTT(input); got != "[00:00:00] Caption" {
 		t.Fatalf("parseTranscriptVTT() = %q, want Caption", got)
 	}
 }
@@ -143,7 +143,7 @@ func TestGetTranscriptUsesSelectedLanguageAndReadsVTT(t *testing.T) {
 	defer func() { binaryName = old }()
 	got, err := GetTranscript("https://www.youtube.com/watch?v=example", "fr")
 	if err != nil { t.Fatalf("GetTranscript() error = %v", err) }
-	if got != "Bonjour le monde" { t.Fatalf("transcript = %q, want Bonjour le monde", got) }
+	if got != "[00:00:00] Bonjour le monde" { t.Fatalf("transcript = %q, want timestamped caption", got) }
 }
 
 func TestGetTranscriptReportsMissingCaptionFile(t *testing.T) {

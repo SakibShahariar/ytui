@@ -446,6 +446,10 @@ type Model struct {
 	transcriptTitle string
 	transcriptText string
 	transcriptOffset int
+	transcriptSearchMode bool
+	transcriptSearchInput textinput.Model
+	transcriptMatches []int
+	transcriptMatchIndex int
 	sponsorBlockSettings bool
 	sponsorBlockCursor int
 	sponsorBlockDraftEnabled bool

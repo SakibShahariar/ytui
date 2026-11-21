@@ -106,6 +106,30 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.transcriptViewer {
+		if m.transcriptSearchMode {
+			switch key {
+			case "esc":
+				m.transcriptSearchMode = false
+				m.transcriptSearchInput.Blur()
+				return m, nil
+			case "enter":
+				m.transcriptMatches = searchTranscript(m.transcriptText, m.transcriptSearchInput.Value())
+				m.transcriptMatchIndex = 0
+				m.transcriptSearchMode = false
+				m.transcriptSearchInput.Blur()
+				if len(m.transcriptMatches) > 0 {
+					m.transcriptOffset = m.transcriptMatches[0]
+					m.statusMsg = fmt.Sprintf("transcript match 1/%d", len(m.transcriptMatches))
+				} else {
+					m.statusMsg = "no transcript matches"
+				}
+				return m, nil
+			default:
+				var cmd tea.Cmd
+				m.transcriptSearchInput, cmd = m.transcriptSearchInput.Update(msg)
+				return m, cmd
+			}
+		}
 		lines := strings.Split(m.transcriptText, "\n")
 		maxOffset := len(lines) - (m.panelHeight() - 5)
 		if maxOffset < 0 { maxOffset = 0 }
@@ -114,9 +138,39 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.transcriptViewer = false
 			m.transcriptText = ""
 			m.transcriptTitle = ""
+			m.transcriptSearchMode = false
+			m.transcriptSearchInput.Blur()
+			m.transcriptMatches = nil
+			m.transcriptMatchIndex = 0
 			return m, nil
 		case "ctrl+c":
 			return m, tea.Quit
+		case "/", "ctrl+f":
+			m.transcriptSearchMode = true
+			m.transcriptSearchInput.Focus()
+			return m, nil
+		case "n", "N":
+			if len(m.transcriptMatches) == 0 { return m, nil }
+			if key == "n" {
+				m.transcriptMatchIndex = (m.transcriptMatchIndex + 1) % len(m.transcriptMatches)
+			} else {
+				m.transcriptMatchIndex = (m.transcriptMatchIndex - 1 + len(m.transcriptMatches)) % len(m.transcriptMatches)
+			}
+			m.transcriptOffset = m.transcriptMatches[m.transcriptMatchIndex]
+			if m.transcriptOffset > maxOffset { m.transcriptOffset = maxOffset }
+			m.statusMsg = fmt.Sprintf("transcript match %d/%d", m.transcriptMatchIndex+1, len(m.transcriptMatches))
+			return m, nil
+		case "g":
+			if len(m.transcriptMatches) == 0 || m.nowPlaying == nil { return m, nil }
+			line := lines[m.transcriptMatches[m.transcriptMatchIndex]]
+			seconds, ok := transcriptLineSeconds(line)
+			if !ok { return m, nil }
+			if err := m.nowPlaying.SeekAbsolute(seconds); err != nil {
+				m.statusMsg = "transcript seek failed: " + err.Error()
+			} else {
+				m.statusMsg = fmt.Sprintf("jumped to %s", line[strings.Index(line, "["):strings.Index(line, "]")+1])
+			}
+			return m, nil
 		case "up":
 			if m.transcriptOffset > 0 { m.transcriptOffset-- }
 			return m, nil

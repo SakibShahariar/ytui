@@ -63,6 +63,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.transcriptTitle = msg.video.Title
 		m.transcriptText = msg.text
 		m.transcriptOffset = 0
+		m.transcriptMatches = nil
+		m.transcriptMatchIndex = 0
+		m.transcriptSearchMode = false
+		m.transcriptSearchInput.SetValue("")
 		m.inputMode = false
 		m.searchInput.Blur()
 		m.statusMsg = "transcript loaded: " + msg.video.Title

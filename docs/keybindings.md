@@ -99,7 +99,7 @@ On the live Downloads tab, `Ctrl+Space` pauses or resumes the selected queued or
 
 ## Subtitles and transcripts
 
-Select a video and press `Ctrl+V` to inspect available manual subtitles and automatic captions. Choose a language with `↑` / `↓` and `Enter`; the selected language is used for subsequent playback and for downloads when the subtitle option is enabled in `Ctrl+D`. Press `Ctrl+E` to fetch and read the transcript in the TUI. The transcript viewer scrolls with `↑` / `↓`, pages with `PgUp` / `PgDn`, jumps with `Home` / `End`, and closes with `Esc` or `q`. Caption availability depends on yt-dlp and the video; errors are reported without interrupting playback.
+Select a video and press `Ctrl+V` to inspect available manual subtitles and automatic captions. Choose a language with `↑` / `↓` and `Enter`; the selected language is used for subsequent playback and for downloads when the subtitle option is enabled in `Ctrl+D`. Press `Ctrl+E` to fetch and read the transcript in the TUI. Timestamps are shown with each caption. The transcript viewer scrolls with `↑` / `↓`, pages with `PgUp` / `PgDn`, jumps with `Home` / `End`, and closes with `Esc` or `q`. Press `/` or `Ctrl+F` to search the transcript, `Enter` to find matches, `n` / `N` to move between them, and `g` to seek playback to the current match's timestamp. Caption availability depends on yt-dlp and the video; errors are reported without interrupting playback.
 
 ## Shared queue with Ytrawl
 

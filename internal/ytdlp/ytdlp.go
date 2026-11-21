@@ -442,21 +442,32 @@ func GetTranscript(videoURL, language string) (string, error) {
 }
 
 var (
-	transcriptTimestampRE = regexp.MustCompile(`^[0-9]{2}:[0-9]{2}(:[0-9]{2})?[.][0-9]{3}[[:space:]]+-->`)
+	transcriptCueRE = regexp.MustCompile(`^([0-9]{2}):([0-9]{2})(?::([0-9]{2}))?[.][0-9]{3}[[:space:]]+-->`)
 	transcriptTagRE = regexp.MustCompile(`<[^>]*>`)
 	transcriptCueNumberRE = regexp.MustCompile(`^[0-9]+$`)
 )
 
-// parseTranscriptVTT removes WebVTT headers, cue timing and markup, returning
-// readable caption text with consecutive duplicate lines collapsed.
+// parseTranscriptVTT removes WebVTT headers and markup, returning readable
+// caption text with consecutive duplicate lines collapsed. Each caption keeps
+// its cue start time as a "[MM:SS]" or "[HH:MM:SS]" prefix so the transcript
+// viewer can jump to that point in the video.
 func parseTranscriptVTT(data []byte) string {
 	text := strings.TrimPrefix(string(data), "\ufeff")
 	lines := strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n")
 	var captions []string
 	previous := ""
+	stamp := ""
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.EqualFold(line, "WEBVTT") || strings.HasPrefix(line, "NOTE") || strings.EqualFold(line, "STYLE") || strings.EqualFold(line, "REGION") || transcriptTimestampRE.MatchString(line) || transcriptCueNumberRE.MatchString(line) {
+		if match := transcriptCueRE.FindStringSubmatch(line); match != nil {
+			if match[3] != "" {
+				stamp = fmt.Sprintf("%s:%s:%s", match[1], match[2], match[3])
+			} else {
+				stamp = match[1] + ":" + match[2]
+			}
+			continue
+		}
+		if line == "" || strings.EqualFold(line, "WEBVTT") || strings.HasPrefix(line, "NOTE") || strings.EqualFold(line, "STYLE") || strings.EqualFold(line, "REGION") || transcriptCueNumberRE.MatchString(line) {
 			continue
 		}
 		line = transcriptTagRE.ReplaceAllString(line, "")
@@ -465,7 +476,11 @@ func parseTranscriptVTT(data []byte) string {
 		if line == "" || line == previous {
 			continue
 		}
-		captions = append(captions, line)
+		if stamp != "" {
+			captions = append(captions, "["+stamp+"] "+line)
+		} else {
+			captions = append(captions, line)
+		}
 		previous = line
 	}
 	return strings.Join(captions, "\n")

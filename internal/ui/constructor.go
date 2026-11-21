@@ -51,6 +51,10 @@ func New(s *store.Store) Model {
 	fi.PlaceholderStyle = lipgloss.NewStyle().Foreground(ctpOverlay0)
 	fi.Cursor.Style = lipgloss.NewStyle().Foreground(ctpMauve)
 
+	tsi := textinput.New()
+	tsi.Placeholder = "Search transcript…"
+	tsi.CharLimit = 200
+
 	pi := textinput.New()
 	pi.Placeholder = "paste here…"
 	pi.PromptStyle = lipgloss.NewStyle().Foreground(ctpGreen)
@@ -90,6 +94,7 @@ func New(s *store.Store) Model {
 		searchInput:    ti,
 		commandPaletteInput: ci,
 		libraryFilterInput: fi,
+		transcriptSearchInput: tsi,
 		pathInput:      pi,
 		list:           l,
 		listPositions:  make(map[tab]int),

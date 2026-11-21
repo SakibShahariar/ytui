@@ -413,9 +413,28 @@ func (m Model) transcriptViewerContent(width, height int) string {
 	if end > len(lines) { end = len(lines) }
 	heading := lipgloss.NewStyle().Bold(true).Foreground(ctpMauve).Render("Transcript · " + truncate(m.transcriptTitle, width))
 	visible := make([]string, 0, end-offset)
-	for _, line := range lines[offset:end] {
-		visible = append(visible, lipgloss.NewStyle().MaxWidth(width).Render(truncate(line, width)))
+	matchSet := make(map[int]bool, len(m.transcriptMatches))
+	for _, index := range m.transcriptMatches {
+		matchSet[index] = true
 	}
-	footer := lipgloss.NewStyle().Foreground(ctpOverlay1).Render("↑↓ scroll · PgUp/PgDn page · Home/End jump · Esc close")
-	return strings.Join([]string{heading, strings.Join(visible, "\n"), footer}, "\n")
+	for i := offset; i < end; i++ {
+		line := lines[i]
+		style := lipgloss.NewStyle().MaxWidth(width)
+		if matchSet[i] {
+			style = style.Foreground(ctpYellow)
+		}
+		visible = append(visible, style.Render(truncate(line, width)))
+	}
+	searchBar := ""
+	if m.transcriptSearchMode || m.transcriptSearchInput.Value() != "" {
+		searchBar = m.transcriptSearchInput.View()
+		if len(m.transcriptMatches) > 0 {
+			searchBar += fmt.Sprintf("  %d/%d", m.transcriptMatchIndex+1, len(m.transcriptMatches))
+		}
+	}
+	footer := lipgloss.NewStyle().Foreground(ctpOverlay1).Render("↑↓ scroll · / find · n/N next match · g jump · PgUp/PgDn page · Esc close")
+	parts := []string{heading}
+	if searchBar != "" { parts = append(parts, searchBar) }
+	parts = append(parts, strings.Join(visible, "\n"), footer)
+	return strings.Join(parts, "\n")
 }
