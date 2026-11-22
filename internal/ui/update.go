@@ -489,9 +489,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case spinnerWakeMsg:
+		if !m.spinRunning && (m.loading || m.ytLoading) {
+			m.spinRunning = true
+			return m, m.spin.Tick
+		}
+		return m, spinnerWakeCmd()
+
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spin, cmd = m.spin.Update(msg)
+		if !m.loading && !m.ytLoading {
+			m.spinRunning = false
+			return m, spinnerWakeCmd()
+		}
 		return m, cmd
 	}
 
