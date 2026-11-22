@@ -63,7 +63,7 @@ var builtinPalettes = map[string]palette{
 func applyTheme(name string, overrides map[string]string) error {
 	name = strings.ToLower(strings.TrimSpace(name))
 	if name == "" {
-		name = "default"
+		name = "terminal"
 	}
 	base, ok := builtinPalettes[name]
 	if !ok {
@@ -111,7 +111,7 @@ func applyTheme(name string, overrides map[string]string) error {
 	return nil
 }
 
-var activeTheme = "default"
+var activeTheme = "terminal"
 
 // restyleComponents rebuilds styles that were captured when the text inputs
 // and list were created. Without this, a live theme switch would leave those

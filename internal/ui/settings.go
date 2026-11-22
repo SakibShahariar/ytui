@@ -41,7 +41,7 @@ func settingsValue(cfg config.Config, name string) string {
 	switch name {
 	case "theme":
 		if cfg.Theme == "" {
-			return "default"
+			return "terminal"
 		}
 		return cfg.Theme
 	case "download_dir":

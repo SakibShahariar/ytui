@@ -39,6 +39,16 @@ func TestRestyleComponentsFollowsTheme(t *testing.T) {
 	}
 }
 
+func TestEmptyThemeDefaultsToTerminalPalette(t *testing.T) {
+	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	if err := applyTheme("", nil); err != nil {
+		t.Fatal(err)
+	}
+	if string(ctpMauve) != "5" || activeTheme != "terminal" {
+		t.Fatalf("default palette = mauve %s, active %q", ctpMauve, activeTheme)
+	}
+}
+
 func TestTerminalThemeUsesANSIPalette(t *testing.T) {
 	t.Cleanup(func() { _ = applyTheme("default", nil) })
 	if err := applyTheme("terminal", nil); err != nil {
