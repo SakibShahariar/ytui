@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/exec"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -74,44 +74,49 @@ func New(s *store.Store) Model {
 	l.DisableQuitKeybindings()
 
 	sp := spinner.New()
-	sp.Spinner = spinner.Dot
+	sp.Spinner = spinner.MiniDot
+	sp.Style = lipgloss.NewStyle().Foreground(ctpOverlay0)
 
 	cfg, cfgErr := config.LoadWithError()
 	activeProfile, profileErr := auth.ActiveProfile()
-	if activeProfile == "" { activeProfile = "default" }
+	if activeProfile == "" {
+		activeProfile = "default"
+	}
 	if override := os.Getenv("YTUI_DOWNLOAD_DIR"); override != "" {
 		cfg.DownloadDir = override
 	}
 	dl, downloadErr := downloader.NewWithConcurrency(cfg.DownloadDir, cfg.MaxConcurrentDownloads)
 
 	m := Model{
-		store:          s,
-		cfg:            cfg,
-		downloadStatusFilter: cfg.DownloadStatusFilter,
-		activeProfile:  activeProfile,
-		activeTab:      tabSearch,
-		inputMode:      true,
-		searchInput:    ti,
-		commandPaletteInput: ci,
-		libraryFilterInput: fi,
+		store:                 s,
+		cfg:                   cfg,
+		downloadStatusFilter:  cfg.DownloadStatusFilter,
+		activeProfile:         activeProfile,
+		activeTab:             tabSearch,
+		inputMode:             true,
+		searchInput:           ti,
+		commandPaletteInput:   ci,
+		libraryFilterInput:    fi,
 		transcriptSearchInput: tsi,
-		pathInput:      pi,
-		list:           l,
-		listPositions:  make(map[tab]int),
-		listTab:        tabSearch,
-		listTabReady:   true,
-		spin:           sp,
-		width:          defaultWidth,
-		height:         defaultHeight,
-		previewEnabled: thumb.Supported(), // auto-on in Kitty; press 't' to disable if it glitches
-		downloads:      dl,
-		audioOnly:      cfg.DefaultAudioOnly,
+		pathInput:             pi,
+		list:                  l,
+		listPositions:         make(map[tab]int),
+		listTab:               tabSearch,
+		listTabReady:          true,
+		spin:                  sp,
+		width:                 defaultWidth,
+		height:                defaultHeight,
+		previewEnabled:        thumb.Supported(), // auto-on in Kitty; press 't' to disable if it glitches
+		downloads:             dl,
+		audioOnly:             cfg.DefaultAudioOnly,
 	}
 	if cfgErr != nil {
 		m.errMsg = "config: " + cfgErr.Error()
 	}
 	if profileErr != nil {
-		if m.errMsg != "" { m.errMsg += "; " }
+		if m.errMsg != "" {
+			m.errMsg += "; "
+		}
 		m.errMsg += "auth profile: " + profileErr.Error()
 	}
 	if downloadErr != nil {
@@ -165,4 +170,3 @@ func (m Model) Init() tea.Cmd {
 	}
 	return tea.Batch(cmds...)
 }
-

@@ -37,11 +37,13 @@ func (m Model) View() string {
 	var b strings.Builder
 
 	profileName := m.activeProfile
-	if profileName == "" { profileName = "default" }
+	if profileName == "" {
+		profileName = "default"
+	}
 	loginStatus := lipgloss.NewStyle().Foreground(ctpOverlay0).Render("○ not logged in · profile: " + profileName)
 	if m.loggedIn {
 		loginStatus = lipgloss.NewStyle().Foreground(ctpGreen).Render("●") + " " +
-			lipgloss.NewStyle().Foreground(ctpSubtext0).Render("logged in · profile: " + profileName)
+			lipgloss.NewStyle().Foreground(ctpSubtext0).Render("logged in · profile: "+profileName)
 	}
 	titleLine := titleStyle.Render("ytui") + "  " + subtitleStyle.Render("youtube, in your terminal") +
 		"   " + loginStatus
@@ -67,10 +69,15 @@ func (m Model) View() string {
 
 	var listContent strings.Builder
 	if m.activeTab == tabSearch && !m.commandPalette && !m.subtitlePicker && !m.transcriptViewer && !m.sponsorBlockSettings {
-		listContent.WriteString(m.searchInput.View())
+		searchLine := m.searchInput.View()
 		if m.loading {
-			listContent.WriteString("  " + m.spin.View())
+			// textinput renders a fixed-width field; render a compact line
+			// instead so the indicator sits next to the query.
+			searchLine = lipgloss.NewStyle().Foreground(ctpMauve).Render("🔍 ") +
+				lipgloss.NewStyle().Foreground(ctpText).Render(m.searchInput.Value()) +
+				lipgloss.NewStyle().Foreground(ctpOverlay0).Render("  searching ") + m.spin.View()
 		}
+		listContent.WriteString(searchLine)
 		listContent.WriteString("\n")
 		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
 		listContent.WriteString("\n")
@@ -80,26 +87,26 @@ func (m Model) View() string {
 		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
 		listContent.WriteString("\n")
 	} else if (m.activeTab == tabHistory || m.activeTab == tabDownloads) && m.libraryFilter != "" {
-		listContent.WriteString(lipgloss.NewStyle().Foreground(ctpSubtext0).Render("Filter: "+m.libraryFilter))
+		listContent.WriteString(lipgloss.NewStyle().Foreground(ctpSubtext0).Render("Filter: " + m.libraryFilter))
 		listContent.WriteString("\n")
 		listContent.WriteString(dividerStyle.Render(strings.Repeat("─", listWidth-2)))
 		listContent.WriteString("\n")
 	}
 	switch {
 	case m.channelManager:
-		listContent.WriteString(m.channelManagerContent(listWidth-4))
+		listContent.WriteString(m.channelManagerContent(listWidth - 4))
 	case m.rssViewer:
-		listContent.WriteString(m.rssViewerContent(listWidth-4))
+		listContent.WriteString(m.rssViewerContent(listWidth - 4))
 	case m.settingsView:
-		listContent.WriteString(m.settingsContent(listWidth-4))
+		listContent.WriteString(m.settingsContent(listWidth - 4))
 	case m.sponsorBlockStats:
-		listContent.WriteString(m.sponsorBlockStatsContent(listWidth-4))
+		listContent.WriteString(m.sponsorBlockStatsContent(listWidth - 4))
 	case m.sponsorBlockSettings:
-		listContent.WriteString(m.sponsorBlockSettingsContent(listWidth-4))
+		listContent.WriteString(m.sponsorBlockSettingsContent(listWidth - 4))
 	case m.transcriptViewer:
 		listContent.WriteString(m.transcriptViewerContent(listWidth-4, panelH-4))
 	case m.subtitlePicker:
-		listContent.WriteString(m.subtitlePickerContent(listWidth-4))
+		listContent.WriteString(m.subtitlePickerContent(listWidth - 4))
 	case m.commandPalette:
 		listContent.WriteString(m.commandPaletteContent(listWidth-4, panelH-4))
 	case m.downloadPicker:
@@ -282,7 +289,9 @@ func (m Model) nowPlayingBar() string {
 		lipgloss.NewStyle().Foreground(ctpSubtext0).Render(timeStr)
 	if highlight := m.nextSponsorHighlight(); highlight != "" {
 		highlightWidth := m.width / 2
-		if highlightWidth < 18 { highlightWidth = 18 }
+		if highlightWidth < 18 {
+			highlightWidth = 18
+		}
 		progressRow += "  " + lipgloss.NewStyle().Foreground(ctpYellow).Render(truncate(highlight, highlightWidth))
 	}
 
