@@ -317,7 +317,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case thumbShownMsg:
 		m.previewedID = msg.id
-		return m, nil
+		// Kitty draws images outside Bubble Tea's render loop. Repaint the
+		// text layer so stale border glyphs from the previous layout cannot
+		// survive underneath or beside the new image.
+		return m, tea.ClearScreen
 	case thumbErrMsg:
 		logging.Error("thumbnail preview failed", msg.err)
 		m.errMsg = "thumbnail: " + msg.err.Error()
