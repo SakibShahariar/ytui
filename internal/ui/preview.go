@@ -1,11 +1,42 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/SakibShahariar/ytui/internal/thumb"
 	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
+
+// previewFooterLines builds the fixed-height text block below the thumbnail.
+// Every row is clamped to innerW so a long title or separator can never wrap
+// and bleed into the neighbouring panel.
+func previewFooterLines(v ytdlp.Video, innerW int) []string {
+	if innerW < 8 {
+		innerW = 8
+	}
+	lines := make([]string, previewFooterRows-1)
+	titleStyle := lipgloss.NewStyle().Foreground(ctpText).Bold(true)
+	titleLine1, titleLine2 := wrapTwoLines(v.Title, innerW)
+	lines[0] = titleStyle.MaxWidth(innerW).Render(truncate(titleLine1, innerW))
+	lines[1] = titleStyle.MaxWidth(innerW).Render(truncate(titleLine2, innerW))
+	// A short centered separator cannot overflow even if geometry drifts.
+	lines[2] = lipgloss.NewStyle().Foreground(ctpSurface1).Width(innerW).
+		Align(lipgloss.Center).Render(strings.Repeat("─", 12))
+	lines[3] = lipgloss.NewStyle().Foreground(ctpSubtext1).MaxWidth(innerW).
+		Render("📺 " + truncate(v.Channel, innerW-4))
+	if v.Duration > 0 {
+		lines[4] = lipgloss.NewStyle().Foreground(ctpSubtext0).MaxWidth(innerW).
+			Render("⏱  " + formatDuration(v.Duration))
+	}
+	if v.ViewCount > 0 {
+		lines[5] = lipgloss.NewStyle().Foreground(ctpSubtext0).MaxWidth(innerW).
+			Render("👁  " + truncate(formatViews(v.ViewCount)+" views", innerW-4))
+	}
+	return lines
+}
 
 // refreshPreview clears any currently-drawn thumbnail and redraws one for
 // whatever's now selected, if applicable. Call this any time the *visible
@@ -76,4 +107,3 @@ const (
 // "how many lines does this reserve" constants have been the source of
 // real layout bugs here before (image overlapping text, overflow).
 const nowPlayingInfoRows = 7
-

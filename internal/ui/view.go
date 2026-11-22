@@ -155,21 +155,7 @@ func (m Model) View() string {
 		}
 		footer := make([]string, previewFooterRows-1)
 		if v, ok := m.selectedVideo(); ok {
-			titleStyle := lipgloss.NewStyle().Foreground(ctpText).Bold(true)
-			titleLine1, titleLine2 := wrapTwoLines(v.Title, innerW)
-			footer[0] = titleStyle.MaxWidth(innerW).Render(titleLine1)
-			footer[1] = titleStyle.MaxWidth(innerW).Render(titleLine2)
-			footer[2] = dividerStyle.MaxWidth(innerW).Render(strings.Repeat("─", innerW))
-			footer[3] = lipgloss.NewStyle().Foreground(ctpSubtext1).MaxWidth(innerW).
-				Render("📺 " + truncate(v.Channel, innerW-4))
-			if v.Duration > 0 {
-				footer[4] = lipgloss.NewStyle().Foreground(ctpSubtext0).MaxWidth(innerW).
-					Render("⏱  " + formatDuration(v.Duration))
-			}
-			if v.ViewCount > 0 {
-				footer[5] = lipgloss.NewStyle().Foreground(ctpSubtext0).MaxWidth(innerW).
-					Render("👁  " + truncate(formatViews(v.ViewCount)+" views", innerW-4))
-			}
+			footer = previewFooterLines(v, innerW)
 		}
 		pv.WriteString(strings.Join(footer, "\n"))
 
