@@ -144,6 +144,11 @@ func New(s *store.Store) Model {
 	}
 	m.applyConfiguredTheme()
 	m.applyListSize()
+	// Kitty images live in the terminal, not in this process. Clear anything
+	// left behind by an earlier ytui session before drawing new previews.
+	if thumb.Supported() {
+		_ = thumb.Clear()
+	}
 	return m
 }
 
