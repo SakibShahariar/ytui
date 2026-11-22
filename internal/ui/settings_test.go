@@ -64,10 +64,10 @@ func TestSettingsToggleAndEdit(t *testing.T) {
 	if !m.settingsEditing {
 		t.Fatal("enter did not start editing a string field")
 	}
-	m.settingsInput.SetValue("high-contrast")
+	m.settingsInput.SetValue("dracula")
 	updated, _ = m.handleSettingsKey("enter", tea.KeyMsg{Type: tea.KeyEnter})
 	m = updated.(Model)
-	if m.cfg.Theme != "high-contrast" || m.settingsEditing {
+	if m.cfg.Theme != "dracula" || m.settingsEditing {
 		t.Fatalf("edit result = theme %q, editing %v", m.cfg.Theme, m.settingsEditing)
 	}
 }

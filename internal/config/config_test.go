@@ -14,18 +14,18 @@ func TestImportExportRoundTrip(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", configHome)
 
 	want := Config{
-		DownloadDir:           "/tmp/ytui-downloads",
-		DownloadSort:          "progress",
-		DownloadStatusFilter:  2,
-		MaxConcurrentDownloads: 3,
-		DefaultQuality:        "1080p",
-		DefaultCookiesBrowser: "firefox",
-		DefaultAudioOnly:          true,
+		DownloadDir:              "/tmp/ytui-downloads",
+		DownloadSort:             "progress",
+		DownloadStatusFilter:     2,
+		MaxConcurrentDownloads:   3,
+		DefaultQuality:           "1080p",
+		DefaultCookiesBrowser:    "firefox",
+		DefaultAudioOnly:         true,
 		DisableResumePrompt:      true,
-		DesktopNotifications:      true,
-		AutoplayNext:              true,
-		ThumbnailCacheMaxEntries:  120,
-		ThumbnailCacheMaxAgeDays:  14,
+		DesktopNotifications:     true,
+		AutoplayNext:             true,
+		ThumbnailCacheMaxEntries: 120,
+		ThumbnailCacheMaxAgeDays: 14,
 	}
 	input := filepath.Join(t.TempDir(), "settings.json")
 	data, err := json.Marshal(want)
@@ -151,12 +151,12 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 }
 
 func TestThemeValidation(t *testing.T) {
-	for _, theme := range []string{"", "default", "minimal", "high-contrast", "light", "terminal", " TERMINAL "} {
+	for _, theme := range []string{"", "terminal", "catppuccin-mocha", "nord", "gruvbox-dark", "dracula", "solarized-dark", "solarized-light", "tokyo-night", "rose-pine", "one-dark", " TERMINAL "} {
 		if err := Validate(Config{Theme: theme}); err != nil {
 			t.Errorf("Validate(Theme=%q) error = %v", theme, err)
 		}
 	}
-	for _, theme := range []string{"dark", "solarized"} {
+	for _, theme := range []string{"dark", "nord-light"} {
 		if err := Validate(Config{Theme: theme}); err == nil {
 			t.Errorf("Validate(Theme=%q) unexpectedly succeeded", theme)
 		}
@@ -178,8 +178,8 @@ func TestThemeValidation(t *testing.T) {
 			t.Errorf("Validate(Colors=%v) unexpectedly succeeded", colors)
 		}
 	}
-	cfg := normalize(Config{Theme: " LIGHT "})
-	if cfg.Theme != "light" {
+	cfg := normalize(Config{Theme: " TERMINAL "})
+	if cfg.Theme != "terminal" {
 		t.Fatalf("normalized theme = %q", cfg.Theme)
 	}
 }
@@ -304,7 +304,6 @@ func TestReadNormalizesStableQualityIdentifier(t *testing.T) {
 	}
 }
 
-
 func TestLoadWithErrorMissingFileUsesDefaults(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	got, err := LoadWithError()
@@ -349,7 +348,6 @@ func TestLoadWithErrorReportsInvalidConfigValues(t *testing.T) {
 		t.Fatalf("LoadWithError() error = %v, want invalid quality reported", err)
 	}
 }
-
 
 func TestConfigPathOverride(t *testing.T) {
 	override := filepath.Join(t.TempDir(), "portable", "settings.json")

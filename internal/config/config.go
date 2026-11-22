@@ -89,8 +89,8 @@ type Config struct {
 	// TUI. Keyboard controls are unaffected either way.
 	MouseEnabled bool `json:"mouse_enabled,omitempty"`
 
-	// Theme selects a built-in color profile: default, minimal,
-	// high-contrast, or light. Empty uses the default.
+	// Theme selects a built-in color profile (see BuiltinThemes). Empty
+	// uses the terminal palette.
 	Theme string `json:"theme,omitempty"`
 
 	// Colors overrides individual palette roles (for example "mauve" or
@@ -145,7 +145,10 @@ var DefaultKeybindings = map[string]string{
 }
 
 // BuiltinThemes are the selectable color profiles.
-var BuiltinThemes = []string{"default", "minimal", "high-contrast", "light", "terminal"}
+var BuiltinThemes = []string{
+	"terminal", "catppuccin-mocha", "nord", "gruvbox-dark", "dracula",
+	"solarized-dark", "solarized-light", "tokyo-night", "rose-pine", "one-dark",
+}
 
 // ColorRoles are the palette roles that can be overridden in config.json.
 var ColorRoles = []string{
@@ -320,7 +323,7 @@ func Validate(cfg Config) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("theme %q is not supported (use default, minimal, high-contrast, light, or terminal)", cfg.Theme)
+			return fmt.Errorf("theme %q is not supported (use one of: %s)", cfg.Theme, strings.Join(BuiltinThemes, ", "))
 		}
 	}
 	validRoles := make(map[string]bool, len(ColorRoles))

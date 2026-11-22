@@ -23,7 +23,7 @@ func TestUpdateCheckStatus(t *testing.T) {
 func TestTerminalPaletteChangeRepaintsOnlyTerminalTheme(t *testing.T) {
 	t.Cleanup(func() { _ = applyTheme("default", nil) })
 	m := Model{}
-	if err := applyTheme("light", nil); err != nil {
+	if err := applyTheme("solarized-light", nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, cmd := m.Update(TerminalPaletteChangedMsg{}); cmd != nil {

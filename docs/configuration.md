@@ -46,7 +46,7 @@ All fields are optional. Any unset field uses ytui’s built-in default.
 | `keybindings` | Object mapping global shortcut actions (for example `quit`, `download`, `search`) to key strings. See [Keybindings](keybindings.md#configurable-shortcuts). | built-in defaults |
 | `download_presets` | List of custom download presets (`name`, `quality`, `write_subs`, `embed_thumbnail`, `rate_limit`) added to the `Ctrl+D` preset row. | built-in presets only |
 | `mouse_enabled` | Opt into mouse wheel scrolling and click-to-select in the TUI. Keyboard controls always work. | `false` |
-| `theme` | Built-in color profile: `terminal` (uses your terminal emulator's ANSI palette), `default`, `minimal`, `high-contrast`, or `light`. Also switchable from the command palette. | `terminal` |
+| `theme` | Built-in color profile: `terminal` (follows your terminal palette), `catppuccin-mocha`, `nord`, `gruvbox-dark`, `dracula`, `solarized-dark`, `solarized-light`, `tokyo-night`, `rose-pine`, or `one-dark`. Also switchable from the command palette. | `terminal` |
 
 The `terminal` theme emits indexed ANSI colors, so most terminals recolor the whole window automatically when a theme generator such as **matugen** changes the palette. If your terminal does not repaint existing cells, add a hook to your matugen command:
 

@@ -11,25 +11,25 @@ import (
 )
 
 func TestApplyThemeChangesPaletteAndStyles(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
-	if err := applyTheme("high-contrast", nil); err != nil {
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
+	if err := applyTheme("dracula", nil); err != nil {
 		t.Fatal(err)
 	}
-	if string(ctpBase) != "#000000" || string(ctpMauve) != "#ffff00" {
+	if string(ctpBase) != "#282a36" || string(ctpMauve) != "#bd93f9" {
 		t.Fatalf("palette = base %s, mauve %s", ctpBase, ctpMauve)
 	}
 	if !strings.Contains(titleStyle.Render("ytui"), "ytui") {
 		t.Fatal("styled title lost its text")
 	}
-	if activeTheme != "high-contrast" {
+	if activeTheme != "dracula" {
 		t.Fatalf("activeTheme = %q", activeTheme)
 	}
 }
 
 func TestRestyleComponentsFollowsTheme(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
 	m := Model{searchInput: textinput.New()}
-	if err := applyTheme("high-contrast", nil); err != nil {
+	if err := applyTheme("dracula", nil); err != nil {
 		t.Fatal(err)
 	}
 	m.restyleComponents()
@@ -40,7 +40,7 @@ func TestRestyleComponentsFollowsTheme(t *testing.T) {
 }
 
 func TestEmptyThemeDefaultsToTerminalPalette(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
 	if err := applyTheme("", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestEmptyThemeDefaultsToTerminalPalette(t *testing.T) {
 }
 
 func TestTerminalThemeUsesANSIPalette(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
 	if err := applyTheme("terminal", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -60,8 +60,8 @@ func TestTerminalThemeUsesANSIPalette(t *testing.T) {
 }
 
 func TestApplyThemeColorOverrides(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
-	if err := applyTheme("minimal", map[string]string{"mauve": "#ff00ff"}); err != nil {
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
+	if err := applyTheme("nord", map[string]string{"mauve": "#ff00ff"}); err != nil {
 		t.Fatal(err)
 	}
 	if string(ctpMauve) != "#ff00ff" {
@@ -70,17 +70,17 @@ func TestApplyThemeColorOverrides(t *testing.T) {
 }
 
 func TestThemeAvailableInCommandPalette(t *testing.T) {
-	t.Cleanup(func() { _ = applyTheme("default", nil) })
-	m := Model{cfg: config.Config{Theme: "default"}}
+	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
+	m := Model{cfg: config.Config{Theme: "terminal"}}
 	m.commandPaletteInput.SetValue("theme:")
 	commands := m.filteredPaletteCommands()
 	if len(commands) != len(config.BuiltinThemes) {
 		t.Fatalf("theme commands = %d, want %d", len(commands), len(config.BuiltinThemes))
 	}
 	m.cfg.Colors = map[string]string{"mauve": "#ff00ff"}
-	updated, _ := m.executePaletteCommand("theme:light")
+	updated, _ := m.executePaletteCommand("theme:dracula")
 	result := updated.(Model)
-	if result.cfg.Theme != "light" || activeTheme != "light" {
+	if result.cfg.Theme != "dracula" || activeTheme != "dracula" {
 		t.Fatalf("theme not switched: cfg %q, active %q", result.cfg.Theme, activeTheme)
 	}
 	if len(result.cfg.Colors) != 0 || string(ctpMauve) == "#ff00ff" {
