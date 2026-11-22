@@ -28,9 +28,7 @@ func loadDirectURLWith(videoURL string, getVideo func(string) (ytdlp.Video, erro
 }
 
 func doSearch(query string) tea.Cmd {
-	if ytdlp.IsPlaylistURL(query) {
-		return loadPlaylistCmd(query)
-	}
+	if ytdlp.IsPlaylistURL(query) { return loadPlaylistCmd(query) }
 	return doSearchWith(query, ytdlp.Search)
 }
 
@@ -160,57 +158,52 @@ func downloadsTickCmd() tea.Cmd {
 	})
 }
 
+
 const (
 	maxTranscriptCacheEntries = 32
-	maxTranscriptCacheBytes   = 4 << 20
+	maxTranscriptCacheBytes = 4 << 20
 )
 
 type transcriptCacheKey struct {
-	videoID  string
+	videoID string
 	language string
 }
 
 type transcriptCacheEntry struct {
-	key  transcriptCacheKey
+	key transcriptCacheKey
 	text string
 }
 
 type transcriptCache struct {
-	mu         sync.Mutex
-	entries    map[transcriptCacheKey]*list.Element
-	order      *list.List
-	bytes      int
+	mu sync.Mutex
+	entries map[transcriptCacheKey]*list.Element
+	order *list.List
+	bytes int
 	maxEntries int
-	maxBytes   int
+	maxBytes int
 }
 
 func newTranscriptCache(maxEntries, maxBytes int) *transcriptCache {
 	return &transcriptCache{
-		entries:    make(map[transcriptCacheKey]*list.Element),
-		order:      list.New(),
+		entries: make(map[transcriptCacheKey]*list.Element),
+		order: list.New(),
 		maxEntries: maxEntries,
-		maxBytes:   maxBytes,
+		maxBytes: maxBytes,
 	}
 }
 
 func (cache *transcriptCache) get(key transcriptCacheKey) (string, bool) {
-	if cache == nil || key.videoID == "" {
-		return "", false
-	}
+	if cache == nil || key.videoID == "" { return "", false }
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 	element, ok := cache.entries[key]
-	if !ok {
-		return "", false
-	}
+	if !ok { return "", false }
 	cache.order.MoveToFront(element)
 	return element.Value.(transcriptCacheEntry).text, true
 }
 
 func (cache *transcriptCache) put(key transcriptCacheKey, text string) {
-	if cache == nil || key.videoID == "" || text == "" || len(text) > cache.maxBytes || cache.maxEntries < 1 || cache.maxBytes < 1 {
-		return
-	}
+	if cache == nil || key.videoID == "" || text == "" || len(text) > cache.maxBytes || cache.maxEntries < 1 || cache.maxBytes < 1 { return }
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 	if old, ok := cache.entries[key]; ok {
@@ -234,9 +227,7 @@ var sharedTranscriptCache = newTranscriptCache(maxTranscriptCacheEntries, maxTra
 
 func transcriptCacheLanguage(language string) string {
 	language = strings.TrimSpace(language)
-	if language == "" {
-		return "en.*,en"
-	}
+	if language == "" { return "en.*,en" }
 	return language
 }
 
