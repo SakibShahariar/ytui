@@ -152,7 +152,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = m.showThumbnailCmd(vi.v)
 			}
 		}
-		return m, cmd
+		return m, tea.Batch(tea.ClearScreen, cmd)
 
 	case sharedQueueMsg:
 		if msg.err != nil {
@@ -372,7 +372,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.realSubscriptions = items
 		if m.activeTab == tabSubscriptions {
 			m.refreshList()
-			return m, m.refreshPreview()
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -408,7 +408,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.playlistVideos = items
 		if m.activeTab == tabPlaylists && m.browsingPlaylistID != "" {
 			m.refreshList()
-			return m, m.refreshPreview()
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -426,7 +426,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.channelVideos = items
 		if m.activeTab == tabSubscriptions && m.browsingChannelID != "" {
 			m.refreshList()
-			return m, m.refreshPreview()
+			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -462,9 +462,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.refreshList()
 			previewCmd := m.refreshPreview()
 			if msg.fromCache && msg.refresh {
-				return m, tea.Batch(previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
+				return m, tea.Batch(tea.ClearScreen, previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
 			}
-			return m, previewCmd
+			return m, tea.Batch(tea.ClearScreen, previewCmd)
 		}
 		if msg.fromCache && msg.refresh {
 			return m, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions)
