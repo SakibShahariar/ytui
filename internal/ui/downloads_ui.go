@@ -226,6 +226,10 @@ func (m Model) startPickedDownload() (tea.Model, tea.Cmd) {
 	}
 	wasActive := m.downloads.Active()
 	queued := m.downloads.Enqueue(v.ID, v.Title, v.Channel, v.URL, opts)
+	// Follow the transfer: the Downloading tab only exists while work is in
+	// flight, so switching here makes live progress immediately visible.
+	m.activeTab = tabDownloading
+	m.refreshList()
 	if queued.Opts.ForceOverwrite {
 		m.statusMsg = "re-downloading with new options (previous output may be overwritten): " + v.Title
 	} else {

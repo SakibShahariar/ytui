@@ -9,6 +9,7 @@ import (
 
 	"github.com/SakibShahariar/ytui/internal/config"
 	"github.com/SakibShahariar/ytui/internal/downloader"
+	"github.com/SakibShahariar/ytui/internal/ytdlp"
 )
 
 func downloadingTestModel(t *testing.T) Model {
@@ -58,6 +59,29 @@ func TestDownloadingTabShowsOnlyActiveItems(t *testing.T) {
 	items := m.currentListItems()
 	if len(items) != 1 || items[0].(downloadItem).d.VideoID != "v1" {
 		t.Fatalf("active items = %v", items)
+	}
+}
+
+func TestStartingDownloadSwitchesToDownloadingTab(t *testing.T) {
+	m := downloadingTestModel(t)
+	binDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(binDir, "yt-dlp"), []byte("#!/bin/sh\nsleep 10\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	manager, err := downloader.NewWithConcurrency(filepath.Join(t.TempDir(), "downloads"), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Shutdown()
+	m.downloads = manager
+	m.list = list.New(nil, ytDelegate{}, 60, 9)
+	m.activeTab = tabSearch
+	m.downloadPicker = true
+	m.downloadPickerVideo = &ytdlp.Video{ID: "v1", Title: "Video", URL: "https://example.com/v"}
+	updated, _ := m.startPickedDownload()
+	if updated.(Model).activeTab != tabDownloading {
+		t.Fatalf("active tab after starting download = %v, want Downloading", updated.(Model).activeTab)
 	}
 }
 
