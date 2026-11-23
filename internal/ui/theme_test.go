@@ -70,6 +70,7 @@ func TestApplyThemeColorOverrides(t *testing.T) {
 }
 
 func TestThemeAvailableInCommandPalette(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // palette switch writes the theme
 	t.Cleanup(func() { _ = applyTheme("catppuccin-mocha", nil) })
 	m := Model{cfg: config.Config{Theme: "terminal"}}
 	m.commandPaletteInput.SetValue("theme:")
