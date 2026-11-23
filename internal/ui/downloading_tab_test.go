@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -39,6 +40,18 @@ func TestDownloadingTabOnlyVisibleWhenActive(t *testing.T) {
 
 func TestDownloadingTabShowsOnlyActiveItems(t *testing.T) {
 	m := downloadingTestModel(t)
+	// Keep the fake transfer alive so it cannot finish before the assertion.
+	binDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(binDir, "yt-dlp"), []byte("#!/bin/sh\nsleep 10\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	manager, err := downloader.NewWithConcurrency(filepath.Join(t.TempDir(), "downloads"), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer manager.Shutdown()
+	m.downloads = manager
 	m.downloads.Enqueue("v1", "Active", "Channel", "https://example.com/v", downloader.Options{})
 	m.activeTab = tabDownloading
 	m.list = list.New(nil, ytDelegate{}, 60, 9)
