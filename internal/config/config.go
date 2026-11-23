@@ -7,8 +7,10 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"unicode"
@@ -507,6 +509,9 @@ func Save(cfg Config) error {
 // SetTheme changes only the theme and color overrides, leaving every other
 // saved preference untouched. Use this instead of Save for theme switches.
 func SetTheme(theme string, colors map[string]string) error {
+	if _, file, line, ok := runtime.Caller(1); ok {
+		slog.Info("theme preference written", "theme", theme, "caller", fmt.Sprintf("%s:%d", file, line))
+	}
 	p, err := path()
 	if err != nil {
 		return err
