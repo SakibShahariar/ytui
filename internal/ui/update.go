@@ -152,7 +152,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = m.showThumbnailCmd(vi.v)
 			}
 		}
-		return m, tea.Batch(tea.ClearScreen, cmd)
+		return m, tea.Sequence(tea.ClearScreen, cmd)
 
 	case sharedQueueMsg:
 		if msg.err != nil {
@@ -317,10 +317,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case thumbShownMsg:
 		m.previewedID = msg.id
-		// Kitty draws images outside Bubble Tea's render loop. Repaint the
-		// text layer so stale border glyphs from the previous layout cannot
-		// survive underneath or beside the new image.
-		return m, tea.ClearScreen
+		return m, nil
 	case thumbErrMsg:
 		logging.Error("thumbnail preview failed", msg.err)
 		m.errMsg = "thumbnail: " + msg.err.Error()
@@ -375,7 +372,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.realSubscriptions = items
 		if m.activeTab == tabSubscriptions {
 			m.refreshList()
-			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+			return m, tea.Sequence(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -411,7 +408,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.playlistVideos = items
 		if m.activeTab == tabPlaylists && m.browsingPlaylistID != "" {
 			m.refreshList()
-			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+			return m, tea.Sequence(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -429,7 +426,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.channelVideos = items
 		if m.activeTab == tabSubscriptions && m.browsingChannelID != "" {
 			m.refreshList()
-			return m, tea.Batch(tea.ClearScreen, m.refreshPreview())
+			return m, tea.Sequence(tea.ClearScreen, m.refreshPreview())
 		}
 		return m, nil
 
@@ -477,9 +474,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				previewCmd = m.refreshPreview()
 			}
 			if msg.fromCache && msg.refresh {
-				return m, tea.Batch(tea.ClearScreen, previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
+				return m, tea.Sequence(tea.ClearScreen, previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
 			}
-			return m, tea.Batch(tea.ClearScreen, previewCmd)
+			return m, tea.Sequence(tea.ClearScreen, previewCmd)
 		}
 		if msg.fromCache && msg.refresh {
 			return m, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions)
