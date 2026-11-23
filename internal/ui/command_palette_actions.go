@@ -130,7 +130,7 @@ func (m Model) executePaletteCommand(id string) (tea.Model, tea.Cmd) {
 			m.restyleComponents()
 			m.cfg.Theme = name
 			m.cfg.Colors = nil
-			if err := config.Save(m.cfg); err != nil {
+			if err := config.SetTheme(name, nil); err != nil {
 				m.errMsg = "save theme: " + err.Error()
 			} else if hadOverrides {
 				m.statusMsg = "theme set to " + name + " (custom colors cleared)"

@@ -142,6 +142,13 @@ func settingsSet(cfg *config.Config, name, value string) error {
 	default:
 		return fmt.Errorf("unknown setting %q", name)
 	}
+	if name == "theme" {
+		if err := config.SetTheme(value, cfg.Colors); err != nil {
+			return err
+		}
+		cfg.Theme = value
+		return nil
+	}
 	if err := config.Validate(candidate); err != nil {
 		return err
 	}

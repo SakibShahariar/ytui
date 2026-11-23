@@ -67,8 +67,8 @@ type Config struct {
 	SponsorBlockEnabled bool `json:"sponsorblock_enabled,omitempty"`
 	// SponsorBlockCategories lists categories to skip automatically. When not configured,
 	// ytui defaults to sponsor and selfpromo; an explicit empty list disables auto-skip.
-	SponsorBlockCategories []string `json:"sponsorblock_categories,omitempty"`
-	SponsorBlockCategoriesConfigured bool `json:"sponsorblock_categories_configured,omitempty"`
+	SponsorBlockCategories           []string `json:"sponsorblock_categories,omitempty"`
+	SponsorBlockCategoriesConfigured bool     `json:"sponsorblock_categories_configured,omitempty"`
 
 	// ThumbnailCacheMaxEntries bounds the number of cached thumbnails; zero uses the default.
 	ThumbnailCacheMaxEntries int `json:"thumbnail_cache_max_entries,omitempty"`
@@ -187,19 +187,19 @@ func validKeyBinding(value string) bool {
 }
 
 var qualityLabels = map[string]string{
-	"best": "Best quality (video+audio)",
-	"best-quality": "Best quality (video+audio)",
-	"best_quality": "Best quality (video+audio)",
+	"best":                       "Best quality (video+audio)",
+	"best-quality":               "Best quality (video+audio)",
+	"best_quality":               "Best quality (video+audio)",
 	"best quality (video+audio)": "Best quality (video+audio)",
-	"1080p": "1080p",
-	"720p": "720p",
-	"480p": "480p",
-	"audio-mp3": "Audio only (mp3)",
-	"audio_mp3": "Audio only (mp3)",
-	"audio only (mp3)": "Audio only (mp3)",
-	"audio-opus": "Audio only (opus)",
-	"audio_opus": "Audio only (opus)",
-	"audio only (opus)": "Audio only (opus)",
+	"1080p":                      "1080p",
+	"720p":                       "720p",
+	"480p":                       "480p",
+	"audio-mp3":                  "Audio only (mp3)",
+	"audio_mp3":                  "Audio only (mp3)",
+	"audio only (mp3)":           "Audio only (mp3)",
+	"audio-opus":                 "Audio only (opus)",
+	"audio_opus":                 "Audio only (opus)",
+	"audio only (opus)":          "Audio only (opus)",
 }
 
 // normalizeQuality converts stable machine-readable identifiers to the
@@ -494,6 +494,35 @@ func Save(cfg Config) error {
 	if err != nil {
 		return err
 	}
+	// Theme and color overrides belong to SetTheme. Preserving them here
+	// prevents an older in-memory config from resurrecting a stale theme
+	// whenever an unrelated preference is saved.
+	if existing, readErr := read(p); readErr == nil {
+		cfg.Theme = existing.Theme
+		cfg.Colors = existing.Colors
+	}
+	return write(p, cfg)
+}
+
+// SetTheme changes only the theme and color overrides, leaving every other
+// saved preference untouched. Use this instead of Save for theme switches.
+func SetTheme(theme string, colors map[string]string) error {
+	p, err := path()
+	if err != nil {
+		return err
+	}
+	cfg, err := read(p)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		cfg = Config{}
+	}
+	cfg.Theme = theme
+	cfg.Colors = colors
+	if err := Validate(cfg); err != nil {
+		return err
+	}
 	return write(p, cfg)
 }
 
@@ -519,5 +548,9 @@ func Import(source string) error {
 	if err := Validate(cfg); err != nil {
 		return err
 	}
-	return Save(cfg)
+	p, err := path()
+	if err != nil {
+		return err
+	}
+	return write(p, cfg)
 }

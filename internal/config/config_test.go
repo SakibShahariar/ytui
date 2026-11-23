@@ -150,6 +150,27 @@ func TestDownloadRateLimitValidation(t *testing.T) {
 	}
 }
 
+func TestSavePreservesPersistedTheme(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if err := SetTheme("dracula", nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(Config{DownloadRateLimit: "500K"}); err != nil {
+		t.Fatal(err)
+	}
+	loaded := Load()
+	if loaded.Theme != "dracula" || loaded.DownloadRateLimit != "500K" {
+		t.Fatalf("after unrelated save: %#v", loaded)
+	}
+	if err := SetTheme("nord", nil); err != nil {
+		t.Fatal(err)
+	}
+	loaded = Load()
+	if loaded.Theme != "nord" || loaded.DownloadRateLimit != "500K" {
+		t.Fatalf("after theme switch: %#v", loaded)
+	}
+}
+
 func TestThemeValidation(t *testing.T) {
 	for _, theme := range []string{"", "terminal", "catppuccin-mocha", "nord", "gruvbox-dark", "dracula", "solarized-dark", "solarized-light", "tokyo-night", "rose-pine", "one-dark", " TERMINAL "} {
 		if err := Validate(Config{Theme: theme}); err != nil {
