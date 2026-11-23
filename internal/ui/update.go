@@ -462,8 +462,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusMsg = "Home feed refreshed"
 		}
 		if m.activeTab == tabHome {
+			// Home loads twice (cached, then network). If the selected video
+			// is unchanged, leave its thumbnail alone: overlapping image
+			// clear/redraws leave stale fragments in the terminal.
+			previousID := ""
+			if previous, ok := m.selectedVideo(); ok {
+				previousID = previous.ID
+			}
 			m.refreshList()
-			previewCmd := m.refreshPreview()
+			var previewCmd tea.Cmd
+			if current, ok := m.selectedVideo(); ok && current.ID != "" && current.ID == previousID && m.previewedID == current.ID {
+				previewCmd = nil
+			} else {
+				previewCmd = m.refreshPreview()
+			}
 			if msg.fromCache && msg.refresh {
 				return m, tea.Batch(tea.ClearScreen, previewCmd, fetchHomeFeedNetworkCmd(m.authClient, msg.subscriptions))
 			}
