@@ -35,6 +35,13 @@ func (m Model) contextualHelp() string {
 	if _, ok := m.selectedVideo(); ok {
 		parts = append(parts, "^s: sub", "^w: later", "^d: download")
 	}
+	if m.activeTab == tabDownloading {
+		parts = append(parts, "^d: cancel")
+		if m.downloads != nil {
+			active, queued, limit := m.downloads.QueueCounts()
+			parts = append(parts, fmt.Sprintf("%d active · %d queued · max %d", active, queued, limit))
+		}
+	}
 	if m.activeTab == tabDownloads {
 		if m.offlineDownloads {
 			if hasItems { parts = append(parts, "enter: play", "delete: remove (confirm with y)") }

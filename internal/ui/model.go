@@ -43,9 +43,10 @@ const (
 	tabWatchLater
 	tabHistory
 	tabDownloads
+	tabDownloading
 )
 
-var tabNames = []string{"Search", "Now Playing", "Home", "Subs", "Playlists", "Liked", "Watch Later", "History", "Downloads"}
+var tabNames = []string{"Search", "Now Playing", "Home", "Subs", "Playlists", "Liked", "Watch Later", "History", "Downloads", "Downloading"}
 
 // visibleTabs returns which tabs currently show in the tab bar. Now
 // Playing only appears while something's actually playing — showing an
@@ -56,6 +57,10 @@ func (m Model) visibleTabs() []tab {
 	for i := range tabNames {
 		t := tab(i)
 		if t == tabNowPlaying && m.nowPlaying == nil {
+			continue
+		}
+		if t == tabDownloading && m.activeTab != tabDownloading &&
+			(m.downloads == nil || !m.downloads.Active()) {
 			continue
 		}
 		out = append(out, t)

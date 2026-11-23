@@ -307,11 +307,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, positionTickCmd()
 
 	case downloadsTickMsg:
-		if m.activeTab == tabDownloads {
+		if m.activeTab == tabDownloads || m.activeTab == tabDownloading {
 			m.refreshList()
 		}
 		if m.downloads != nil && m.downloads.Active() {
 			return m, downloadsTickCmd()
+		}
+		if m.activeTab == tabDownloading {
+			m.activeTab = tabDownloads
+			m.refreshList()
 		}
 		return m, nil
 

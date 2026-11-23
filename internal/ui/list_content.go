@@ -128,6 +128,17 @@ func (m Model) currentListItems() []list.Item {
 			items = append(items, downloadItem{d})
 		}
 		return items
+	case tabDownloading:
+		if m.downloads == nil {
+			return nil
+		}
+		items := make([]list.Item, 0)
+		for _, d := range m.downloads.List() {
+			if d.Status == downloader.StatusQueued || d.Status == downloader.StatusDownloading || d.Status == downloader.StatusPaused {
+				items = append(items, downloadItem{d})
+			}
+		}
+		return items
 	case tabHome:
 		return m.homeFeed
 	case tabSubscriptions:
