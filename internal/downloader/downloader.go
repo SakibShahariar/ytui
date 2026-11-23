@@ -445,6 +445,15 @@ func progressPhaseForLine(line string) string {
 	case strings.HasPrefix(line, "[download]"):
 		if strings.Contains(line, "Destination:") { return "Preparing download" }
 		if progressPercentRe.MatchString(line) { return "Downloading" }
+	case strings.HasPrefix(line, "[youtube]"):
+		// Metadata extraction can take several seconds before any byte
+		// counter appears; surface it so the queue does not look frozen.
+		if strings.Contains(line, "Extracting URL") { return "Resolving URL" }
+		if strings.Contains(line, "Downloading webpage") { return "Fetching video info" }
+		if strings.Contains(line, "player API") || strings.Contains(line, "player response") { return "Fetching video info" }
+		if strings.Contains(line, "Downloading m3u8") { return "Resolving formats" }
+	case strings.HasPrefix(line, "[info]"):
+		if strings.Contains(line, "Downloading") { return "Preparing formats" }
 	case strings.HasPrefix(line, "[Merger]"):
 		return "Merging formats"
 	case strings.HasPrefix(line, "[VideoRemuxer]"):
