@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strings"
+	"sync/atomic"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -45,7 +46,14 @@ func previewFooterLines(v ytdlp.Video, innerW int) []string {
 // Without this, an old thumbnail (drawn outside Bubbletea's own render
 // loop, so it isn't naturally cleared by a normal redraw) stays on screen
 // after switching to a tab/state that has nothing to do with it.
+// thumbnailGeneration invalidates in-flight image draws. A download command
+// that started before a newer clear must not paint an old image afterwards.
+var thumbnailGeneration atomic.Int64
+
+func currentThumbnailGeneration() int64 { return thumbnailGeneration.Load() }
+
 func (m *Model) refreshPreview() tea.Cmd {
+	thumbnailGeneration.Add(1)
 	_ = thumb.Clear()
 	m.previewedID = ""
 	if m.activeTab == tabNowPlaying {
@@ -68,6 +76,7 @@ func (m Model) showThumbnailCmd(v ytdlp.Video) tea.Cmd {
 		return nil
 	}
 	col, row, cols, rows := m.previewImageRegion()
+	generation := currentThumbnailGeneration()
 	return func() tea.Msg {
 		path, err := thumb.DownloadWithPolicy(v.Thumbnail, v.ID, thumb.CachePolicy{
 			MaxEntries: m.cfg.ThumbnailCacheMaxEntries,
@@ -75,6 +84,9 @@ func (m Model) showThumbnailCmd(v ytdlp.Video) tea.Cmd {
 		})
 		if err != nil {
 			return thumbErrMsg{err}
+		}
+		if generation != currentThumbnailGeneration() {
+			return nil // a newer preview superseded this one
 		}
 		_ = thumb.Clear()
 		if err := thumb.ShowWithPolicy(path, col, row, cols, rows, thumb.CachePolicy{

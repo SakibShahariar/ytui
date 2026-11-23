@@ -46,10 +46,14 @@ func (m Model) nowPlayingThumbCmd() tea.Cmd {
 	}
 	v := *m.playingVid
 	col, row, cols, rows := m.nowPlayingImageRegion()
+	generation := currentThumbnailGeneration()
 	return func() tea.Msg {
 		path, err := thumb.Download(v.Thumbnail, v.ID)
 		if err != nil {
 			return thumbErrMsg{err}
+		}
+		if generation != currentThumbnailGeneration() {
+			return nil // superseded by a newer preview
 		}
 		_ = thumb.Clear()
 		if err := thumb.Show(path, col, row, cols, rows); err != nil {
